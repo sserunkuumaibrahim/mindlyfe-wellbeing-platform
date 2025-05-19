@@ -50,6 +50,22 @@ function RootRedirect() {
   );
 }
 
+// import all feature pages
+import AssessmentPage from "@/pages/Assessment";
+import ProgressPage from "@/pages/Progress";
+import SupportPage from "@/pages/Support";
+import SessionsPage from "@/pages/Sessions";
+import ResourcesPage from "@/pages/Resources";
+import ToolsPage from "@/pages/Tools";
+import CommunityPage from "@/pages/Community";
+import WellnessPage from "@/pages/Wellness";
+import CrisisPage from "@/pages/Crisis";
+import LifestylePage from "@/pages/Lifestyle";
+import AiPage from "@/pages/Ai";
+import PersonalizationPage from "@/pages/Personalization";
+import GamificationPage from "@/pages/Gamification";
+import AdminPage from "@/pages/Admin";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -94,6 +110,22 @@ const App = () => (
               </ProtectedRoute>
             }
           />
+
+          {/* Feature pages */}
+          <Route path="/assessment" element={<ProtectedRoute><AssessmentPage /></ProtectedRoute>} />
+          <Route path="/progress" element={<ProtectedRoute><ProgressPage /></ProtectedRoute>} />
+          <Route path="/support" element={<ProtectedRoute><SupportPage /></ProtectedRoute>} />
+          <Route path="/sessions" element={<ProtectedRoute><SessionsPage /></ProtectedRoute>} />
+          <Route path="/resources" element={<ProtectedRoute><ResourcesPage /></ProtectedRoute>} />
+          <Route path="/tools" element={<ProtectedRoute><ToolsPage /></ProtectedRoute>} />
+          <Route path="/community" element={<ProtectedRoute><CommunityPage /></ProtectedRoute>} />
+          <Route path="/wellness" element={<ProtectedRoute><WellnessPage /></ProtectedRoute>} />
+          <Route path="/crisis" element={<ProtectedRoute><CrisisPage /></ProtectedRoute>} />
+          <Route path="/lifestyle" element={<ProtectedRoute><LifestylePage /></ProtectedRoute>} />
+          <Route path="/ai" element={<ProtectedRoute><AiPage /></ProtectedRoute>} />
+          <Route path="/personalization" element={<ProtectedRoute><PersonalizationPage /></ProtectedRoute>} />
+          <Route path="/gamification" element={<ProtectedRoute><GamificationPage /></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
 
           {/* Catch-all Route */}
           <Route path="*" element={<NotFound />} />
