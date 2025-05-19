@@ -1,10 +1,10 @@
-
 import { useState } from "react";
 import SidebarNav from "@/components/schedule/SidebarNav";
 import { DoctorsFilter } from "@/components/schedule/DoctorsFilter";
 import ConsultationTypeFilter from "@/components/schedule/ConsultationTypeFilter";
 import ScheduleHeader from "@/components/schedule/ScheduleHeader";
 import AppointmentCalendar from "@/components/schedule/AppointmentCalendar";
+import AppPageLayout from "@/components/ui/AppPageLayout";
 
 const doctorsList = [
   {
@@ -125,53 +125,55 @@ export default function Schedule() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f4f7ff] via-[#e3eafe] to-[#ffffff] flex flex-col">
-      <div className="flex flex-1 w-full overflow-hidden">
-        {/* Sidebar */}
-        <SidebarNav />
-        {/* Main content */}
-        <div className="flex-1 py-3 px-1 md:px-8 flex flex-col gap-0">
-          <ScheduleHeader userAvatar={"https://randomuser.me/api/portraits/women/40.jpg"} />
-          <div className="flex flex-col md:flex-row gap-6 mt-2">
-            <div className="min-w-[290px] max-w-[320px] w-full flex-shrink-0 flex flex-col gap-5">
-              <DoctorsFilter
-                doctors={doctorsList.map((doc, i) => ({
-                  ...doc,
-                  checked: checkedDoctors[i],
-                  onChange: (checked: boolean) => {
-                    const arr = [...checkedDoctors];
-                    arr[i] = checked;
-                    setCheckedDoctors(arr);
-                  },
-                }))}
-                onClear={() => setCheckedDoctors(doctorsList.map(_ => false))}
-              />
-              <ConsultationTypeFilter
-                checked={consultationTypes}
-                onChange={setConsultationTypes}
-              />
-            </div>
-            {/* Appointment Calendar */}
-            <div className="flex-1 min-w-0">
-              <AppointmentCalendar
-                doctors={filteredDoctors}
-                appointments={appointments}
-                day={day}
-                onPrevDay={() => setDay(prev => {
-                  const d = new Date(prev);
-                  d.setDate(d.getDate() - 1);
-                  return d;
-                })}
-                onNextDay={() => setDay(prev => {
-                  const d = new Date(prev);
-                  d.setDate(d.getDate() + 1);
-                  return d;
-                })}
-              />
+    <AppPageLayout>
+      <div className="min-h-screen bg-gradient-to-br from-[#f4f7ff] via-[#e3eafe] to-[#ffffff] flex flex-col">
+        <div className="flex flex-1 w-full overflow-hidden">
+          {/* Sidebar */}
+          <SidebarNav />
+          {/* Main content */}
+          <div className="flex-1 py-3 px-1 md:px-8 flex flex-col gap-0">
+            <ScheduleHeader userAvatar={"https://randomuser.me/api/portraits/women/40.jpg"} />
+            <div className="flex flex-col md:flex-row gap-6 mt-2">
+              <div className="min-w-[290px] max-w-[320px] w-full flex-shrink-0 flex flex-col gap-5">
+                <DoctorsFilter
+                  doctors={doctorsList.map((doc, i) => ({
+                    ...doc,
+                    checked: checkedDoctors[i],
+                    onChange: (checked: boolean) => {
+                      const arr = [...checkedDoctors];
+                      arr[i] = checked;
+                      setCheckedDoctors(arr);
+                    },
+                  }))}
+                  onClear={() => setCheckedDoctors(doctorsList.map(_ => false))}
+                />
+                <ConsultationTypeFilter
+                  checked={consultationTypes}
+                  onChange={setConsultationTypes}
+                />
+              </div>
+              {/* Appointment Calendar */}
+              <div className="flex-1 min-w-0">
+                <AppointmentCalendar
+                  doctors={filteredDoctors}
+                  appointments={appointments}
+                  day={day}
+                  onPrevDay={() => setDay(prev => {
+                    const d = new Date(prev);
+                    d.setDate(d.getDate() - 1);
+                    return d;
+                  })}
+                  onNextDay={() => setDay(prev => {
+                    const d = new Date(prev);
+                    d.setDate(d.getDate() + 1);
+                    return d;
+                  })}
+                />
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </AppPageLayout>
   );
 }
