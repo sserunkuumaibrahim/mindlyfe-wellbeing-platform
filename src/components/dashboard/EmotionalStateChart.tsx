@@ -1,54 +1,34 @@
 
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
-import {
-  ResponsiveContainer,
-  BarChart,
-  XAxis,
-  Bar,
-  Tooltip,
-} from "recharts";
+import { ResponsiveContainer, BarChart, XAxis, Bar } from "recharts";
 
-interface Props {
-  emotionalData: { name: string; value: number }[];
-}
-
-export default function EmotionalStateChart({ emotionalData }: Props) {
+export default function EmotionalStateChart({ emotionalData }: { emotionalData: { name: string; value: number }[] }) {
   return (
-    <Card className="rounded-3xl glass-morphism p-6 xl:col-span-2 animate-fade-in">
+    <div className="rounded-[32px] bg-white/70 backdrop-blur-lg shadow-xl px-8 py-7 flex flex-col min-h-[290px] border border-[#e5eaf3]">
       <div className="flex items-center justify-between mb-1">
-        <div className="font-bold">Emotional State</div>
+        <span className="text-lg font-bold font-dashboard text-gray-700">Emotional State</span>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="rounded-xl">
-            Week
-          </Button>
-          <Button variant="ghost" size="sm" className="rounded-xl">
-            Month
-          </Button>
-          <Button variant="ghost" size="sm" className="rounded-xl">
-            Year
-          </Button>
+          <button className="rounded-xl bg-primary/10 text-primary text-xs px-4 py-1.5 font-bold">Week</button>
+          <button className="rounded-xl text-gray-400 bg-white/40 px-4 py-1.5 text-xs font-bold">Month</button>
+          <button className="rounded-xl text-gray-400 bg-white/40 px-4 py-1.5 text-xs font-bold">Year</button>
         </div>
       </div>
-      <p className="text-muted-foreground text-sm mb-2">
+      <div className="text-[15px] text-[#7c8ca2] mb-2">
         Based on data collected during sessions with a therapist, self-tests and feedback
-      </p>
-      <div className="w-full h-[180px]">
-        <ChartContainer
-          config={{
-            mood: { label: "Mood", color: "#21A9E1" }
-          }}
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={emotionalData}>
-              <XAxis dataKey="name" />
-              <Bar dataKey="value" fill="#21A9E1" radius={[8, 8, 0, 0]} />
-              <Tooltip content={<ChartTooltip />} />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartContainer>
       </div>
-    </Card>
+      <div className="w-full h-[124px] mt-2">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={emotionalData}>
+            <XAxis dataKey="name" axisLine={false} tickLine={false} stroke="#a3adc2" style={{ fontSize: 14 }}/>
+            <Bar dataKey="value" fill="url(#barGradient)" radius={[10, 10, 0, 0]} />
+            <defs>
+              <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#66b2ff" />
+                <stop offset="100%" stopColor="#c8d7fa" />
+              </linearGradient>
+            </defs>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
   );
 }
