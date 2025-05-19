@@ -15,8 +15,6 @@ interface Props {
 }
 
 export default function EmotionalStateChart({ emotionalData }: Props) {
-  // The ChartContainer should directly wrap the chart children,
-  // instead of using a 'render' prop.
   return (
     <Card className="rounded-3xl glass-morphism p-6 xl:col-span-2 animate-fade-in">
       <div className="flex items-center justify-between mb-1">
@@ -42,7 +40,7 @@ export default function EmotionalStateChart({ emotionalData }: Props) {
             mood: { label: "Mood", color: "#21A9E1" }
           }}
         >
-          <ResponsiveContainer>
+          <ResponsiveContainer width="100%" height="100%">
             <BarChart data={emotionalData}>
               <XAxis dataKey="name" />
               <Bar dataKey="value" fill="#21A9E1" radius={[8, 8, 0, 0]} />
@@ -54,4 +52,3 @@ export default function EmotionalStateChart({ emotionalData }: Props) {
     </Card>
   );
 }
-

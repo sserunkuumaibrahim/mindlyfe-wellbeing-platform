@@ -5,12 +5,15 @@ import { useAuthStore } from "@/stores/useAuthStore";
 
 export default function DashboardHeader() {
   const { user } = useAuthStore();
+  
+  // Use mock data if user is not available
+  const userName = user?.firstName || "Amanda";
 
   return (
     <header className="flex items-center justify-between">
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold">
-          Hey, {user?.firstName || "Amanda"}! Glad to have you back{" "}
+          Hey, {userName}! Glad to have you back{" "}
           <span className="animate-bounce inline-block">🙌</span>
         </h1>
       </div>

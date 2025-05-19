@@ -1,21 +1,6 @@
+
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/useAuthStore";
-import {
-  Activity,
-  CalendarDays,
-  MessageSquare,
-  Book,
-  User,
-  Settings,
-  Bell,
-  CircleUser,
-  Plus,
-  Loader,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { ChartContainer, ChartLegend, ChartTooltip } from "@/components/ui/chart";
 import { useState } from "react";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
@@ -26,17 +11,8 @@ import UrgentSupportWidget from "@/components/dashboard/UrgentSupportWidget";
 import ExercisesWidget from "@/components/dashboard/ExercisesWidget";
 import RecentSessionsWidget from "@/components/dashboard/RecentSessionsWidget";
 
-const navItems = [
-  { icon: Activity, label: "Dashboard" },
-  { icon: CalendarDays, label: "Appointments" },
-  { icon: User, label: "Profile" },
-  { icon: Book, label: "Resources" },
-  { icon: MessageSquare, label: "Community" },
-  { icon: Settings, label: "Settings" },
-];
-
 export default function Dashboard() {
-  const { user, logout } = useAuthStore();
+  const { user } = useAuthStore();
   const navigate = useNavigate();
   const [progress] = useState({
     goalsAchieved: 14,
@@ -90,14 +66,5 @@ export default function Dashboard() {
         </div>
       </main>
     </div>
-  );
-}
-
-function PlayIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg width={20} height={20} viewBox="0 0 20 20" fill="none" aria-hidden="true" {...props}>
-      <circle cx="10" cy="10" r="10" fill="#21A9E1" fillOpacity="0.18"/>
-      <path d="M8.5 7.5V12.5L13 10L8.5 7.5Z" fill="#21A9E1"/>
-    </svg>
   );
 }
