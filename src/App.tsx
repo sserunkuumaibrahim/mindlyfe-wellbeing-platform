@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -24,6 +25,27 @@ import SidebarNav from "./components/schedule/SidebarNav";
 
 import { useAuthStore } from "@/stores/useAuthStore";
 
+// Import all referenced pages below
+import AssessmentPage from "@/pages/Assessment";
+import ProgressPage from "@/pages/Progress";
+import ProgressTrackingPage from "@/pages/ProgressTracking";
+import SupportPage from "@/pages/Support";
+import TherapistMatchingPage from "@/pages/TherapistMatching";
+import SessionsPage from "@/pages/Sessions";
+import ResourcesPage from "@/pages/Resources";
+import ToolsPage from "@/pages/Tools";
+import CommunityPage from "@/pages/Community";
+import WellnessPage from "@/pages/Wellness";
+import CrisisPage from "@/pages/Crisis";
+import LifestylePage from "@/pages/Lifestyle";
+import LifestyleManagementPage from "@/pages/LifestyleManagement";
+import AiPage from "@/pages/Ai";
+import AiAssistantPage from "@/pages/AI_Assistant";
+import PersonalizationPage from "@/pages/Personalization";
+import GamificationPage from "@/pages/Gamification";
+import AdminPage from "@/pages/Admin";
+import AdminDashboardPage from "@/pages/AdminDashboard";
+
 // Custom Redirect component for "/" route
 import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -49,13 +71,6 @@ function RootRedirect() {
     </div>
   );
 }
-
-// New pages
-import TherapistMatchingPage from "@/pages/TherapistMatching";
-import ProgressTrackingPage from "@/pages/ProgressTracking";
-import AiAssistantPage from "@/pages/AI_Assistant";
-import LifestyleManagementPage from "@/pages/LifestyleManagement";
-import AdminDashboardPage from "@/pages/AdminDashboard";
 
 const queryClient = new QueryClient();
 
@@ -117,3 +132,4 @@ const App = () => (
 );
 
 export default App;
+
