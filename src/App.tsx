@@ -18,6 +18,7 @@ import MfaSetup from "./pages/auth/MfaSetup";
 
 // App Pages
 import Dashboard from "./pages/Dashboard";
+import Chat from "./pages/Chat";
 
 import { useAuthStore } from "@/stores/useAuthStore";
 
@@ -58,6 +59,9 @@ const App = () => (
         <Routes>
           {/* Root route always redirects depending on auth */}
           <Route path="/" element={<RootRedirect />} />
+          
+          {/* Add chat route for demo purposes */}
+          <Route path="/chat" element={<Chat />} />
 
           {/* Auth routes */}
           <Route path="/login" element={<Login />} />
