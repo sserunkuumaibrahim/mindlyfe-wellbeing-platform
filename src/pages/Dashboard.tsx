@@ -1,15 +1,16 @@
 
 import React from "react";
-import FloatingSidebar from "@/components/ui/FloatingSidebar";
-import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import SidebarPillNav from "@/components/dashboard/SidebarPillNav";
+import DashboardHeaderNew from "@/components/dashboard/DashboardHeaderNew";
 import PageGrid from "@/components/dashboard/PageGrid";
-import ProgressWidget from "@/components/dashboard/ProgressWidget";
-import StatsWidget from "@/components/dashboard/StatsWidget";
-import BarChartWidget from "@/components/dashboard/BarChartWidget";
-import UrgentSupportWidget from "@/components/dashboard/UrgentSupportWidget";
-import UpcomingWidget from "@/components/dashboard/UpcomingWidget";
-import ExercisesWidget from "@/components/dashboard/ExercisesWidget";
-import SessionListWidget from "@/components/dashboard/SessionListWidget";
+import ProgressStatWidget from "@/components/dashboard/ProgressStatWidget";
+import EduStatWidget from "@/components/dashboard/EduStatWidget";
+import SessionStatWidget from "@/components/dashboard/SessionStatWidget";
+import EmotionalStateChart from "@/components/dashboard/EmotionalStateChart";
+import UrgentSupportCard from "@/components/dashboard/UrgentSupportCard";
+import UpcomingSchedule from "@/components/dashboard/UpcomingSchedule";
+import ExercisesList from "@/components/dashboard/ExercisesList";
+import SessionRecords from "@/components/dashboard/SessionRecords";
 
 const dashboardData = {
   progress: {
@@ -19,8 +20,8 @@ const dashboardData = {
     sourcesChange: "-30%",
     sessions: 6,
     sessionsChange: "+5%",
-    goalsProgress: 71,
-    sessionsProgress: 73,
+    goalsProgress: 98,
+    sessionsProgress: 55,
   },
   emotionalData: [
     { name: "16 Aug", value: 40 },
@@ -33,7 +34,7 @@ const dashboardData = {
   ],
   exercises: [
     {
-      icon: "📝",
+      icon: "/lovable-uploads/9dbea15a-597b-4b76-802f-e165c195a65e.png",
       label: "Gratitude journal",
       progress: 98,
       duration: "6h 32min",
@@ -41,7 +42,7 @@ const dashboardData = {
       actions: { completed: 16, comments: 3 },
     },
     {
-      icon: "🧠",
+      icon: "/lovable-uploads/9dbea15a-597b-4b76-802f-e165c195a65e.png",
       label: "The power of awareness",
       progress: 55,
       duration: "1h 40min",
@@ -101,69 +102,45 @@ const dashboardData = {
     },
   ],
 };
-
 export default function Dashboard() {
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-[#ecf4fb] via-[#e7f1fa] to-[#e3eafb] flex font-dmsans antialiased">
-      <FloatingSidebar />
-      <main className="flex-1 flex flex-col items-center px-0">
-        {/* Header */}
-        <div className="w-full max-w-7xl px-8 pt-8">
-          <DashboardHeader />
-        </div>
-        {/* Main Dashboard Grid */}
+    <div className="min-h-screen w-full flex bg-gradient-to-br from-[#eaf2fa] via-[#e2eff8] to-[#e6f3f9] font-dmsans antialiased">
+      <SidebarPillNav />
+      <main className="flex-1 flex flex-col items-center pl-44 px-0">
+        <DashboardHeaderNew />
         <PageGrid
           left={
             <>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-7">
-                <ProgressWidget
-                  title="Progress Tracking"
+              <div className="grid grid-cols-3 gap-6">
+                <ProgressStatWidget
                   value={dashboardData.progress.goalsAchieved}
-                  changeLabel={dashboardData.progress.goalsChange}
-                  progressPercent={dashboardData.progress.goalsProgress}
-                  description="Therapy goals achieved over the last 3 months"
-                  highlightColor="bg-green-100 text-green-600"
+                  change={dashboardData.progress.goalsChange}
+                  progress={dashboardData.progress.goalsProgress}
                 />
-                <StatsWidget
-                  title="Educational Sources"
+                <EduStatWidget
                   value={dashboardData.progress.sources}
-                  changeLabel={dashboardData.progress.sourcesChange}
-                  stats={[
-                    { emoji: "🧘", label: "Breathing and meditation techniques" },
-                    { emoji: "🔎", label: "Identifying sources of stress" }
-                  ]}
-                  highlightColor="bg-blue-50 text-blue-500"
+                  change={dashboardData.progress.sourcesChange}
                 />
-                <ProgressWidget
-                  title="Therapeutic Sessions"
+                <SessionStatWidget
                   value={dashboardData.progress.sessions}
-                  changeLabel={dashboardData.progress.sessionsChange}
-                  progressPercent={dashboardData.progress.sessionsProgress}
-                  description="Sessions were held this month"
-                  highlightColor="bg-green-50 text-green-500"
+                  change={dashboardData.progress.sessionsChange}
+                  progress={dashboardData.progress.sessionsProgress}
                 />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-7">
-                <BarChartWidget
-                  title="Emotional State"
-                  data={dashboardData.emotionalData}
-                  description="Based on data collected during sessions with a therapist, self-tests and feedback"
-                  tabs={["Week", "Month", "Year"]}
-                />
-                <UrgentSupportWidget />
+              <div className="grid grid-cols-[2fr_1fr] gap-6 mt-4">
+                <EmotionalStateChart data={dashboardData.emotionalData} />
+                <UrgentSupportCard />
               </div>
-              <ExercisesWidget exercises={dashboardData.exercises} />
+              <div className="mt-4">
+                <ExercisesList data={dashboardData.exercises} />
+              </div>
             </>
           }
           right={
-            <>
-              <UpcomingWidget upcoming={dashboardData.upcoming} />
-              <SessionListWidget
-                title="Records of recent sessions"
-                description="View or download recordings of your sessions for review and analysis"
-                sessions={dashboardData.recentSessions}
-              />
-            </>
+            <div className="flex flex-col gap-4">
+              <UpcomingSchedule data={dashboardData.upcoming} />
+              <SessionRecords data={dashboardData.recentSessions} />
+            </div>
           }
         />
       </main>
