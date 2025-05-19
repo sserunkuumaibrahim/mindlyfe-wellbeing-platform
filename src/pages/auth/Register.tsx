@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -72,9 +71,26 @@ export default function Register() {
   return (
     <AuthLayout>
       <AuthCard 
-        title="Create an Account" 
-        description="Enter your details to create your Mindlyfe account"
+        title="Create Account" 
+        description="Start your wellness journey – just a few steps away."
       >
+        <div className="flex justify-center gap-4 mb-4">
+          <button
+            type="button"
+            className="rounded-full bg-white border shadow-sm p-2 w-10 h-10 flex items-center justify-center hover:shadow transition duration-150"
+            aria-label="Sign up with Google"
+          >
+            <img src="https://unpkg.com/simple-icons@v11/icons/google.svg" alt="Google" className="w-5 h-5" />
+          </button>
+          <button
+            type="button"
+            className="rounded-full bg-white border shadow-sm p-2 w-10 h-10 flex items-center justify-center hover:shadow transition duration-150"
+            aria-label="Sign up with Facebook"
+          >
+            <img src="https://unpkg.com/simple-icons@v11/icons/facebook.svg" alt="Facebook" className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="text-center text-muted-foreground text-xs mb-2 -mt-2">Or sign up with email</div>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} onChange={handleFormChange} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -59,8 +58,8 @@ export default function Login() {
   return (
     <AuthLayout>
       <AuthCard 
-        title="Welcome to Mindlyfe" 
-        description="Sign in to your account to continue"
+        title="Welcome Back" 
+        description="Sign in to your Mindlyfe account to continue"
       >
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} onChange={handleFormChange} className="space-y-4">
