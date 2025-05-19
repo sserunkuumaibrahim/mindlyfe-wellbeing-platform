@@ -1,23 +1,20 @@
-
 import { Button } from "@/components/ui/button";
 import { Bell, CircleUser } from "lucide-react";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 export default function DashboardHeader() {
-  const { user } = useAuthStore();
-  
-  // Use mock data if user is not available
-  const userName = user?.firstName || "Amanda";
+  // Only use mock data for dashboard display, fully independent of auth
+  const userName = "Amanda";
 
   return (
-    <header className="flex items-center justify-between">
+    <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 w-full mb-3">
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold">
+        <h1 className="text-2xl sm:text-3xl font-bold leading-snug">
           Hey, {userName}! Glad to have you back{" "}
           <span className="animate-bounce inline-block">🙌</span>
         </h1>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 mt-2 sm:mt-0 self-end">
         <Button variant="ghost" size="icon" className="rounded-full hover:bg-background/80 fade-in" aria-label="Notifications">
           <Bell className="h-6 w-6" />
         </Button>
