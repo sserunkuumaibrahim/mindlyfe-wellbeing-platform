@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { toast } from "@/components/ui/use-toast";
 import { User } from '@/types/user';
@@ -23,6 +22,15 @@ interface AuthState {
   clearError: () => void;
 }
 
+// Mock user data for UI preview
+const MOCK_USER = {
+  id: "1",
+  email: "mock@mindlyfe.org",
+  firstName: "Amanda",
+  lastName: "Doe",
+  // ... add any other properties needed from User type
+};
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
@@ -31,183 +39,94 @@ export const useAuthStore = create<AuthState>((set) => ({
   error: null,
   
   login: async (credentials) => {
-    try {
-      set({ loading: true, error: null });
-      const response = await apiClient.auth.login(credentials);
-      
-      if (response.mfaRequired) {
-        set({ 
-          mfaRequired: true, 
-          loading: false 
-        });
-        return;
-      }
-      
-      set({ 
-        user: response.user, 
-        isAuthenticated: true, 
-        mfaRequired: false,
-        loading: false 
-      });
-      
-      toast({
-        title: "Login successful",
-        description: `Welcome back, ${response.user.firstName}!`,
-      });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to login';
-      set({ error: errorMessage, loading: false });
-      toast({
-        variant: "destructive",
-        title: "Login failed",
-        description: errorMessage,
-      });
-    }
+    set({ loading: true, error: null });
+    // Simulate network delay
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    // Always "succeed" with mock user
+    set({
+      user: MOCK_USER,
+      isAuthenticated: true,
+      mfaRequired: false,
+      loading: false,
+    });
+    toast({
+      title: "Login successful (mock)",
+      description: `Welcome back, ${MOCK_USER.firstName}!`,
+    });
   },
   
   register: async (data) => {
-    try {
-      set({ loading: true, error: null });
-      const response = await apiClient.auth.register(data);
-      
-      set({ 
-        user: response.user, 
-        isAuthenticated: true, 
-        loading: false 
-      });
-      
-      toast({
-        title: "Registration successful",
-        description: `Welcome to Mindlyfe, ${response.user.firstName}!`,
-      });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to register';
-      set({ error: errorMessage, loading: false });
-      toast({
-        variant: "destructive",
-        title: "Registration failed",
-        description: errorMessage,
-      });
-    }
+    set({ loading: true, error: null });
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    set({
+      user: MOCK_USER,
+      isAuthenticated: true,
+      loading: false,
+    });
+    toast({
+      title: "Registration successful (mock)",
+      description: `Welcome to Mindlyfe, ${MOCK_USER.firstName}!`,
+    });
   },
   
   logout: async () => {
-    try {
-      set({ loading: true });
-      await apiClient.auth.logout();
-      
-      set({ 
-        user: null, 
-        isAuthenticated: false, 
-        loading: false 
-      });
-      
-      toast({
-        title: "Logged out",
-        description: "You have been successfully logged out.",
-      });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to logout';
-      set({ loading: false });
-      toast({
-        variant: "destructive",
-        title: "Logout failed",
-        description: errorMessage,
-      });
-    }
+    set({ loading: true });
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    set({
+      user: null,
+      isAuthenticated: false,
+      loading: false,
+    });
+    toast({
+      title: "Logged out (mock)",
+      description: "You have been logged out (mock).",
+    });
   },
   
   refreshToken: async () => {
-    try {
-      set({ loading: true });
-      const response = await apiClient.auth.refreshToken();
-      
-      set({ 
-        user: response.user, 
-        isAuthenticated: true, 
-        loading: false 
-      });
-    } catch (error) {
-      set({ 
-        user: null, 
-        isAuthenticated: false, 
-        loading: false 
-      });
-    }
+    // Simulate auto-login with mock user (for dashboard redirects)
+    set({ loading: true });
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    set({
+      user: MOCK_USER,
+      isAuthenticated: true,
+      loading: false,
+    });
   },
   
   verifyMFA: async (code) => {
-    try {
-      set({ loading: true, error: null });
-      await apiClient.mfa.verify(code);
-      
-      // After successful MFA verification, refresh the user data
-      const response = await apiClient.auth.refreshToken();
-      
-      set({ 
-        user: response.user, 
-        isAuthenticated: true, 
-        mfaRequired: false,
-        loading: false 
-      });
-      
-      toast({
-        title: "Verification successful",
-        description: "MFA verification completed successfully.",
-      });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to verify MFA code';
-      set({ error: errorMessage, loading: false });
-      toast({
-        variant: "destructive",
-        title: "Verification failed",
-        description: errorMessage,
-      });
-    }
+    set({ loading: true, error: null });
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    set({
+      user: MOCK_USER,
+      isAuthenticated: true,
+      mfaRequired: false,
+      loading: false,
+    });
+    toast({
+      title: "Verification successful (mock)",
+      description: "MFA verification (mock).",
+    });
   },
   
   forgotPassword: async (email) => {
-    try {
-      set({ loading: true, error: null });
-      await apiClient.auth.forgotPassword(email);
-      
-      set({ loading: false });
-      
-      toast({
-        title: "Password reset email sent",
-        description: "Please check your email for instructions to reset your password.",
-      });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to send password reset email';
-      set({ error: errorMessage, loading: false });
-      toast({
-        variant: "destructive",
-        title: "Request failed",
-        description: errorMessage,
-      });
-    }
+    set({ loading: true, error: null });
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    set({ loading: false });
+    toast({
+      title: "Password reset email sent (mock)",
+      description: "Please check your email (pretend email) to reset your password.",
+    });
   },
   
   resetPassword: async (data) => {
-    try {
-      set({ loading: true, error: null });
-      await apiClient.auth.resetPassword(data);
-      
-      set({ loading: false });
-      
-      toast({
-        title: "Password reset successful",
-        description: "Your password has been reset successfully. You can now login with your new password.",
-      });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to reset password';
-      set({ error: errorMessage, loading: false });
-      toast({
-        variant: "destructive",
-        title: "Reset failed",
-        description: errorMessage,
-      });
-    }
+    set({ loading: true, error: null });
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    set({ loading: false });
+    toast({
+      title: "Password reset successful (mock)",
+      description: "Password reset with mock logic.",
+    });
   },
   
   clearError: () => set({ error: null }),
