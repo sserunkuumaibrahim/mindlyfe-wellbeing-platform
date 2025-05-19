@@ -50,21 +50,12 @@ function RootRedirect() {
   );
 }
 
-// import all feature pages
-import AssessmentPage from "@/pages/Assessment";
-import ProgressPage from "@/pages/Progress";
-import SupportPage from "@/pages/Support";
-import SessionsPage from "@/pages/Sessions";
-import ResourcesPage from "@/pages/Resources";
-import ToolsPage from "@/pages/Tools";
-import CommunityPage from "@/pages/Community";
-import WellnessPage from "@/pages/Wellness";
-import CrisisPage from "@/pages/Crisis";
-import LifestylePage from "@/pages/Lifestyle";
-import AiPage from "@/pages/Ai";
-import PersonalizationPage from "@/pages/Personalization";
-import GamificationPage from "@/pages/Gamification";
-import AdminPage from "@/pages/Admin";
+// New pages
+import TherapistMatchingPage from "@/pages/TherapistMatching";
+import ProgressTrackingPage from "@/pages/ProgressTracking";
+import AiAssistantPage from "@/pages/AI_Assistant";
+import LifestyleManagementPage from "@/pages/LifestyleManagement";
+import AdminDashboardPage from "@/pages/AdminDashboard";
 
 const queryClient = new QueryClient();
 
@@ -77,19 +68,13 @@ const App = () => (
         <Routes>
           {/* Root route always redirects depending on auth */}
           <Route path="/" element={<RootRedirect />} />
-          
-          {/* Add chat route */}
           <Route path="/chat" element={<Chat />} />
-
-          {/* Add schedule route */}
           <Route path="/schedule" element={<Schedule />} />
-
           {/* Auth routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-
           {/* MFA routes */}
           <Route path="/mfa/verify" element={<MfaVerify />} />
           <Route
@@ -101,20 +86,13 @@ const App = () => (
             }
           />
 
-          {/* Protected routes */}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Feature pages */}
+          {/* Main navigation pages */}
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/assessment" element={<ProtectedRoute><AssessmentPage /></ProtectedRoute>} />
           <Route path="/progress" element={<ProtectedRoute><ProgressPage /></ProtectedRoute>} />
+          <Route path="/progress-tracking" element={<ProtectedRoute><ProgressTrackingPage /></ProtectedRoute>} />
           <Route path="/support" element={<ProtectedRoute><SupportPage /></ProtectedRoute>} />
+          <Route path="/therapist-matching" element={<ProtectedRoute><TherapistMatchingPage /></ProtectedRoute>} />
           <Route path="/sessions" element={<ProtectedRoute><SessionsPage /></ProtectedRoute>} />
           <Route path="/resources" element={<ProtectedRoute><ResourcesPage /></ProtectedRoute>} />
           <Route path="/tools" element={<ProtectedRoute><ToolsPage /></ProtectedRoute>} />
@@ -122,10 +100,13 @@ const App = () => (
           <Route path="/wellness" element={<ProtectedRoute><WellnessPage /></ProtectedRoute>} />
           <Route path="/crisis" element={<ProtectedRoute><CrisisPage /></ProtectedRoute>} />
           <Route path="/lifestyle" element={<ProtectedRoute><LifestylePage /></ProtectedRoute>} />
+          <Route path="/lifestyle-management" element={<ProtectedRoute><LifestyleManagementPage /></ProtectedRoute>} />
           <Route path="/ai" element={<ProtectedRoute><AiPage /></ProtectedRoute>} />
+          <Route path="/ai-assistant" element={<ProtectedRoute><AiAssistantPage /></ProtectedRoute>} />
           <Route path="/personalization" element={<ProtectedRoute><PersonalizationPage /></ProtectedRoute>} />
           <Route path="/gamification" element={<ProtectedRoute><GamificationPage /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
+          <Route path="/admin-dashboard" element={<ProtectedRoute><AdminDashboardPage /></ProtectedRoute>} />
 
           {/* Catch-all Route */}
           <Route path="*" element={<NotFound />} />
