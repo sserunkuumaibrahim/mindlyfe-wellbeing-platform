@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { toast } from "@/components/ui/use-toast";
 import { User } from '@/types/user';
@@ -23,12 +24,16 @@ interface AuthState {
 }
 
 // Mock user data for UI preview
-const MOCK_USER = {
+const MOCK_USER: User = {
   id: "1",
   email: "mock@mindlyfe.org",
   firstName: "Amanda",
   lastName: "Doe",
-  // ... add any other properties needed from User type
+  isEmailVerified: true,
+  mfaEnabled: false,
+  createdAt: new Date("2024-01-01T09:00:00.000Z"),
+  updatedAt: new Date("2024-04-01T09:00:00.000Z"),
+  // If the User interface changes in the future, include additional fields as needed.
 };
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -131,3 +136,4 @@ export const useAuthStore = create<AuthState>((set) => ({
   
   clearError: () => set({ error: null }),
 }));
+
