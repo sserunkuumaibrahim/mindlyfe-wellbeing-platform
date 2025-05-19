@@ -2,12 +2,14 @@
 import React from "react";
 import FloatingSidebar from "@/components/ui/FloatingSidebar";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
-import ProgressWidgets from "@/components/dashboard/ProgressWidgets";
-import EmotionalStateChart from "@/components/dashboard/EmotionalStateChart";
+import PageGrid from "@/components/dashboard/PageGrid";
+import ProgressWidget from "@/components/dashboard/ProgressWidget";
+import StatsWidget from "@/components/dashboard/StatsWidget";
+import BarChartWidget from "@/components/dashboard/BarChartWidget";
 import UrgentSupportWidget from "@/components/dashboard/UrgentSupportWidget";
 import UpcomingWidget from "@/components/dashboard/UpcomingWidget";
 import ExercisesWidget from "@/components/dashboard/ExercisesWidget";
-import RecentSessionsWidget from "@/components/dashboard/RecentSessionsWidget";
+import SessionListWidget from "@/components/dashboard/SessionListWidget";
 
 const dashboardData = {
   progress: {
@@ -102,7 +104,7 @@ const dashboardData = {
 
 export default function Dashboard() {
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-[#ecf4fb] via-[#e7f1fa] to-[#e3eafb] flex font-dashboard antialiased">
+    <div className="min-h-screen w-full bg-gradient-to-br from-[#ecf4fb] via-[#e7f1fa] to-[#e3eafb] flex font-dmsans antialiased">
       <FloatingSidebar />
       <main className="flex-1 flex flex-col items-center px-0">
         {/* Header */}
@@ -110,26 +112,60 @@ export default function Dashboard() {
           <DashboardHeader />
         </div>
         {/* Main Dashboard Grid */}
-        <div className="w-full max-w-7xl px-8 flex flex-col gap-6 pb-12">
-          <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
-            {/* Main left */}
-            <div className="flex flex-col gap-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <ProgressWidgets progress={dashboardData.progress} />
+        <PageGrid
+          left={
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-7">
+                <ProgressWidget
+                  title="Progress Tracking"
+                  value={dashboardData.progress.goalsAchieved}
+                  changeLabel={dashboardData.progress.goalsChange}
+                  progressPercent={dashboardData.progress.goalsProgress}
+                  description="Therapy goals achieved over the last 3 months"
+                  highlightColor="bg-green-100 text-green-600"
+                />
+                <StatsWidget
+                  title="Educational Sources"
+                  value={dashboardData.progress.sources}
+                  changeLabel={dashboardData.progress.sourcesChange}
+                  stats={[
+                    { emoji: "🧘", label: "Breathing and meditation techniques" },
+                    { emoji: "🔎", label: "Identifying sources of stress" }
+                  ]}
+                  highlightColor="bg-blue-50 text-blue-500"
+                />
+                <ProgressWidget
+                  title="Therapeutic Sessions"
+                  value={dashboardData.progress.sessions}
+                  changeLabel={dashboardData.progress.sessionsChange}
+                  progressPercent={dashboardData.progress.sessionsProgress}
+                  description="Sessions were held this month"
+                  highlightColor="bg-green-50 text-green-500"
+                />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-6">
-                <EmotionalStateChart emotionalData={dashboardData.emotionalData} />
+              <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-7">
+                <BarChartWidget
+                  title="Emotional State"
+                  data={dashboardData.emotionalData}
+                  description="Based on data collected during sessions with a therapist, self-tests and feedback"
+                  tabs={["Week", "Month", "Year"]}
+                />
                 <UrgentSupportWidget />
               </div>
               <ExercisesWidget exercises={dashboardData.exercises} />
-            </div>
-            {/* Sidebar widgets */}
-            <div className="flex flex-col gap-6">
+            </>
+          }
+          right={
+            <>
               <UpcomingWidget upcoming={dashboardData.upcoming} />
-              <RecentSessionsWidget recentSessions={dashboardData.recentSessions} />
-            </div>
-          </div>
-        </div>
+              <SessionListWidget
+                title="Records of recent sessions"
+                description="View or download recordings of your sessions for review and analysis"
+                sessions={dashboardData.recentSessions}
+              />
+            </>
+          }
+        />
       </main>
     </div>
   );
