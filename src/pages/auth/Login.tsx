@@ -13,6 +13,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useAuthStore } from "@/stores/useAuthStore";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { AuthCard } from "@/components/auth/AuthCard";
+import { LoginDTO } from "@/types/auth";
 
 const formSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -38,7 +39,14 @@ export default function Login() {
   });
 
   const onSubmit = async (data: FormData) => {
-    await login(data);
+    // Create a LoginDTO object with required properties
+    const loginData: LoginDTO = {
+      email: data.email,
+      password: data.password,
+      rememberMe: data.rememberMe,
+    };
+    
+    await login(loginData);
     const from = location.state?.from?.pathname || "/dashboard";
     navigate(from, { replace: true });
   };

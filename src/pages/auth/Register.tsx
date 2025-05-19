@@ -12,6 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useAuthStore } from "@/stores/useAuthStore";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { AuthCard } from "@/components/auth/AuthCard";
+import { RegisterDTO } from "@/types/auth";
 
 const formSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -50,7 +51,16 @@ export default function Register() {
   });
 
   const onSubmit = async (data: FormData) => {
-    await register(data);
+    // Create a RegisterDTO object with required properties
+    const registerData: RegisterDTO = {
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email,
+      password: data.password,
+      confirmPassword: data.confirmPassword,
+    };
+    
+    await register(registerData);
     navigate("/dashboard");
   };
 
