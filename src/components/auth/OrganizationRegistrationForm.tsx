@@ -64,9 +64,32 @@ export function OrganizationRegistrationForm({ onSubmit, loading, error, onBack 
 
   const onFormSubmit = async (data: z.infer<typeof organizationSchema>) => {
     const formData: OrganizationRegisterDTO = {
-      ...data,
+      role: 'org_admin', // Explicitly set the role
+      email: data.email,
+      password: data.password,
+      confirmPassword: data.confirmPassword,
+      full_name: data.full_name,
+      phone_number: data.phone_number,
+      date_of_birth: data.date_of_birth,
+      gender: data.gender,
+      country: data.country,
+      preferred_language: data.preferred_language,
+      organization_name: data.organization_name,
+      organization_type: data.organization_type,
+      registration_number: data.registration_number,
+      date_of_establishment: data.date_of_establishment,
+      tax_id_number: data.tax_id_number,
+      num_employees: data.num_employees,
       official_website: data.official_website || undefined,
+      address: data.address,
+      city: data.city,
+      state_province: data.state_province,
+      postal_code: data.postal_code,
+      representative_job_title: data.representative_job_title,
+      representative_national_id: data.representative_national_id,
+      service_requirements: data.service_requirements,
       billing_contact_email: data.billing_contact_email || undefined,
+      billing_contact_phone: data.billing_contact_phone,
     };
     await onSubmit(formData);
   };

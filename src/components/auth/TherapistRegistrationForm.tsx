@@ -123,10 +123,30 @@ export function TherapistRegistrationForm({ onSubmit, loading, error, onBack }: 
 
   const onFormSubmit = async (data: z.infer<typeof therapistSchema>) => {
     const formData: TherapistRegisterDTO = {
-      ...data,
+      role: 'therapist', // Explicitly set the role
+      email: data.email,
+      password: data.password,
+      confirmPassword: data.confirmPassword,
+      full_name: data.full_name,
+      phone_number: data.phone_number,
+      date_of_birth: data.date_of_birth,
+      gender: data.gender,
+      country: data.country,
+      preferred_language: data.preferred_language,
+      national_id_number: data.national_id_number,
+      license_body: data.license_body,
+      license_number: data.license_number,
+      license_expiry_date: data.license_expiry_date,
+      insurance_provider: data.insurance_provider,
+      insurance_policy_number: data.insurance_policy_number,
+      insurance_expiry_date: data.insurance_expiry_date,
+      years_experience: data.years_experience,
       specializations: specializations.filter(s => s.trim()),
       languages_spoken: languages.filter(l => l.trim()),
+      education_background: data.education_background,
       certifications: certifications.filter(c => c.trim()),
+      hourly_rate: data.hourly_rate,
+      bio: data.bio,
     };
     await onSubmit(formData);
   };
