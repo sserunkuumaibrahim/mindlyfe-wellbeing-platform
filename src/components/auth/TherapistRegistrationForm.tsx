@@ -17,7 +17,8 @@ const therapistSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   confirmPassword: z.string(),
-  full_name: z.string().min(1, "Full name is required"),
+  first_name: z.string().min(1, "First name is required"),
+  last_name: z.string().min(1, "Last name is required"),
   phone_number: z.string().optional(),
   date_of_birth: z.date().optional(),
   gender: z.enum(['male', 'female', 'other', 'prefer_not_to_say']).optional(),
@@ -123,11 +124,12 @@ export function TherapistRegistrationForm({ onSubmit, loading, error, onBack }: 
 
   const onFormSubmit = async (data: z.infer<typeof therapistSchema>) => {
     const formData: TherapistRegisterDTO = {
-      role: 'therapist', // Explicitly set the role
+      role: 'therapist',
       email: data.email,
       password: data.password,
       confirmPassword: data.confirmPassword,
-      full_name: data.full_name,
+      first_name: data.first_name,
+      last_name: data.last_name,
       phone_number: data.phone_number,
       date_of_birth: data.date_of_birth,
       gender: data.gender,
@@ -180,14 +182,26 @@ export function TherapistRegistrationForm({ onSubmit, loading, error, onBack }: 
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="full_name">Full Name *</Label>
+              <Label htmlFor="first_name">First Name *</Label>
               <Input
-                id="full_name"
-                {...register("full_name")}
-                placeholder="Enter your full name"
+                id="first_name"
+                {...register("first_name")}
+                placeholder="Enter your first name"
               />
-              {errors.full_name && (
-                <p className="text-sm text-destructive">{errors.full_name.message}</p>
+              {errors.first_name && (
+                <p className="text-sm text-destructive">{errors.first_name.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="last_name">Last Name *</Label>
+              <Input
+                id="last_name"
+                {...register("last_name")}
+                placeholder="Enter your last name"
+              />
+              {errors.last_name && (
+                <p className="text-sm text-destructive">{errors.last_name.message}</p>
               )}
             </div>
 

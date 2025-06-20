@@ -10,6 +10,8 @@ export interface User {
   id: string;
   auth_uid: string;
   role: UserRole;
+  first_name: string;
+  last_name: string;
   full_name: string;
   email: string;
   phone_number?: string;

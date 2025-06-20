@@ -1,3 +1,4 @@
+
 import { User, UserRole, GenderType, CommunicationPreference, OrganizationType } from './user';
 
 export type { GenderType, CommunicationPreference, OrganizationType } from './user';
@@ -12,7 +13,8 @@ export interface BaseRegisterDTO {
   email: string;
   password: string;
   confirmPassword: string;
-  full_name: string;
+  first_name: string;
+  last_name: string;
   phone_number?: string;
   date_of_birth?: Date;
   gender?: GenderType;

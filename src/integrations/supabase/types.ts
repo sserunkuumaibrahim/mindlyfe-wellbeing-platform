@@ -371,6 +371,7 @@ export type Database = {
           date_of_birth: string | null
           email: string
           failed_login_attempts: number | null
+          first_name: string
           full_name: string
           gender: Database["public"]["Enums"]["gender_type"] | null
           id: string
@@ -378,6 +379,7 @@ export type Database = {
           is_email_verified: boolean | null
           is_phone_verified: boolean | null
           last_login_at: string | null
+          last_name: string | null
           locked_until: string | null
           password_changed_at: string | null
           phone_number: string | null
@@ -393,6 +395,7 @@ export type Database = {
           date_of_birth?: string | null
           email: string
           failed_login_attempts?: number | null
+          first_name: string
           full_name: string
           gender?: Database["public"]["Enums"]["gender_type"] | null
           id?: string
@@ -400,6 +403,7 @@ export type Database = {
           is_email_verified?: boolean | null
           is_phone_verified?: boolean | null
           last_login_at?: string | null
+          last_name?: string | null
           locked_until?: string | null
           password_changed_at?: string | null
           phone_number?: string | null
@@ -415,6 +419,7 @@ export type Database = {
           date_of_birth?: string | null
           email?: string
           failed_login_attempts?: number | null
+          first_name?: string
           full_name?: string
           gender?: Database["public"]["Enums"]["gender_type"] | null
           id?: string
@@ -422,6 +427,7 @@ export type Database = {
           is_email_verified?: boolean | null
           is_phone_verified?: boolean | null
           last_login_at?: string | null
+          last_name?: string | null
           locked_until?: string | null
           password_changed_at?: string | null
           phone_number?: string | null

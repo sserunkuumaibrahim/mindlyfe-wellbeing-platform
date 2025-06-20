@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { toast } from "@/components/ui/use-toast";
 import { User } from '@/types/user';
@@ -28,6 +27,7 @@ interface AuthState {
 const convertProfileToUser = (profile: any): User => {
   return {
     ...profile,
+    full_name: profile.full_name || `${profile.first_name} ${profile.last_name}`,
     date_of_birth: profile.date_of_birth ? new Date(profile.date_of_birth) : undefined,
     last_login_at: profile.last_login_at ? new Date(profile.last_login_at) : undefined,
     password_changed_at: new Date(profile.password_changed_at),
@@ -138,7 +138,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
           toast({
             title: "Login successful",
-            description: `Welcome back, ${profile.full_name}!`,
+            description: `Welcome back, ${profile.first_name}!`,
           });
         } else {
           throw new Error('Profile not found');
@@ -165,7 +165,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       
       // Prepare metadata based on role
       const metadata: Record<string, any> = {
-        full_name: data.full_name,
+        first_name: data.first_name,
+        last_name: data.last_name,
         role: data.role,
         phone_number: data.phone_number,
         date_of_birth: data.date_of_birth?.toISOString(),
