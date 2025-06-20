@@ -210,7 +210,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         metadata.date_of_birth = data.date_of_birth.toISOString().split('T')[0];
       }
       
-      if (data.gender && data.gender !== 'undefined' && data.gender.trim() !== '') {
+      if (data.gender && data.gender.trim() !== '') {
         metadata.gender = data.gender;
       }
       
@@ -256,7 +256,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           metadata.emergency_contact_phone = individualData.emergency_contact_phone.trim();
         }
         
-        if (individualData.preferred_therapist_gender && individualData.preferred_therapist_gender !== 'undefined' && individualData.preferred_therapist_gender.trim() !== '') {
+        if (individualData.preferred_therapist_gender && individualData.preferred_therapist_gender.trim() !== '') {
           metadata.preferred_therapist_gender = individualData.preferred_therapist_gender;
         }
       } else if (data.role === 'therapist') {
