@@ -751,6 +751,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      upload_document: {
+        Args: { file_path: string; file_type: string; profile_type: string }
+        Returns: Json
+      }
     }
     Enums: {
       communication_preference: "email" | "sms" | "both"
