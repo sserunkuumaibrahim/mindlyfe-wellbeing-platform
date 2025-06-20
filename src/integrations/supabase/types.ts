@@ -770,7 +770,7 @@ export type Database = {
     }
     Enums: {
       communication_preference: "email" | "sms" | "both"
-      gender_type: "male" | "female" | "other" | "prefer_not_to_say"
+      gender_type: "male" | "female"
       organization_type:
         | "private_company"
         | "school"
@@ -910,7 +910,7 @@ export const Constants = {
   public: {
     Enums: {
       communication_preference: ["email", "sms", "both"],
-      gender_type: ["male", "female", "other", "prefer_not_to_say"],
+      gender_type: ["male", "female"],
       organization_type: [
         "private_company",
         "school",
