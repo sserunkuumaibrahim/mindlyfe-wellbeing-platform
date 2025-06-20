@@ -25,9 +25,12 @@ export default function Register() {
 
   const handleRegistration = async (data: RegisterDTO) => {
     setEmail(data.email);
-    await register(data);
-    // After successful registration, redirect to verification or login
-    setStep('verification');
+    try {
+      await register(data);
+      setStep('verification');
+    } catch (error) {
+      // Error is handled in the store
+    }
   };
 
   const handleBackToRoleSelection = () => {

@@ -8,22 +8,13 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated, mfaRequired, refreshToken, loading } = useAuthStore();
+  const { isAuthenticated, mfaRequired, checkAuth, loading } = useAuthStore();
   const location = useLocation();
 
   useEffect(() => {
-    const checkAuth = async () => {
-      if (!isAuthenticated && !loading) {
-        try {
-          await refreshToken();
-        } catch (error) {
-          // Token refresh failed, user will be redirected
-        }
-      }
-    };
-
+    // Check authentication on mount
     checkAuth();
-  }, [isAuthenticated, refreshToken, loading]);
+  }, [checkAuth]);
 
   if (loading) {
     return (
