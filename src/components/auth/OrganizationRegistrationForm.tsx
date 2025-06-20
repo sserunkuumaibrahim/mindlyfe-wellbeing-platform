@@ -1,3 +1,4 @@
+
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -14,8 +15,8 @@ const organizationSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   confirmPassword: z.string(),
-  first_name: z.string().min(1, "First name is required"),
-  last_name: z.string().min(1, "Last name is required"),
+  first_name: z.string().min(1, "Representative first name is required"),
+  last_name: z.string().min(1, "Representative last name is required"),
   phone_number: z.string().optional(),
   date_of_birth: z.date().optional(),
   gender: z.enum(['male', 'female']).optional(),
@@ -124,11 +125,11 @@ export function OrganizationRegistrationForm({ onSubmit, loading, error, onBack 
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="first_name">First Name *</Label>
+              <Label htmlFor="first_name">Representative First Name *</Label>
               <Input
                 id="first_name"
                 {...register("first_name")}
-                placeholder="Enter first name"
+                placeholder="Enter representative's first name"
               />
               {errors.first_name && (
                 <p className="text-sm text-destructive">{errors.first_name.message}</p>
@@ -136,11 +137,11 @@ export function OrganizationRegistrationForm({ onSubmit, loading, error, onBack 
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="last_name">Last Name *</Label>
+              <Label htmlFor="last_name">Representative Last Name *</Label>
               <Input
                 id="last_name"
                 {...register("last_name")}
-                placeholder="Enter last name"
+                placeholder="Enter representative's last name"
               />
               {errors.last_name && (
                 <p className="text-sm text-destructive">{errors.last_name.message}</p>
