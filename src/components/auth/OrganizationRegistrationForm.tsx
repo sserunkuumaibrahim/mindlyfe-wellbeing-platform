@@ -1,5 +1,3 @@
-
-
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -147,19 +145,6 @@ export function OrganizationRegistrationForm({ onSubmit, loading, error, onBack 
               {errors.last_name && (
                 <p className="text-sm text-destructive">{errors.last_name.message}</p>
               )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="gender">Gender</Label>
-              <Select onValueChange={(value: 'male' | 'female') => setValue("gender", value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select gender" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="male">Male</SelectItem>
-                  <SelectItem value="female">Female</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
             <div className="space-y-2">
