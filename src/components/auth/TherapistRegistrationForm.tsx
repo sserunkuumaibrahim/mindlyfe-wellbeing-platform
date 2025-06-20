@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -21,7 +20,7 @@ const therapistSchema = z.object({
   last_name: z.string().min(1, "Last name is required"),
   phone_number: z.string().optional(),
   date_of_birth: z.date().optional(),
-  gender: z.enum(['male', 'female', 'other', 'prefer_not_to_say']).optional(),
+  gender: z.enum(['male', 'female']).optional(),
   country: z.string().optional(),
   preferred_language: z.string().optional(),
   national_id_number: z.string().min(1, "National ID is required"),
@@ -262,8 +261,6 @@ export function TherapistRegistrationForm({ onSubmit, loading, error, onBack }: 
                 <SelectContent>
                   <SelectItem value="male">Male</SelectItem>
                   <SelectItem value="female">Female</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                  <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
                 </SelectContent>
               </Select>
             </div>
