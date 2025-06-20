@@ -36,6 +36,19 @@ export default function Register() {
     if (error) clearError();
   };
 
+  const getCardTitle = () => {
+    switch (step) {
+      case 'role-selection':
+        return 'Choose Account Type';
+      case 'registration':
+        return 'Create Account';
+      case 'verification':
+        return 'Verify Email';
+      default:
+        return 'Register';
+    }
+  };
+
   const renderStep = () => {
     switch (step) {
       case 'role-selection':
@@ -100,7 +113,7 @@ export default function Register() {
 
   return (
     <AuthLayout>
-      <AuthCard>
+      <AuthCard title={getCardTitle()}>
         {renderStep()}
         
         {step === 'role-selection' && (

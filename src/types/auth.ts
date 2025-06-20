@@ -1,5 +1,6 @@
-
 import { User, UserRole, GenderType, CommunicationPreference, OrganizationType } from './user';
+
+export { GenderType, CommunicationPreference } from './user';
 
 export interface LoginDTO {
   email: string;

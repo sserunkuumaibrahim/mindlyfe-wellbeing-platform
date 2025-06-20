@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { toast } from "@/components/ui/use-toast";
 import { User } from '@/types/user';
@@ -23,6 +24,19 @@ interface AuthState {
   checkAuth: () => Promise<void>;
 }
 
+// Helper function to convert profile data from Supabase to User type
+const convertProfileToUser = (profile: any): User => {
+  return {
+    ...profile,
+    date_of_birth: profile.date_of_birth ? new Date(profile.date_of_birth) : undefined,
+    last_login_at: profile.last_login_at ? new Date(profile.last_login_at) : undefined,
+    password_changed_at: new Date(profile.password_changed_at),
+    locked_until: profile.locked_until ? new Date(profile.locked_until) : undefined,
+    created_at: new Date(profile.created_at),
+    updated_at: new Date(profile.updated_at),
+  } as User;
+};
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isAuthenticated: false,
@@ -46,7 +60,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
         if (profile && !profileError) {
           set({
-            user: profile as User,
+            user: convertProfileToUser(profile),
             isAuthenticated: true,
             loading: false,
           });
@@ -117,7 +131,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             });
 
           set({
-            user: profile as User,
+            user: convertProfileToUser(profile),
             isAuthenticated: true,
             loading: false,
           });
@@ -285,7 +299,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
         if (profile) {
           set({
-            user: profile as User,
+            user: convertProfileToUser(profile),
             isAuthenticated: true,
             loading: false,
           });
