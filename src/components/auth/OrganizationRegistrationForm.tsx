@@ -19,7 +19,7 @@ const organizationSchema = z.object({
   last_name: z.string().min(1, "Last name is required"),
   phone_number: z.string().optional(),
   date_of_birth: z.date().optional(),
-  gender: z.enum(['male', 'female', 'other', 'prefer_not_to_say']).optional(),
+  gender: z.enum(['male', 'female']).optional(),
   country: z.string().optional(),
   preferred_language: z.string().optional(),
   organization_name: z.string().min(1, "Organization name is required"),
@@ -146,6 +146,19 @@ export function OrganizationRegistrationForm({ onSubmit, loading, error, onBack 
               {errors.last_name && (
                 <p className="text-sm text-destructive">{errors.last_name.message}</p>
               )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="gender">Gender</Label>
+              <Select onValueChange={(value: 'male' | 'female') => setValue("gender", value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="male">Male</SelectItem>
+                  <SelectItem value="female">Female</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">

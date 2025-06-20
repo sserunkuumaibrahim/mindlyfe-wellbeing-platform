@@ -1,8 +1,7 @@
-
 export type UserRole = 'individual' | 'therapist' | 'org_admin' | 'sys_admin' | 'super_admin';
 export type ProfileStatus = 'pending_review' | 'approved' | 'rejected' | 'active' | 'inactive';
 export type CommunicationPreference = 'email' | 'sms' | 'both';
-export type GenderType = 'male' | 'female' | 'other' | 'prefer_not_to_say';
+export type GenderType = 'male' | 'female';
 export type OrganizationType = 'private_company' | 'school' | 'ngo' | 'government' | 'healthcare' | 'other';
 export type TwoFAMethod = 'email' | 'sms' | 'authenticator';
 
