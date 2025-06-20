@@ -13,7 +13,8 @@ import { IndividualRegisterDTO, GenderType, CommunicationPreference } from "@/ty
 import { Eye, EyeOff } from "lucide-react";
 
 const formSchema = z.object({
-  full_name: z.string().min(2, "Full name must be at least 2 characters"),
+  first_name: z.string().min(2, "First name must be at least 2 characters"),
+  last_name: z.string().min(2, "Last name must be at least 2 characters"),
   email: z.string().email("Please enter a valid email address"),
   phone_number: z.string().optional(),
   password: z
@@ -59,7 +60,8 @@ export function IndividualRegistrationForm({ onSubmit, loading, error, onBack }:
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      full_name: "",
+      first_name: "",
+      last_name: "",
       email: "",
       phone_number: "",
       password: "",
@@ -77,7 +79,8 @@ export function IndividualRegistrationForm({ onSubmit, loading, error, onBack }:
     
     const registrationData: IndividualRegisterDTO = {
       role: 'individual',
-      full_name: data.full_name,
+      first_name: data.first_name,
+      last_name: data.last_name,
       email: data.email,
       password: data.password,
       confirmPassword: data.confirmPassword,
@@ -112,19 +115,35 @@ export function IndividualRegistrationForm({ onSubmit, loading, error, onBack }:
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Personal Information</h3>
             
-            <FormField
-              control={form.control}
-              name="full_name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Full Name *</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter your full name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="first_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>First Name *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter your first name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="last_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Last Name *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter your last name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
