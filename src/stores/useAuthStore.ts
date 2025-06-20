@@ -1,5 +1,6 @@
+
 import { create } from 'zustand';
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { User, UserRole, IndividualProfile, TherapistProfile, OrganizationProfile } from '../types/user';
 import { LoginDTO, BaseRegisterDTO, IndividualRegisterDTO, TherapistRegisterDTO, OrganizationRegisterDTO } from '../types/auth';
 import { supabase } from '../integrations/supabase/client';
@@ -191,82 +192,174 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       set({ loading: true, error: null });
       
-      // Prepare metadata based on role
-      const metadata: Record<string, unknown> = {
+      // Prepare clean metadata - only include valid, non-empty values
+      const metadata: Record<string, string | number | boolean> = {
         first_name: data.first_name,
         last_name: data.last_name,
         role: data.role,
-        phone: data.phone_number,
-        date_of_birth: data.date_of_birth?.toISOString().split('T')[0],
-        gender: data.gender,
-        country: data.country,
-        preferred_language: data.preferred_language,
       };
 
-      console.log('Registration metadata:', metadata);
+      // Add optional fields only if they have valid values
+      if (data.phone_number?.trim()) {
+        metadata.phone_number = data.phone_number.trim();
+      }
+      
+      if (data.date_of_birth) {
+        metadata.date_of_birth = data.date_of_birth.toISOString().split('T')[0];
+      }
+      
+      if (data.gender && data.gender !== 'undefined') {
+        metadata.gender = data.gender;
+      }
+      
+      if (data.country?.trim()) {
+        metadata.country = data.country.trim();
+      }
+      
+      if (data.preferred_language?.trim()) {
+        metadata.preferred_language = data.preferred_language.trim();
+      }
+
+      console.log('Clean registration metadata:', metadata);
 
       // Add role-specific data
       if (data.role === 'individual') {
         const individualData = data as IndividualRegisterDTO;
-        Object.assign(metadata, {
-          mental_health_history: individualData.mental_health_history,
-          therapy_goals: individualData.therapy_goals?.join(','),
-          communication_pref: individualData.communication_pref,
-          opt_in_newsletter: individualData.opt_in_newsletter,
-          opt_in_sms: individualData.opt_in_sms,
-          emergency_contact_name: individualData.emergency_contact_name,
-          emergency_contact_phone: individualData.emergency_contact_phone,
-          preferred_therapist_gender: individualData.preferred_therapist_gender,
-        });
+        
+        if (individualData.mental_health_history?.trim()) {
+          metadata.mental_health_history = individualData.mental_health_history.trim();
+        }
+        
+        if (individualData.therapy_goals?.length) {
+          metadata.therapy_goals = individualData.therapy_goals.join(',');
+        }
+        
+        if (individualData.communication_pref) {
+          metadata.communication_pref = individualData.communication_pref;
+        }
+        
+        if (typeof individualData.opt_in_newsletter === 'boolean') {
+          metadata.opt_in_newsletter = individualData.opt_in_newsletter;
+        }
+        
+        if (typeof individualData.opt_in_sms === 'boolean') {
+          metadata.opt_in_sms = individualData.opt_in_sms;
+        }
+        
+        if (individualData.emergency_contact_name?.trim()) {
+          metadata.emergency_contact_name = individualData.emergency_contact_name.trim();
+        }
+        
+        if (individualData.emergency_contact_phone?.trim()) {
+          metadata.emergency_contact_phone = individualData.emergency_contact_phone.trim();
+        }
+        
+        if (individualData.preferred_therapist_gender && individualData.preferred_therapist_gender !== 'undefined') {
+          metadata.preferred_therapist_gender = individualData.preferred_therapist_gender;
+        }
       } else if (data.role === 'therapist') {
         const therapistData = data as TherapistRegisterDTO;
-        Object.assign(metadata, {
-          national_id_number: therapistData.national_id_number,
-          license_body: therapistData.license_body,
-          license_number: therapistData.license_number,
-          license_expiry_date: therapistData.license_expiry_date?.toISOString().split('T')[0],
-          insurance_provider: therapistData.insurance_provider,
-          insurance_policy_number: therapistData.insurance_policy_number,
-          insurance_expiry_date: therapistData.insurance_expiry_date?.toISOString().split('T')[0],
-          years_experience: therapistData.years_experience ? Number(therapistData.years_experience) : null,
-          specializations: therapistData.specializations?.join(','),
-          languages_spoken: therapistData.languages_spoken?.join(','),
-          education_background: therapistData.education_background,
-          certifications: therapistData.certifications?.join(','),
-
-          bio: therapistData.bio,
-        });
+        
+        // Required fields for therapists
+        metadata.national_id_number = therapistData.national_id_number;
+        metadata.license_body = therapistData.license_body;
+        metadata.license_number = therapistData.license_number;
+        metadata.insurance_provider = therapistData.insurance_provider;
+        metadata.insurance_policy_number = therapistData.insurance_policy_number;
+        
+        if (therapistData.license_expiry_date) {
+          metadata.license_expiry_date = therapistData.license_expiry_date.toISOString().split('T')[0];
+        }
+        
+        if (therapistData.insurance_expiry_date) {
+          metadata.insurance_expiry_date = therapistData.insurance_expiry_date.toISOString().split('T')[0];
+        }
+        
+        if (typeof therapistData.years_experience === 'number') {
+          metadata.years_experience = therapistData.years_experience;
+        }
+        
+        if (therapistData.specializations?.length) {
+          metadata.specializations = therapistData.specializations.join(',');
+        }
+        
+        if (therapistData.languages_spoken?.length) {
+          metadata.languages_spoken = therapistData.languages_spoken.join(',');
+        }
+        
+        if (therapistData.education_background?.trim()) {
+          metadata.education_background = therapistData.education_background.trim();
+        }
+        
+        if (therapistData.certifications?.length) {
+          metadata.certifications = therapistData.certifications.join(',');
+        }
+        
+        if (therapistData.bio?.trim()) {
+          metadata.bio = therapistData.bio.trim();
+        }
       } else if (data.role === 'org_admin') {
         const orgData = data as OrganizationRegisterDTO;
-        Object.assign(metadata, {
-          organization_name: orgData.organization_name,
-          organization_type: orgData.organization_type,
-          registration_number: orgData.registration_number,
-          date_of_establishment: orgData.date_of_establishment?.toISOString().split('T')[0],
-          tax_id_number: orgData.tax_id_number,
-          num_employees: orgData.num_employees ? Number(orgData.num_employees) : null,
-          official_website: orgData.official_website,
-          address: orgData.address,
-          city: orgData.city,
-          state: orgData.state_province,
-          postal_code: orgData.postal_code,
-          representative_name: `${data.first_name} ${data.last_name}`,
-          representative_job_title: orgData.representative_job_title,
-          representative_national_id: orgData.representative_national_id,
-          billing_contact_email: orgData.billing_contact_email,
-          billing_contact_phone: orgData.billing_contact_phone,
-        });
+        
+        // Required fields for organizations
+        metadata.organization_name = orgData.organization_name;
+        metadata.registration_number = orgData.registration_number;
+        metadata.tax_id_number = orgData.tax_id_number;
+        
+        if (orgData.organization_type) {
+          metadata.organization_type = orgData.organization_type;
+        }
+        
+        if (orgData.date_of_establishment) {
+          metadata.date_of_establishment = orgData.date_of_establishment.toISOString().split('T')[0];
+        }
+        
+        if (typeof orgData.num_employees === 'number') {
+          metadata.num_employees = orgData.num_employees;
+        }
+        
+        if (orgData.official_website?.trim()) {
+          metadata.official_website = orgData.official_website.trim();
+        }
+        
+        if (orgData.address?.trim()) {
+          metadata.address = orgData.address.trim();
+        }
+        
+        if (orgData.city?.trim()) {
+          metadata.city = orgData.city.trim();
+        }
+        
+        if (orgData.state_province?.trim()) {
+          metadata.state_province = orgData.state_province.trim();
+        }
+        
+        if (orgData.postal_code?.trim()) {
+          metadata.postal_code = orgData.postal_code.trim();
+        }
+        
+        if (orgData.representative_job_title?.trim()) {
+          metadata.representative_job_title = orgData.representative_job_title.trim();
+        }
+        
+        if (orgData.representative_national_id?.trim()) {
+          metadata.representative_national_id = orgData.representative_national_id.trim();
+        }
+        
+        if (orgData.billing_contact_email?.trim()) {
+          metadata.billing_contact_email = orgData.billing_contact_email.trim();
+        }
+        
+        if (orgData.billing_contact_phone?.trim()) {
+          metadata.billing_contact_phone = orgData.billing_contact_phone.trim();
+        }
       }
 
-      console.log('Attempting signup with:', {
-        email: data.email,
-        metadata: metadata
-      });
+      console.log('Attempting signup with clean metadata:', metadata);
 
       const { data: authData, error } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
-        phone: data.phone_number,
         options: {
           emailRedirectTo: `${window.location.origin}/`,
           data: metadata,
@@ -275,15 +368,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       if (error) {
         console.error('Supabase signup error:', error);
-        console.error('Error details:', {
-          message: error.message,
-          status: error.status,
-          details: error
-        });
         
         // Provide more specific error messages
         let errorMessage = error.message;
-        if (error.message.includes('duplicate key')) {
+        if (error.message.includes('User already registered')) {
+          errorMessage = 'This email address is already registered. Please try logging in instead.';
+        } else if (error.message.includes('duplicate key')) {
           if (error.message.includes('license_number')) {
             errorMessage = 'This license number is already registered. Please check your license number.';
           } else if (error.message.includes('email')) {
@@ -291,10 +381,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           } else {
             errorMessage = 'Some of the information provided is already in use. Please check your details.';
           }
-        } else if (error.message.includes('not-null')) {
-          errorMessage = 'Please fill in all required fields.';
-        } else if (error.message.includes('check constraint')) {
-          errorMessage = 'Please check that all values are valid (e.g., years of experience should be a positive number).';
+        } else if (error.message.includes('Database error')) {
+          errorMessage = 'There was an issue with your registration. Please check all required fields are filled correctly and try again.';
         }
         
         throw new Error(errorMessage);
@@ -313,49 +401,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       let errorMessage = 'Registration failed. Please try again.';
       
       if (error instanceof Error) {
-        // Handle specific database constraint errors
-        if (error.message.includes('duplicate key value violates unique constraint')) {
-          if (error.message.includes('license_number')) {
-            errorMessage = 'This license number is already registered. Please check your license number or contact support if you believe this is an error.';
-          } else if (error.message.includes('email')) {
-            errorMessage = 'This email address is already registered. Please use a different email or try logging in.';
-          } else if (error.message.includes('registration_number')) {
-            errorMessage = 'This organization registration number is already in use. Please verify your registration number.';
-          } else {
-            errorMessage = 'Some of the information provided is already in use. Please check your details.';
-          }
-        } else if (error.message.includes('violates not-null constraint') || error.message.includes('is required')) {
-          // Extract field name from error message if possible
-          const fieldMatch = error.message.match(/(\w+)\s+is required/);
-          if (fieldMatch) {
-            const fieldName = fieldMatch[1].replace('_', ' ');
-            errorMessage = `${fieldName.charAt(0).toUpperCase() + fieldName.slice(1)} is required. Please fill in all required fields.`;
-          } else {
-            errorMessage = 'Please fill in all required fields. Some mandatory information is missing.';
-          }
-        } else if (error.message.includes('check constraint')) {
-          if (error.message.includes('years_experience')) {
-            errorMessage = 'Years of experience must be a valid positive number.';
-          } else if (error.message.includes('num_employees')) {
-            errorMessage = 'Number of employees must be a positive number.';
-          } else if (error.message.includes('expiry_date')) {
-            errorMessage = 'Please ensure all expiry dates are valid and in the future.';
-          } else {
-            errorMessage = 'Please check that all values are valid and meet the required criteria.';
-          }
-        } else if (error.message.includes('invalid input syntax')) {
-          if (error.message.includes('date')) {
-            errorMessage = 'Please enter valid dates in the correct format.';
-          } else if (error.message.includes('integer')) {
-            errorMessage = 'Please enter valid numbers for numeric fields.';
-          } else {
-            errorMessage = 'Please check the format of your input data.';
-          }
-        } else if (error.message.includes('value too long')) {
-          errorMessage = 'Some of your input is too long. Please shorten your text and try again.';
-        } else {
-          errorMessage = error.message;
-        }
+        errorMessage = error.message;
       }
       
       set({
@@ -406,105 +452,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({
         loading: false,
         error: error instanceof Error ? error.message : 'Logout failed',
-      });
-    }
-  },
-  
-  refreshToken: async () => {
-    try {
-      set({ loading: true });
-      
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('auth_uid', session.user.id)
-          .single();
-
-        if (profile) {
-          set({
-            user: convertProfileToUser(profile),
-            isAuthenticated: true,
-            loading: false,
-          });
-        }
-      } else {
-        set({
-          user: null,
-          isAuthenticated: false,
-          loading: false,
-        });
-      }
-    } catch (error) {
-      set({
-        user: null,
-        isAuthenticated: false,
-        loading: false,
-      });
-    }
-  },
-  
-  verifyMFA: async (code) => {
-    set({ loading: true, error: null });
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    set({
-      mfaRequired: false,
-      loading: false,
-    });
-    toast({
-      title: "Verification successful (mock)",
-      description: "MFA verification (mock).",
-    });
-  },
-  
-  forgotPassword: async (email) => {
-    try {
-      set({ loading: true, error: null });
-      
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      set({ loading: false });
-      toast({
-        title: "Password reset email sent",
-        description: "Please check your email for password reset instructions.",
-      });
-    } catch (error: unknown) {
-      set({
-        error: error instanceof Error ? error.message : 'Failed to send reset email',
-        loading: false,
-      });
-    }
-  },
-  
-  resetPassword: async (token: string, newPassword: string) => {
-    try {
-      set({ loading: true, error: null });
-      
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword,
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      set({ loading: false });
-      toast({
-        title: "Password reset successful",
-        description: "Your password has been updated successfully.",
-      });
-    } catch (error: unknown) {
-      set({
-        error: error instanceof Error ? error.message : 'Password reset failed',
-        loading: false,
       });
     }
   },
@@ -583,6 +530,31 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error: unknown) {
       set({
         error: error instanceof Error ? error.message : 'Password reset request failed',
+        loading: false,
+      });
+    }
+  },
+
+  resetPassword: async (token: string, newPassword: string) => {
+    try {
+      set({ loading: true, error: null });
+      
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      set({ loading: false });
+      toast({
+        title: "Password reset successful",
+        description: "Your password has been updated successfully.",
+      });
+    } catch (error: unknown) {
+      set({
+        error: error instanceof Error ? error.message : 'Password reset failed',
         loading: false,
       });
     }
