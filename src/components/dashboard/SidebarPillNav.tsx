@@ -1,14 +1,12 @@
 
-import { LayoutDashboard, Calendar, MessageSquare, Book, Settings, Heart } from "lucide-react";
+import { LayoutDashboard, User, Settings } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import clsx from "clsx";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-  { icon: Calendar, label: "Schedule", path: "/schedule" },
-  { icon: MessageSquare, label: "Chat", path: "/chat" },
-  { icon: Book, label: "Resources", path: "#" },
-  { icon: Heart, label: "Wellness", path: "#" }
+  { icon: User, label: "Profile", path: "/profile" },
+  { icon: Settings, label: "Settings", path: "/settings" }
 ];
 
 export default function SidebarPillNav() {
@@ -18,7 +16,7 @@ export default function SidebarPillNav() {
     <aside className="fixed z-50 top-0 left-0 h-screen flex flex-col bg-transparent pt-10 pl-5 select-none">
       <div className="flex flex-col items-center gap-5">
         <div className="rounded-full bg-white/80 w-[50px] h-[50px] shadow-lg flex items-center justify-center mb-2">
-          <img src="https://cdn-icons-png.flaticon.com/512/4211/4211819.png" className="w-8 h-8" draggable={false} alt="App" />
+          <img src="/lovable-uploads/b2301cde-7b47-44db-9383-36476ebb83c9.png" className="w-8 h-8" draggable={false} alt="App" />
         </div>
         {navItems.map((item, idx) => {
           const active = location.pathname === item.path;
@@ -31,7 +29,7 @@ export default function SidebarPillNav() {
               )}
               style={{ fontSize: 0 }}
               tabIndex={0}
-              onClick={() => item.path !== "#" && navigate(item.path)}
+              onClick={() => navigate(item.path)}
               aria-label={item.label}
               title={item.label}
             >
