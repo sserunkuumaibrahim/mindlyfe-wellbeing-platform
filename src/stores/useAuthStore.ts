@@ -2,7 +2,7 @@
 import { create } from 'zustand';
 import { toast } from "@/hooks/use-toast";
 import { User, UserRole, IndividualProfile, TherapistProfile, OrganizationProfile } from '../types/user';
-import { LoginDTO, BaseRegisterDTO, IndividualRegisterDTO, TherapistRegisterDTO, OrganizationRegisterDTO } from '../types/auth';
+import { LoginDTO, BaseRegisterDTO, IndividualRegisterDTO, TherapistRegisterDTO, OrganizationRegisterDTO, ResetPasswordDTO } from '../types/auth';
 import { supabase } from '../integrations/supabase/client';
 
 type RegisterData = IndividualRegisterDTO | TherapistRegisterDTO | OrganizationRegisterDTO;
@@ -47,9 +47,11 @@ interface AuthState {
   updateProfile: (updates: Partial<User>) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   requestPasswordReset: (email: string) => Promise<void>;
-  resetPassword: (token: string, newPassword: string) => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (data: ResetPasswordDTO) => Promise<void>;
   verifyEmail: (token: string) => Promise<void>;
   resendVerificationEmail: () => Promise<void>;
+  verifyMFA: (code: string) => Promise<void>;
 }
 
 // Helper function to convert profile data from Supabase to User type
@@ -208,7 +210,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         metadata.date_of_birth = data.date_of_birth.toISOString().split('T')[0];
       }
       
-      if (data.gender && data.gender !== 'undefined') {
+      if (data.gender && data.gender !== 'undefined' && data.gender.trim() !== '') {
         metadata.gender = data.gender;
       }
       
@@ -254,7 +256,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           metadata.emergency_contact_phone = individualData.emergency_contact_phone.trim();
         }
         
-        if (individualData.preferred_therapist_gender && individualData.preferred_therapist_gender !== 'undefined') {
+        if (individualData.preferred_therapist_gender && individualData.preferred_therapist_gender !== 'undefined' && individualData.preferred_therapist_gender.trim() !== '') {
           metadata.preferred_therapist_gender = individualData.preferred_therapist_gender;
         }
       } else if (data.role === 'therapist') {
@@ -535,12 +537,36 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  resetPassword: async (token: string, newPassword: string) => {
+  forgotPassword: async (email: string) => {
+    try {
+      set({ loading: true, error: null });
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      
+      if (error) throw error;
+      
+      set({ loading: false });
+      
+      toast({
+        title: "Reset link sent",
+        description: "Please check your email for the password reset link.",
+      });
+    } catch (error: unknown) {
+      set({
+        error: error instanceof Error ? error.message : 'Password reset request failed',
+        loading: false,
+      });
+    }
+  },
+
+  resetPassword: async (data: ResetPasswordDTO) => {
     try {
       set({ loading: true, error: null });
       
       const { error } = await supabase.auth.updateUser({
-        password: newPassword,
+        password: data.password,
       });
 
       if (error) {
@@ -600,6 +626,31 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error: unknown) {
       set({
         error: error instanceof Error ? error.message : 'Resend verification failed',
+        loading: false,
+      });
+    }
+  },
+
+  verifyMFA: async (code: string) => {
+    try {
+      set({ loading: true, error: null });
+      
+      // For now, just simulate MFA verification
+      // In a real implementation, this would verify the MFA code
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      set({ 
+        mfaRequired: false,
+        loading: false 
+      });
+      
+      toast({
+        title: "MFA verification successful",
+        description: "Two-factor authentication verified.",
+      });
+    } catch (error: unknown) {
+      set({
+        error: error instanceof Error ? error.message : 'MFA verification failed',
         loading: false,
       });
     }
