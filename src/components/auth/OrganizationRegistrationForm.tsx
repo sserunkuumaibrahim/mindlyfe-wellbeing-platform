@@ -148,6 +148,19 @@ export function OrganizationRegistrationForm({ onSubmit, loading, error, onBack 
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="gender">Gender</Label>
+              <Select onValueChange={(value: 'male' | 'female') => setValue("gender", value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="male">Male</SelectItem>
+                  <SelectItem value="female">Female</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="representative_job_title">Job Title *</Label>
               <Input
                 id="representative_job_title"
