@@ -253,6 +253,7 @@ export type Database = {
           tax_certificate_url: string | null
           tax_id_number: string
           updated_at: string | null
+          uploaded_documents: Json | null
         }
         Insert: {
           address?: string | null
@@ -283,6 +284,7 @@ export type Database = {
           tax_certificate_url?: string | null
           tax_id_number: string
           updated_at?: string | null
+          uploaded_documents?: Json | null
         }
         Update: {
           address?: string | null
@@ -313,6 +315,7 @@ export type Database = {
           tax_certificate_url?: string | null
           tax_id_number?: string
           updated_at?: string | null
+          uploaded_documents?: Json | null
         }
         Relationships: [
           {
@@ -456,6 +459,7 @@ export type Database = {
           specializations: string[]
           status: Database["public"]["Enums"]["profile_status"] | null
           updated_at: string | null
+          uploaded_documents: Json | null
           years_experience: number
         }
         Insert: {
@@ -484,6 +488,7 @@ export type Database = {
           specializations: string[]
           status?: Database["public"]["Enums"]["profile_status"] | null
           updated_at?: string | null
+          uploaded_documents?: Json | null
           years_experience: number
         }
         Update: {
@@ -512,6 +517,7 @@ export type Database = {
           specializations?: string[]
           status?: Database["public"]["Enums"]["profile_status"] | null
           updated_at?: string | null
+          uploaded_documents?: Json | null
           years_experience?: number
         }
         Relationships: [
