@@ -1,11 +1,13 @@
 
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { RoleSelection } from "@/components/auth/RoleSelection";
 import { IndividualRegistrationForm } from "@/components/auth/IndividualRegistrationForm";
+import { TherapistRegistrationForm } from "@/components/auth/TherapistRegistrationForm";
+import { OrganizationRegistrationForm } from "@/components/auth/OrganizationRegistrationForm";
 import { UserRole } from "@/types/user";
 import { RegisterDTO } from "@/types/auth";
 
@@ -16,7 +18,6 @@ export default function Register() {
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [email, setEmail] = useState<string>('');
   const { register, loading, error, clearError } = useAuthStore();
-  const navigate = useNavigate();
 
   const handleRoleSelect = (role: UserRole) => {
     setSelectedRole(role);
@@ -52,37 +53,33 @@ export default function Register() {
     }
   };
 
+  const renderRegistrationForm = () => {
+    const commonProps = {
+      onSubmit: handleRegistration,
+      loading,
+      error,
+      onBack: handleBackToRoleSelection,
+    };
+
+    switch (selectedRole) {
+      case 'individual':
+        return <IndividualRegistrationForm {...commonProps} />;
+      case 'therapist':
+        return <TherapistRegistrationForm {...commonProps} />;
+      case 'org_admin':
+        return <OrganizationRegistrationForm {...commonProps} />;
+      default:
+        return null;
+    }
+  };
+
   const renderStep = () => {
     switch (step) {
       case 'role-selection':
         return <RoleSelection onRoleSelect={handleRoleSelect} />;
       
       case 'registration':
-        if (selectedRole === 'individual') {
-          return (
-            <IndividualRegistrationForm
-              onSubmit={handleRegistration}
-              loading={loading}
-              error={error}
-              onBack={handleBackToRoleSelection}
-            />
-          );
-        }
-        // TODO: Add TherapistRegistrationForm and OrganizationRegistrationForm
-        return (
-          <div className="text-center space-y-4">
-            <h2 className="text-2xl font-bold">Coming Soon</h2>
-            <p className="text-muted-foreground">
-              {selectedRole === 'therapist' ? 'Therapist' : 'Organization'} registration is coming soon.
-            </p>
-            <button
-              onClick={handleBackToRoleSelection}
-              className="text-primary hover:underline"
-            >
-              Back to role selection
-            </button>
-          </div>
-        );
+        return renderRegistrationForm();
       
       case 'verification':
         return (
