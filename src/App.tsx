@@ -5,6 +5,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { useEffect } from "react";
 
 // Auth Pages
 import Login from "./pages/auth/Login";
@@ -17,10 +19,7 @@ import MfaSetup from "./pages/auth/MfaSetup";
 // App Pages
 import Dashboard from "./pages/Dashboard";
 
-import { useAuthStore } from "@/stores/useAuthStore";
-
 // Custom Redirect component for "/" route
-import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 function RootRedirect() {
@@ -47,42 +46,51 @@ function RootRedirect() {
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          {/* Root route always redirects depending on auth */}
-          <Route path="/" element={<RootRedirect />} />
-          
-          {/* Auth routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          
-          {/* MFA routes */}
-          <Route path="/mfa/verify" element={<MfaVerify />} />
-          <Route
-            path="/mfa/setup"
-            element={
-              <ProtectedRoute>
-                <MfaSetup />
-              </ProtectedRoute>
-            }
-          />
+const App = () => {
+  const { checkAuth } = useAuthStore();
 
-          {/* Main dashboard */}
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+  useEffect(() => {
+    // Check authentication status on app load
+    checkAuth();
+  }, [checkAuth]);
 
-          {/* Catch-all Route - redirect to dashboard or login */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            {/* Root route always redirects depending on auth */}
+            <Route path="/" element={<RootRedirect />} />
+            
+            {/* Auth routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            
+            {/* MFA routes */}
+            <Route path="/mfa/verify" element={<MfaVerify />} />
+            <Route
+              path="/mfa/setup"
+              element={
+                <ProtectedRoute>
+                  <MfaSetup />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Main dashboard */}
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+
+            {/* Catch-all Route - redirect to dashboard or login */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

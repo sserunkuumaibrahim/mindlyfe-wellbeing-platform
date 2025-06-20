@@ -1,227 +1,116 @@
+
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Eye, EyeOff, UserPlus } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { AuthCard } from "@/components/auth/AuthCard";
+import { RoleSelection } from "@/components/auth/RoleSelection";
+import { IndividualRegistrationForm } from "@/components/auth/IndividualRegistrationForm";
+import { UserRole } from "@/types/user";
 import { RegisterDTO } from "@/types/auth";
 
-const formSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  email: z.string().email("Please enter a valid email address"),
-  password: z
-    .string()
-    .min(8, "Password must be at least 8 characters")
-    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-    .regex(/[0-9]/, "Password must contain at least one number")
-    .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
-
-type FormData = z.infer<typeof formSchema>;
+type RegistrationStep = 'role-selection' | 'registration' | 'verification';
 
 export default function Register() {
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [step, setStep] = useState<RegistrationStep>('role-selection');
+  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
+  const [email, setEmail] = useState<string>('');
   const { register, loading, error, clearError } = useAuthStore();
   const navigate = useNavigate();
 
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      firstName: "",
-      lastName: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-    },
-  });
-
-  const onSubmit = async (data: FormData) => {
-    // Create a RegisterDTO object with required properties
-    const registerData: RegisterDTO = {
-      firstName: data.firstName,
-      lastName: data.lastName,
-      email: data.email,
-      password: data.password,
-      confirmPassword: data.confirmPassword,
-    };
-    
-    await register(registerData);
-    navigate("/dashboard");
+  const handleRoleSelect = (role: UserRole) => {
+    setSelectedRole(role);
+    setStep('registration');
   };
 
-  // Clear error when form fields change
-  const handleFormChange = () => {
+  const handleRegistration = async (data: RegisterDTO) => {
+    setEmail(data.email);
+    await register(data);
+    // After successful registration, redirect to verification or login
+    setStep('verification');
+  };
+
+  const handleBackToRoleSelection = () => {
+    setStep('role-selection');
+    setSelectedRole(null);
     if (error) clearError();
+  };
+
+  const renderStep = () => {
+    switch (step) {
+      case 'role-selection':
+        return <RoleSelection onRoleSelect={handleRoleSelect} />;
+      
+      case 'registration':
+        if (selectedRole === 'individual') {
+          return (
+            <IndividualRegistrationForm
+              onSubmit={handleRegistration}
+              loading={loading}
+              error={error}
+              onBack={handleBackToRoleSelection}
+            />
+          );
+        }
+        // TODO: Add TherapistRegistrationForm and OrganizationRegistrationForm
+        return (
+          <div className="text-center space-y-4">
+            <h2 className="text-2xl font-bold">Coming Soon</h2>
+            <p className="text-muted-foreground">
+              {selectedRole === 'therapist' ? 'Therapist' : 'Organization'} registration is coming soon.
+            </p>
+            <button
+              onClick={handleBackToRoleSelection}
+              className="text-primary hover:underline"
+            >
+              Back to role selection
+            </button>
+          </div>
+        );
+      
+      case 'verification':
+        return (
+          <div className="text-center space-y-4">
+            <h2 className="text-2xl font-bold">Check Your Email</h2>
+            <p className="text-muted-foreground">
+              We've sent a verification email to <strong>{email}</strong>.
+              Please check your email and click the verification link to activate your account.
+            </p>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Didn't receive the email? Check your spam folder or
+              </p>
+              <button className="text-primary hover:underline text-sm">
+                Resend verification email
+              </button>
+            </div>
+            <Link
+              to="/login"
+              className="inline-block text-primary hover:underline mt-4"
+            >
+              Back to login
+            </Link>
+          </div>
+        );
+      
+      default:
+        return null;
+    }
   };
 
   return (
     <AuthLayout>
-      <AuthCard 
-        title="Create Account" 
-        description="Start your wellness journey – just a few steps away."
-      >
-        <div className="flex justify-center gap-4 mb-4">
-          <button
-            type="button"
-            className="rounded-full bg-white border shadow-sm p-2 w-10 h-10 flex items-center justify-center hover:shadow transition duration-150"
-            aria-label="Sign up with Google"
-          >
-            <img src="https://unpkg.com/simple-icons@v11/icons/google.svg" alt="Google" className="w-5 h-5" />
-          </button>
-          <button
-            type="button"
-            className="rounded-full bg-white border shadow-sm p-2 w-10 h-10 flex items-center justify-center hover:shadow transition duration-150"
-            aria-label="Sign up with Facebook"
-          >
-            <img src="https://unpkg.com/simple-icons@v11/icons/facebook.svg" alt="Facebook" className="w-5 h-5" />
-          </button>
-        </div>
-        <div className="text-center text-muted-foreground text-xs mb-2 -mt-2">Or sign up with email</div>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} onChange={handleFormChange} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="firstName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>First Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="John" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="lastName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Last Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Doe" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input placeholder="name@example.com" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Password</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Input
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Create a password"
-                        {...field}
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </Button>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="confirmPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Confirm Password</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Input
-                        type={showConfirmPassword ? "text" : "password"}
-                        placeholder="Confirm your password"
-                        {...field}
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      >
-                        {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </Button>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {error && (
-              <div className="bg-destructive/15 text-destructive text-sm p-3 rounded-md">
-                {error}
-              </div>
-            )}
-
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
-                  Creating account...
-                </span>
-              ) : (
-                <span className="flex items-center gap-2">
-                  <UserPlus className="h-4 w-4" /> Create Account
-                </span>
-              )}
-            </Button>
-
-            <div className="text-center text-sm">
-              Already have an account?{" "}
-              <Link to="/login" className="font-medium text-primary hover:underline">
-                Sign in
-              </Link>
-            </div>
-          </form>
-        </Form>
+      <AuthCard>
+        {renderStep()}
+        
+        {step === 'role-selection' && (
+          <div className="text-center text-sm mt-6">
+            Already have an account?{" "}
+            <Link to="/login" className="font-medium text-primary hover:underline">
+              Sign in
+            </Link>
+          </div>
+        )}
       </AuthCard>
     </AuthLayout>
   );
