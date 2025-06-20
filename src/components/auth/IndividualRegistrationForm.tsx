@@ -26,7 +26,7 @@ const formSchema = z.object({
     .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
   confirmPassword: z.string(),
   date_of_birth: z.string().optional(),
-  gender: z.enum(['male', 'female', 'other', 'prefer_not_to_say']).optional(),
+  gender: z.enum(['male', 'female']).optional(),
   country: z.string().optional(),
   preferred_language: z.string().optional(),
   mental_health_history: z.string().optional(),
@@ -36,7 +36,7 @@ const formSchema = z.object({
   opt_in_sms: z.boolean().optional(),
   emergency_contact_name: z.string().optional(),
   emergency_contact_phone: z.string().optional(),
-  preferred_therapist_gender: z.enum(['male', 'female', 'other', 'prefer_not_to_say']).optional(),
+  preferred_therapist_gender: z.enum(['male', 'female']).optional(),
   terms_accepted: z.boolean().refine(val => val === true, "You must accept the terms and conditions"),
   privacy_accepted: z.boolean().refine(val => val === true, "You must accept the privacy policy"),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -66,9 +66,18 @@ export function IndividualRegistrationForm({ onSubmit, loading, error, onBack }:
       phone_number: "",
       password: "",
       confirmPassword: "",
+      date_of_birth: "",
+      gender: undefined,
+      country: "",
+      preferred_language: "",
+      mental_health_history: "",
+      therapy_goals: "",
       communication_pref: "email",
       opt_in_newsletter: false,
       opt_in_sms: false,
+      emergency_contact_name: "",
+      emergency_contact_phone: "",
+      preferred_therapist_gender: undefined,
       terms_accepted: false,
       privacy_accepted: false,
     },
@@ -194,7 +203,7 @@ export function IndividualRegistrationForm({ onSubmit, loading, error, onBack }:
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Gender</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select gender" />
@@ -203,8 +212,6 @@ export function IndividualRegistrationForm({ onSubmit, loading, error, onBack }:
                       <SelectContent>
                         <SelectItem value="male">Male</SelectItem>
                         <SelectItem value="female">Female</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                        <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -357,7 +364,7 @@ export function IndividualRegistrationForm({ onSubmit, loading, error, onBack }:
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Preferred Therapist Gender</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select preference" />
@@ -366,8 +373,6 @@ export function IndividualRegistrationForm({ onSubmit, loading, error, onBack }:
                     <SelectContent>
                       <SelectItem value="male">Male</SelectItem>
                       <SelectItem value="female">Female</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                      <SelectItem value="prefer_not_to_say">No preference</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -421,7 +426,7 @@ export function IndividualRegistrationForm({ onSubmit, loading, error, onBack }:
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Preferred Contact Method</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select contact method" />

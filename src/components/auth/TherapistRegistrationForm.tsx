@@ -14,29 +14,48 @@ import { ArrowLeft, Plus, X } from "lucide-react";
 const therapistSchema = z.object({
   role: z.literal('therapist'),
   email: z.string().email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  password: z.string().min(8, "Password must be at least 8 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number")
+    .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
   confirmPassword: z.string(),
-  first_name: z.string().min(1, "First name is required"),
-  last_name: z.string().min(1, "Last name is required"),
+  first_name: z.string().min(1, "First name is required").max(50, "First name must be less than 50 characters"),
+  last_name: z.string().min(1, "Last name is required").max(50, "Last name must be less than 50 characters"),
   phone_number: z.string().optional(),
   date_of_birth: z.date().optional(),
   gender: z.enum(['male', 'female']).optional(),
   country: z.string().optional(),
   preferred_language: z.string().optional(),
-  national_id_number: z.string().min(1, "National ID is required"),
-  license_body: z.string().min(1, "License body is required"),
-  license_number: z.string().min(1, "License number is required"),
-  license_expiry_date: z.date(),
-  insurance_provider: z.string().min(1, "Insurance provider is required"),
-  insurance_policy_number: z.string().min(1, "Insurance policy number is required"),
-  insurance_expiry_date: z.date(),
-  years_experience: z.number().min(0, "Years of experience must be 0 or more"),
-  specializations: z.array(z.string()).min(1, "At least one specialization is required"),
-  languages_spoken: z.array(z.string()).min(1, "At least one language is required"),
-  education_background: z.string().optional(),
-  certifications: z.array(z.string()).optional(),
-  hourly_rate: z.number().min(0).optional(),
-  bio: z.string().optional(),
+  national_id_number: z.string().min(1, "National ID is required").max(50, "National ID must be less than 50 characters"),
+  license_body: z.string().min(1, "License body is required").max(100, "License body must be less than 100 characters"),
+  license_number: z.string().min(1, "License number is required").max(50, "License number must be less than 50 characters"),
+  license_expiry_date: z.date({
+    required_error: "License expiry date is required",
+    invalid_type_error: "Please enter a valid date"
+  }).refine((date) => date > new Date(), {
+    message: "License expiry date must be in the future"
+  }),
+  insurance_provider: z.string().min(1, "Insurance provider is required").max(100, "Insurance provider must be less than 100 characters"),
+  insurance_policy_number: z.string().min(1, "Insurance policy number is required").max(50, "Insurance policy number must be less than 50 characters"),
+  insurance_expiry_date: z.date({
+    required_error: "Insurance expiry date is required",
+    invalid_type_error: "Please enter a valid date"
+  }).refine((date) => date > new Date(), {
+    message: "Insurance expiry date must be in the future"
+  }),
+  years_experience: z.number({
+    required_error: "Years of experience is required",
+    invalid_type_error: "Please enter a valid number"
+  }).min(0, "Years of experience must be 0 or more").max(50, "Years of experience must be less than 50"),
+  specializations: z.array(z.string().min(1, "Specialization cannot be empty")).min(1, "At least one specialization is required").max(10, "Maximum 10 specializations allowed"),
+  languages_spoken: z.array(z.string().min(1, "Language cannot be empty")).min(1, "At least one language is required").max(10, "Maximum 10 languages allowed"),
+  education_background: z.string().max(1000, "Education background must be less than 1000 characters").optional(),
+  certifications: z.array(z.string().min(1, "Certification cannot be empty")).max(20, "Maximum 20 certifications allowed").optional(),
+  hourly_rate: z.number().min(0, "Hourly rate must be positive").max(10000, "Hourly rate must be less than 10,000").optional(),
+  bio: z.string().max(2000, "Bio must be less than 2000 characters").optional(),
+  terms_accepted: z.boolean().refine(val => val === true, "You must accept the terms and conditions"),
+  privacy_accepted: z.boolean().refine(val => val === true, "You must accept the privacy policy"),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
