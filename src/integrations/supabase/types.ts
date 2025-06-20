@@ -248,6 +248,7 @@ export type Database = {
           reviewed_at: string | null
           reviewed_by: string | null
           service_requirements: Json | null
+          state: string | null
           state_province: string | null
           status: Database["public"]["Enums"]["profile_status"] | null
           tax_certificate_url: string | null
@@ -279,6 +280,7 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           service_requirements?: Json | null
+          state?: string | null
           state_province?: string | null
           status?: Database["public"]["Enums"]["profile_status"] | null
           tax_certificate_url?: string | null
@@ -310,6 +312,7 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           service_requirements?: Json | null
+          state?: string | null
           state_province?: string | null
           status?: Database["public"]["Enums"]["profile_status"] | null
           tax_certificate_url?: string | null
