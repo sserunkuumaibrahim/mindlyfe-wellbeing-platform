@@ -96,7 +96,7 @@ export function OrganizationRegistrationForm({ onSubmit, loading, error, onBack 
       organization_name: data.organization_name,
       organization_type: data.organization_type,
       registration_number: data.registration_number,
-      date_of_establishment: data.date_of_establishment,
+      date_of_establishment: new Date(data.date_of_establishment),
       tax_id_number: data.tax_id_number,
       num_employees: data.num_employees,
       official_website: data.official_website || undefined,
