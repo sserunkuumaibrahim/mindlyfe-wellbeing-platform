@@ -70,7 +70,7 @@ export const TherapistDashboard: React.FC = () => {
         // Fetch ratings from session feedback
         const { data: feedbackData } = await supabase
           .from('session_feedback')
-          .select('rating')
+          .select('rating, session_id')
           .eq('therapist_id', user.id)
           .not('rating', 'is', null);
         
@@ -82,12 +82,13 @@ export const TherapistDashboard: React.FC = () => {
         }
 
         // Count sessions without feedback
+        const feedbackSessionIds = feedbackData?.map(f => f.session_id) || [];
         const { count: noFeedbackCount } = await supabase
           .from('therapy_sessions')
           .select('*', { count: 'exact', head: true })
           .eq('therapist_id', user.id)
           .eq('status', 'completed')
-          .not('id', 'in', `(${(feedbackData || []).map(f => `'${f.id}'`).join(',') || "''"})`)
+          .not('id', 'in', `(${feedbackSessionIds.length > 0 ? feedbackSessionIds.map(id => `'${id}'`).join(',') : "''"})`)
           .gte('scheduled_at', thirtyDaysAgo.toISOString());
         
         setPendingFeedback(noFeedbackCount || 0);

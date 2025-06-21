@@ -52,12 +52,10 @@ export const BookingSystem: React.FC = () => {
             specializations,
             languages_spoken,
             years_experience,
-            bio,
-            status
+            bio
           )
         `)
-        .eq('role', 'therapist')
-        .eq('therapist_profiles.status', 'approved');
+        .eq('role', 'therapist');
 
       if (error) throw error;
 
@@ -283,7 +281,7 @@ export const BookingSystem: React.FC = () => {
                     </div>
                     <div className="flex items-center space-x-2">
                       <DollarSign className="h-4 w-4" />
-                      <span>$120.00</span>
+                      <span>UGX 76,000</span>
                     </div>
                   </div>
                   <Button 
