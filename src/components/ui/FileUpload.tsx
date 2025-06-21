@@ -6,21 +6,27 @@ import { Label } from './label';
 import { Upload, X, FileText } from 'lucide-react';
 
 interface FileUploadProps {
-  label: string;
+  label?: string;
   accept?: string;
-  onChange: (file: File | null) => void;
+  onChange?: (file: File | null) => void;
+  onFileSelect?: (file: File | null) => void;
   error?: string;
   required?: boolean;
   description?: string;
+  maxSize?: number;
+  multiple?: boolean;
 }
 
 export function FileUpload({ 
   label, 
   accept = ".pdf,.jpg,.jpeg,.png", 
-  onChange, 
+  onChange,
+  onFileSelect,
   error, 
   required = false,
-  description 
+  description,
+  maxSize = 10 * 1024 * 1024,
+  multiple = false
 }: FileUploadProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -28,12 +34,16 @@ export function FileUpload({
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] || null;
     setSelectedFile(file);
-    onChange(file);
+    
+    // Support both prop names for backwards compatibility
+    if (onChange) onChange(file);
+    if (onFileSelect) onFileSelect(file);
   };
 
   const handleRemoveFile = () => {
     setSelectedFile(null);
-    onChange(null);
+    if (onChange) onChange(null);
+    if (onFileSelect) onFileSelect(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -45,9 +55,11 @@ export function FileUpload({
 
   return (
     <div className="space-y-2">
-      <Label className="text-sm font-medium">
-        {label} {required && <span className="text-destructive">*</span>}
-      </Label>
+      {label && (
+        <Label className="text-sm font-medium">
+          {label} {required && <span className="text-destructive">*</span>}
+        </Label>
+      )}
       {description && (
         <p className="text-xs text-muted-foreground">{description}</p>
       )}
@@ -59,6 +71,7 @@ export function FileUpload({
           accept={accept}
           onChange={handleFileSelect}
           className="hidden"
+          multiple={multiple}
         />
         
         {selectedFile ? (
@@ -92,7 +105,7 @@ export function FileUpload({
               Choose File
             </Button>
             <p className="text-xs text-muted-foreground mt-1">
-              Supported formats: PDF, JPG, PNG (Max 10MB)
+              Supported formats: PDF, JPG, PNG (Max {Math.round(maxSize / 1024 / 1024)}MB)
             </p>
           </div>
         )}

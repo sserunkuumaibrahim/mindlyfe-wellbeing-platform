@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,9 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { X, Plus } from 'lucide-react';
 import { FileUpload } from '@/components/ui/FileUpload';
 import { TherapistRegisterDTO } from '@/types/auth';
@@ -497,11 +494,12 @@ export const TherapistRegistrationForm: React.FC<TherapistRegistrationFormProps>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Label>License Document *</Label>
             <FileUpload
-              onFileSelect={setLicenseDocument}
+              label="License Document *"
+              onChange={setLicenseDocument}
               accept=".pdf,.jpg,.jpeg,.png"
-              maxSize={5 * 1024 * 1024} // 5MB
+              maxSize={5 * 1024 * 1024}
+              required
             />
             {licenseDocument && (
               <p className="text-sm text-green-600 mt-1">
@@ -511,9 +509,9 @@ export const TherapistRegistrationForm: React.FC<TherapistRegistrationFormProps>
           </div>
 
           <div>
-            <Label>Insurance Document</Label>
             <FileUpload
-              onFileSelect={setInsuranceDocument}
+              label="Insurance Document"
+              onChange={setInsuranceDocument}
               accept=".pdf,.jpg,.jpeg,.png"
               maxSize={5 * 1024 * 1024}
             />
@@ -525,11 +523,12 @@ export const TherapistRegistrationForm: React.FC<TherapistRegistrationFormProps>
           </div>
 
           <div>
-            <Label>ID Document *</Label>
             <FileUpload
-              onFileSelect={setIdDocument}
+              label="ID Document *"
+              onChange={setIdDocument}
               accept=".pdf,.jpg,.jpeg,.png"
               maxSize={5 * 1024 * 1024}
+              required
             />
             {idDocument && (
               <p className="text-sm text-green-600 mt-1">
@@ -539,9 +538,9 @@ export const TherapistRegistrationForm: React.FC<TherapistRegistrationFormProps>
           </div>
 
           <div>
-            <Label>Other Documents</Label>
             <FileUpload
-              onFileSelect={(file) => setOtherDocuments([...otherDocuments, file])}
+              label="Other Documents"
+              onChange={(file) => file && setOtherDocuments([...otherDocuments, file])}
               accept=".pdf,.jpg,.jpeg,.png"
               maxSize={5 * 1024 * 1024}
               multiple
