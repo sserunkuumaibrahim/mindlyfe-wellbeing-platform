@@ -53,6 +53,105 @@ export type Database = {
           },
         ]
       }
+      group_session_enrollments: {
+        Row: {
+          enrolled_at: string
+          group_session_id: string | null
+          id: string
+          profile_id: string | null
+          status: string
+        }
+        Insert: {
+          enrolled_at?: string
+          group_session_id?: string | null
+          id?: string
+          profile_id?: string | null
+          status?: string
+        }
+        Update: {
+          enrolled_at?: string
+          group_session_id?: string | null
+          id?: string
+          profile_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_session_enrollments_group_session_id_fkey"
+            columns: ["group_session_id"]
+            isOneToOne: false
+            referencedRelation: "group_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_session_enrollments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_sessions: {
+        Row: {
+          created_at: string
+          description: string | null
+          duration_minutes: number
+          facilitator_id: string | null
+          google_meet_url: string | null
+          id: string
+          max_participants: number
+          organization_id: string | null
+          scheduled_at: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number
+          facilitator_id?: string | null
+          google_meet_url?: string | null
+          id?: string
+          max_participants?: number
+          organization_id?: string | null
+          scheduled_at: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number
+          facilitator_id?: string | null
+          google_meet_url?: string | null
+          id?: string
+          max_participants?: number
+          organization_id?: string | null
+          scheduled_at?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_sessions_facilitator_id_fkey"
+            columns: ["facilitator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_sessions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       individual_profiles: {
         Row: {
           communication_pref:
@@ -480,6 +579,58 @@ export type Database = {
         }
         Relationships: []
       }
+      session_feedback: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          feedback_text: string | null
+          id: string
+          rating: number | null
+          session_id: string | null
+          therapist_id: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          feedback_text?: string | null
+          id?: string
+          rating?: number | null
+          session_id?: string | null
+          therapist_id?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          feedback_text?: string | null
+          id?: string
+          rating?: number | null
+          session_id?: string | null
+          therapist_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_feedback_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_feedback_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "therapy_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_feedback_therapist_id_fkey"
+            columns: ["therapist_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscriptions: {
         Row: {
           amount_ugx: number
@@ -610,6 +761,7 @@ export type Database = {
           national_id_number: string
           other_documents_urls: string | null
           specializations: string[]
+          status: Database["public"]["Enums"]["profile_status"] | null
           updated_at: string
           years_experience: number
         }
@@ -632,6 +784,7 @@ export type Database = {
           national_id_number: string
           other_documents_urls?: string | null
           specializations?: string[]
+          status?: Database["public"]["Enums"]["profile_status"] | null
           updated_at?: string
           years_experience?: number
         }
@@ -654,6 +807,7 @@ export type Database = {
           national_id_number?: string
           other_documents_urls?: string | null
           specializations?: string[]
+          status?: Database["public"]["Enums"]["profile_status"] | null
           updated_at?: string
           years_experience?: number
         }
@@ -677,6 +831,8 @@ export type Database = {
           notes: string | null
           recording_url: string | null
           scheduled_at: string
+          session_type: Database["public"]["Enums"]["session_type"] | null
+          status: Database["public"]["Enums"]["session_status"] | null
           therapist_id: string
           updated_at: string
         }
@@ -689,6 +845,8 @@ export type Database = {
           notes?: string | null
           recording_url?: string | null
           scheduled_at: string
+          session_type?: Database["public"]["Enums"]["session_type"] | null
+          status?: Database["public"]["Enums"]["session_status"] | null
           therapist_id: string
           updated_at?: string
         }
@@ -701,6 +859,8 @@ export type Database = {
           notes?: string | null
           recording_url?: string | null
           scheduled_at?: string
+          session_type?: Database["public"]["Enums"]["session_type"] | null
+          status?: Database["public"]["Enums"]["session_status"] | null
           therapist_id?: string
           updated_at?: string
         }
