@@ -124,6 +124,9 @@ CREATE POLICY "Users can view their own profile" ON public.profiles
 CREATE POLICY "Users can update their own profile" ON public.profiles
   FOR UPDATE USING (auth_uid = auth.uid());
 
+CREATE POLICY "Allow profile creation on signup" ON public.profiles
+  FOR INSERT WITH CHECK (true);
+
 -- RLS Policies for therapy_sessions
 CREATE POLICY "Users can view their own sessions" ON public.therapy_sessions
   FOR SELECT USING (client_id = auth.uid() OR therapist_id = auth.uid());
