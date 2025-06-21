@@ -1,5 +1,5 @@
 
-export type UserRole = 'individual' | 'therapist' | 'org_admin';
+export type UserRole = 'individual' | 'therapist' | 'org_admin' | 'admin';
 export type GenderType = 'male' | 'female';
 export type CommunicationPreference = 'email' | 'sms' | 'both';
 export type OrganizationType = 'private_company' | 'school' | 'ngo' | 'government' | 'healthcare' | 'other';
