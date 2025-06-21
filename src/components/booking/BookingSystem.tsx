@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, User, DollarSign, Video } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -67,10 +66,10 @@ export const BookingSystem: React.FC = () => {
         first_name: therapist.first_name,
         last_name: therapist.last_name,
         profile_photo_url: therapist.profile_photo_url,
-        specializations: therapist.therapist_profiles[0]?.specializations || [],
-        languages_spoken: therapist.therapist_profiles[0]?.languages_spoken || [],
-        years_experience: therapist.therapist_profiles[0]?.years_experience || 0,
-        bio: therapist.therapist_profiles[0]?.bio,
+        specializations: therapist.therapist_profiles?.specializations || [],
+        languages_spoken: therapist.therapist_profiles?.languages_spoken || [],
+        years_experience: therapist.therapist_profiles?.years_experience || 0,
+        bio: therapist.therapist_profiles?.bio,
       }));
 
       setTherapists(formattedTherapists);

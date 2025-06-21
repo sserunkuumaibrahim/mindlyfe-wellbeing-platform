@@ -77,23 +77,27 @@ export const useAuth = () => {
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (error) {
-        console.error('Error getting session:', error);
-        setAuthState(prev => ({ ...prev, loading: false }));
-        return;
-      }
-      
-      if (session?.user) {
-        // Fetch user profile to get role
-        supabase
-          .from('profiles')
-          .select('role')
-          .eq('auth_uid', session.user.id)
-          .single()
-          .then(({ data: profile, error }) => {
-            if (error) {
-              console.error('Error fetching profile on init:', error);
+    const initializeSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error getting session:', error);
+          setAuthState(prev => ({ ...prev, loading: false }));
+          return;
+        }
+        
+        if (session?.user) {
+          try {
+            // Fetch user profile to get role
+            const { data: profile, error: profileError } = await supabase
+              .from('profiles')
+              .select('role')
+              .eq('auth_uid', session.user.id)
+              .single();
+            
+            if (profileError) {
+              console.error('Error fetching profile on init:', profileError);
               // Set user without role if profile fetch fails
               setAuthState({
                 user: { ...session.user, role: 'individual' },
@@ -113,22 +117,24 @@ export const useAuth = () => {
               session,
               loading: false,
             });
-          })
-          .catch(err => {
+          } catch (err) {
             console.error('Error in session init:', err);
             setAuthState({
               user: { ...session.user, role: 'individual' },
               session,
               loading: false,
             });
-          });
-      } else {
+          }
+        } else {
+          setAuthState(prev => ({ ...prev, loading: false }));
+        }
+      } catch (err) {
+        console.error('Error getting initial session:', err);
         setAuthState(prev => ({ ...prev, loading: false }));
       }
-    }).catch(err => {
-      console.error('Error getting initial session:', err);
-      setAuthState(prev => ({ ...prev, loading: false }));
-    });
+    };
+
+    initializeSession();
 
     return () => subscription.unsubscribe();
   }, []);
