@@ -83,6 +83,8 @@ export function OrganizationRegistrationForm({ onSubmit, loading, error, onBack 
   });
 
   const onFormSubmit = async (data: z.infer<typeof organizationSchema>) => {
+    console.log('Organization form data:', data);
+    
     const formData: OrganizationRegisterDTO = {
       role: 'org_admin',
       email: data.email,
@@ -91,14 +93,14 @@ export function OrganizationRegistrationForm({ onSubmit, loading, error, onBack 
       first_name: data.first_name,
       last_name: data.last_name,
       phone_number: data.phone_number,
-      date_of_birth: data.date_of_birth,
+      date_of_birth: data.date_of_birth?.toISOString().split('T')[0],
       gender: data.gender,
       country: data.country,
-      preferred_language: data.preferred_language,
+      preferred_language: data.preferred_language || 'en',
       organization_name: data.organization_name,
       organization_type: data.organization_type,
       registration_number: data.registration_number,
-      date_of_establishment: data.date_of_establishment,
+      date_of_establishment: data.date_of_establishment.toISOString().split('T')[0],
       tax_id_number: data.tax_id_number,
       num_employees: data.num_employees,
       official_website: data.official_website || undefined,
@@ -112,6 +114,8 @@ export function OrganizationRegistrationForm({ onSubmit, loading, error, onBack 
       billing_contact_email: data.billing_contact_email || undefined,
       billing_contact_phone: data.billing_contact_phone,
     };
+    
+    console.log('Final organization data for registration:', formData);
     await onSubmit(formData);
   };
 
@@ -463,7 +467,7 @@ export function OrganizationRegistrationForm({ onSubmit, loading, error, onBack 
                 id="billing_contact_email"
                 type="email"
                 {...register("billing_contact_email")}
-                placeholder="billing@organization.com"
+                placeholder="billing@example.com"
               />
               {errors.billing_contact_email && (
                 <p className="text-sm text-destructive">{errors.billing_contact_email.message}</p>
@@ -481,18 +485,20 @@ export function OrganizationRegistrationForm({ onSubmit, loading, error, onBack 
           </div>
         </div>
 
-        {/* Terms & Conditions */}
-        <div className="space-y-3 border-t pt-4">
+        {/* Terms and Conditions */}
+        <div className="space-y-4">
           <div className="flex items-center space-x-2">
             <Checkbox
               id="terms_accepted"
               {...register("terms_accepted")}
+              onCheckedChange={(checked) => setValue("terms_accepted", !!checked)}
             />
-            <Label htmlFor="terms_accepted" className="text-sm font-normal">
-              I agree to the{" "}
-              <a href="/terms" className="text-primary hover:underline">
-                Terms of Service
-              </a> *
+            <Label htmlFor="terms_accepted" className="text-sm">
+              I accept the{" "}
+              <a href="#" className="text-primary underline">
+                Terms and Conditions
+              </a>{" "}
+              *
             </Label>
           </div>
           {errors.terms_accepted && (
@@ -503,12 +509,14 @@ export function OrganizationRegistrationForm({ onSubmit, loading, error, onBack 
             <Checkbox
               id="privacy_accepted"
               {...register("privacy_accepted")}
+              onCheckedChange={(checked) => setValue("privacy_accepted", !!checked)}
             />
-            <Label htmlFor="privacy_accepted" className="text-sm font-normal">
-              I agree to the{" "}
-              <a href="/privacy" className="text-primary hover:underline">
+            <Label htmlFor="privacy_accepted" className="text-sm">
+              I accept the{" "}
+              <a href="#" className="text-primary underline">
                 Privacy Policy
-              </a> *
+              </a>{" "}
+              *
             </Label>
           </div>
           {errors.privacy_accepted && (
@@ -516,15 +524,8 @@ export function OrganizationRegistrationForm({ onSubmit, loading, error, onBack 
           )}
         </div>
 
-        <Button type="submit" className="w-full h-12" disabled={loading}>
-          {loading ? (
-            <span className="flex items-center gap-2">
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
-              Creating Account...
-            </span>
-          ) : (
-            "Create Organization Account"
-          )}
+        <Button type="submit" className="w-full" disabled={loading}>
+          {loading ? "Creating Account..." : "Create Organization Account"}
         </Button>
       </form>
     </div>

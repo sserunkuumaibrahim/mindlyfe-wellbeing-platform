@@ -105,9 +105,6 @@ export type Database = {
       }
       individual_profiles: {
         Row: {
-          communication_pref:
-            | Database["public"]["Enums"]["communication_preference"]
-            | null
           created_at: string | null
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
@@ -123,9 +120,6 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          communication_pref?:
-            | Database["public"]["Enums"]["communication_preference"]
-            | null
           created_at?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
@@ -141,9 +135,6 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          communication_pref?:
-            | Database["public"]["Enums"]["communication_preference"]
-            | null
           created_at?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
@@ -237,7 +228,6 @@ export type Database = {
           official_website: string | null
           org_structure_url: string | null
           organization_name: string
-          organization_type: Database["public"]["Enums"]["organization_type"]
           postal_code: string | null
           proof_registration_url: string | null
           registration_number: string
@@ -250,7 +240,6 @@ export type Database = {
           service_requirements: Json | null
           state: string | null
           state_province: string | null
-          status: Database["public"]["Enums"]["profile_status"] | null
           tax_certificate_url: string | null
           tax_id_number: string
           updated_at: string | null
@@ -269,7 +258,6 @@ export type Database = {
           official_website?: string | null
           org_structure_url?: string | null
           organization_name: string
-          organization_type: Database["public"]["Enums"]["organization_type"]
           postal_code?: string | null
           proof_registration_url?: string | null
           registration_number: string
@@ -282,7 +270,6 @@ export type Database = {
           service_requirements?: Json | null
           state?: string | null
           state_province?: string | null
-          status?: Database["public"]["Enums"]["profile_status"] | null
           tax_certificate_url?: string | null
           tax_id_number: string
           updated_at?: string | null
@@ -301,7 +288,6 @@ export type Database = {
           official_website?: string | null
           org_structure_url?: string | null
           organization_name?: string
-          organization_type?: Database["public"]["Enums"]["organization_type"]
           postal_code?: string | null
           proof_registration_url?: string | null
           registration_number?: string
@@ -314,7 +300,6 @@ export type Database = {
           service_requirements?: Json | null
           state?: string | null
           state_province?: string | null
-          status?: Database["public"]["Enums"]["profile_status"] | null
           tax_certificate_url?: string | null
           tax_id_number?: string
           updated_at?: string | null
@@ -388,7 +373,7 @@ export type Database = {
           phone_number: string | null
           preferred_language: string | null
           profile_photo_url: string | null
-          role: Database["public"]["Enums"]["user_role"]
+          role: Database["public"]["Enums"]["user_role"] | null
           updated_at: string | null
         }
         Insert: {
@@ -412,7 +397,7 @@ export type Database = {
           phone_number?: string | null
           preferred_language?: string | null
           profile_photo_url?: string | null
-          role?: Database["public"]["Enums"]["user_role"]
+          role?: Database["public"]["Enums"]["user_role"] | null
           updated_at?: string | null
         }
         Update: {
@@ -436,7 +421,7 @@ export type Database = {
           phone_number?: string | null
           preferred_language?: string | null
           profile_photo_url?: string | null
-          role?: Database["public"]["Enums"]["user_role"]
+          role?: Database["public"]["Enums"]["user_role"] | null
           updated_at?: string | null
         }
         Relationships: []
@@ -466,7 +451,6 @@ export type Database = {
           reviewed_at: string | null
           reviewed_by: string | null
           specializations: string[]
-          status: Database["public"]["Enums"]["profile_status"] | null
           updated_at: string | null
           uploaded_documents: Json | null
           years_experience: number
@@ -495,7 +479,6 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           specializations: string[]
-          status?: Database["public"]["Enums"]["profile_status"] | null
           updated_at?: string | null
           uploaded_documents?: Json | null
           years_experience: number
@@ -524,7 +507,6 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           specializations?: string[]
-          status?: Database["public"]["Enums"]["profile_status"] | null
           updated_at?: string | null
           uploaded_documents?: Json | null
           years_experience?: number
@@ -558,8 +540,6 @@ export type Database = {
           recording_url: string | null
           scheduled_at: string
           session_notes: string | null
-          session_type: Database["public"]["Enums"]["session_type"]
-          status: Database["public"]["Enums"]["session_status"]
           therapist_id: string
           therapist_notes: string | null
           updated_at: string | null
@@ -575,8 +555,6 @@ export type Database = {
           recording_url?: string | null
           scheduled_at: string
           session_notes?: string | null
-          session_type?: Database["public"]["Enums"]["session_type"]
-          status?: Database["public"]["Enums"]["session_status"]
           therapist_id: string
           therapist_notes?: string | null
           updated_at?: string | null
@@ -592,8 +570,6 @@ export type Database = {
           recording_url?: string | null
           scheduled_at?: string
           session_notes?: string | null
-          session_type?: Database["public"]["Enums"]["session_type"]
-          status?: Database["public"]["Enums"]["session_status"]
           therapist_id?: string
           therapist_notes?: string | null
           updated_at?: string | null
@@ -629,7 +605,6 @@ export type Database = {
           id: string
           is_primary: boolean | null
           is_verified: boolean | null
-          method: Database["public"]["Enums"]["two_fa_method"]
           profile_id: string | null
           secret: string | null
           verified_at: string | null
@@ -640,7 +615,6 @@ export type Database = {
           id?: string
           is_primary?: boolean | null
           is_verified?: boolean | null
-          method: Database["public"]["Enums"]["two_fa_method"]
           profile_id?: string | null
           secret?: string | null
           verified_at?: string | null
@@ -651,7 +625,6 @@ export type Database = {
           id?: string
           is_primary?: boolean | null
           is_verified?: boolean | null
-          method?: Database["public"]["Enums"]["two_fa_method"]
           profile_id?: string | null
           secret?: string | null
           verified_at?: string | null
@@ -723,7 +696,6 @@ export type Database = {
           is_used: boolean | null
           max_attempts: number | null
           profile_id: string | null
-          purpose: Database["public"]["Enums"]["verification_purpose"]
         }
         Insert: {
           attempts?: number | null
@@ -734,7 +706,6 @@ export type Database = {
           is_used?: boolean | null
           max_attempts?: number | null
           profile_id?: string | null
-          purpose: Database["public"]["Enums"]["verification_purpose"]
         }
         Update: {
           attempts?: number | null
@@ -745,7 +716,6 @@ export type Database = {
           is_used?: boolean | null
           max_attempts?: number | null
           profile_id?: string | null
-          purpose?: Database["public"]["Enums"]["verification_purpose"]
         }
         Relationships: [
           {
@@ -781,21 +751,16 @@ export type Database = {
         | "government"
         | "healthcare"
         | "other"
-      profile_status:
-        | "pending_review"
-        | "approved"
-        | "rejected"
-        | "active"
-        | "inactive"
-      session_status: "scheduled" | "completed" | "canceled" | "no_show"
+      profile_status: "pending_review" | "approved" | "rejected" | "suspended"
+      session_status:
+        | "scheduled"
+        | "in_progress"
+        | "completed"
+        | "cancelled"
+        | "no_show"
       session_type: "virtual" | "in_person"
-      two_fa_method: "email" | "sms" | "authenticator"
-      user_role:
-        | "individual"
-        | "therapist"
-        | "org_admin"
-        | "sys_admin"
-        | "super_admin"
+      two_fa_method: "totp" | "sms" | "email"
+      user_role: "individual" | "therapist" | "org_admin"
       verification_purpose: "signup" | "password_reset" | "2fa" | "login"
     }
     CompositeTypes: {
@@ -922,23 +887,17 @@ export const Constants = {
         "healthcare",
         "other",
       ],
-      profile_status: [
-        "pending_review",
-        "approved",
-        "rejected",
-        "active",
-        "inactive",
+      profile_status: ["pending_review", "approved", "rejected", "suspended"],
+      session_status: [
+        "scheduled",
+        "in_progress",
+        "completed",
+        "cancelled",
+        "no_show",
       ],
-      session_status: ["scheduled", "completed", "canceled", "no_show"],
       session_type: ["virtual", "in_person"],
-      two_fa_method: ["email", "sms", "authenticator"],
-      user_role: [
-        "individual",
-        "therapist",
-        "org_admin",
-        "sys_admin",
-        "super_admin",
-      ],
+      two_fa_method: ["totp", "sms", "email"],
+      user_role: ["individual", "therapist", "org_admin"],
       verification_purpose: ["signup", "password_reset", "2fa", "login"],
     },
   },
