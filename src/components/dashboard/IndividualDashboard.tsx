@@ -1,171 +1,143 @@
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Calendar, MessageSquare, CreditCard, Star, Clock, Bell } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, MessageSquare, User, TrendingUp } from 'lucide-react';
-import { useRouter } from 'next/router';
+import { Badge } from '@/components/ui/badge';
+import { useNavigate } from 'react-router-dom';
 
 export const IndividualDashboard: React.FC = () => {
-  const router = useRouter();
+  const navigate = useNavigate();
+
+  const upcomingSessions = [
+    {
+      id: '1',
+      therapist: 'Dr. Sarah Johnson',
+      date: '2024-06-22',
+      time: '10:00 AM',
+      type: 'Virtual',
+    },
+    {
+      id: '2',
+      therapist: 'Dr. Michael Chen',
+      date: '2024-06-25',
+      time: '2:00 PM',
+      type: 'Virtual',
+    },
+  ];
+
+  const recentSessions = [
+    {
+      id: '1',
+      therapist: 'Dr. Sarah Johnson',
+      date: '2024-06-15',
+      rating: 5,
+      notes: 'Great session focused on anxiety management techniques.',
+    },
+  ];
 
   return (
     <div className="space-y-6">
-      {/* Welcome Section */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Welcome Back!</h1>
-        <p className="text-muted-foreground">
-          Here's your mental health journey overview
-        </p>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Welcome to Your Dashboard</h1>
+        <Button onClick={() => navigate('/dashboard/book')}>
+          <Calendar className="h-4 w-4 mr-2" />
+          Book Session
+        </Button>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => router.push('/dashboard/book')}>
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Book Session</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-xs text-muted-foreground">
-              Schedule your next therapy session
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => router.push('/dashboard/sessions')}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">My Sessions</CardTitle>
+            <CardTitle className="text-sm font-medium">Upcoming Sessions</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <p className="text-xs text-muted-foreground">
-              View upcoming and past sessions
-            </p>
+            <div className="text-2xl font-bold">{upcomingSessions.length}</div>
+            <p className="text-xs text-muted-foreground">Next: {upcomingSessions[0]?.date}</p>
           </CardContent>
         </Card>
 
-        <Card className="cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => router.push('/dashboard/messages')}>
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Messages</CardTitle>
+            <CardTitle className="text-sm font-medium">Completed Sessions</CardTitle>
+            <Star className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">12</div>
+            <p className="text-xs text-muted-foreground">This month</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Unread Messages</CardTitle>
             <MessageSquare className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
+            <div className="text-2xl font-bold">3</div>
             <p className="text-xs text-muted-foreground">
-              Chat with your therapist
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => router.push('/dashboard/profile')}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Profile</CardTitle>
-            <User className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-xs text-muted-foreground">
-              Update your information
+              <Button variant="link" className="p-0 h-auto" onClick={() => navigate('/dashboard/messages')}>
+                View all
+              </Button>
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Upcoming Sessions */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Upcoming Sessions</CardTitle>
-            <CardDescription>
-              Your scheduled therapy appointments
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <h4 className="font-semibold">Dr. Sarah Johnson</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Tomorrow at 2:00 PM
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Cognitive Behavioral Therapy
-                  </p>
+      {/* Upcoming Sessions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Upcoming Sessions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {upcomingSessions.map((session) => (
+              <div key={session.id} className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex items-center space-x-4">
+                  <div>
+                    <p className="font-medium">{session.therapist}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {session.date} at {session.time}
+                    </p>
+                  </div>
+                  <Badge variant="outline">{session.type}</Badge>
                 </div>
-                <Button size="sm">Join Session</Button>
+                <div className="space-x-2">
+                  <Button variant="outline" size="sm">Reschedule</Button>
+                  <Button size="sm">Join Session</Button>
+                </div>
               </div>
-              
-              <div className="text-center py-8 text-muted-foreground">
-                <Clock className="h-8 w-8 mx-auto mb-2" />
-                <p>No more upcoming sessions</p>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="mt-2"
-                  onClick={() => router.push('/dashboard/book')}
-                >
-                  Book New Session
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Progress Insights */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <TrendingUp className="h-4 w-4 mr-2" />
-                Progress
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between text-sm">
-                    <span>Sessions Completed</span>
-                    <span>12</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                    <div className="bg-primary h-2 rounded-full" style={{ width: '60%' }}></div>
+      {/* Recent Sessions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Sessions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {recentSessions.map((session) => (
+              <div key={session.id} className="p-4 border rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="font-medium">{session.therapist}</p>
+                  <div className="flex items-center space-x-1">
+                    {[...Array(session.rating)].map((_, i) => (
+                      <Star key={i} className="h-4 w-4 fill-current text-yellow-400" />
+                    ))}
                   </div>
                 </div>
-                
-                <div>
-                  <div className="flex justify-between text-sm">
-                    <span>Goals Achieved</span>
-                    <span>3/5</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                    <div className="bg-green-500 h-2 rounded-full" style={{ width: '60%' }}></div>
-                  </div>
-                </div>
+                <p className="text-sm text-muted-foreground mb-2">{session.date}</p>
+                <p className="text-sm">{session.notes}</p>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Messages</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="p-3 bg-gray-50 rounded-lg">
-                  <p className="text-sm font-medium">Dr. Sarah Johnson</p>
-                  <p className="text-xs text-muted-foreground">
-                    Great progress in our last session...
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">2 hours ago</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

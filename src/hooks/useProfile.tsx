@@ -32,7 +32,18 @@ export const useProfile = () => {
 
         if (mainError) throw mainError;
         
-        setProfile(mainProfile);
+        // Convert string dates to Date objects for type compatibility
+        const profileWithDates = {
+          ...mainProfile,
+          date_of_birth: mainProfile.date_of_birth ? new Date(mainProfile.date_of_birth) : null,
+          created_at: new Date(mainProfile.created_at),
+          updated_at: new Date(mainProfile.updated_at),
+          last_login_at: mainProfile.last_login_at ? new Date(mainProfile.last_login_at) : null,
+          locked_until: mainProfile.locked_until ? new Date(mainProfile.locked_until) : null,
+          password_changed_at: new Date(mainProfile.password_changed_at),
+        };
+        
+        setProfile(profileWithDates as User);
 
         // Fetch role-specific profile
         let roleData = null;
@@ -73,13 +84,19 @@ export const useProfile = () => {
     fetchProfile();
   }, [user]);
 
-  const updateProfile = async (updates: Partial<User>) => {
+  const updateProfile = async (updates: Partial<Omit<User, 'created_at' | 'updated_at'>>) => {
     if (!user || !profile) return;
 
     try {
+      // Convert Date objects back to strings for database
+      const dbUpdates = {
+        ...updates,
+        date_of_birth: updates.date_of_birth ? updates.date_of_birth.toISOString().split('T')[0] : undefined,
+      };
+
       const { error } = await supabase
         .from('profiles')
-        .update(updates)
+        .update(dbUpdates)
         .eq('id', profile.id);
 
       if (error) throw error;
