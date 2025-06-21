@@ -1,40 +1,44 @@
 
 import React from 'react';
-import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useAuth } from '@/hooks/useAuth';
-import { useProfile } from '@/hooks/useProfile';
 import { IndividualDashboard } from '@/components/dashboard/IndividualDashboard';
 import { TherapistDashboard } from '@/components/dashboard/TherapistDashboard';
 import { OrganizationDashboard } from '@/components/dashboard/OrganizationDashboard';
 import { AdminDashboard } from '@/components/dashboard/AdminDashboard';
 
-const Dashboard: React.FC = () => {
-  const { user } = useAuth();
-  const { profile } = useProfile();
+export default function Dashboard() {
+  const { user, loading } = useAuth();
 
-  if (!profile) return null;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
-  const renderDashboard = () => {
-    switch (profile.role) {
-      case 'individual':
-        return <IndividualDashboard />;
-      case 'therapist':
-        return <TherapistDashboard />;
-      case 'org_admin':
-        return <OrganizationDashboard />;
-      case 'sys_admin':
-      case 'super_admin':
-        return <AdminDashboard />;
-      default:
-        return <IndividualDashboard />;
-    }
-  };
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p>Please log in to access the dashboard.</p>
+      </div>
+    );
+  }
+
+  // Render appropriate dashboard based on user role
+  if (user.role === 'individual') {
+    return <IndividualDashboard />;
+  } else if (user.role === 'therapist') {
+    return <TherapistDashboard />;
+  } else if (user.role === 'org_admin') {
+    return <OrganizationDashboard />;
+  } else if (user.role === 'admin') {
+    return <AdminDashboard />;
+  }
 
   return (
-    <DashboardLayout>
-      {renderDashboard()}
-    </DashboardLayout>
+    <div className="flex items-center justify-center min-h-screen">
+      <p>Unknown user role: {user.role}</p>
+    </div>
   );
-};
-
-export default Dashboard;
+}

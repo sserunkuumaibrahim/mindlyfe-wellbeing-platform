@@ -1,21 +1,19 @@
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Plus, Trash2, Edit } from 'lucide-react';
+import { Calendar, Clock, Plus, Edit, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 
 interface AvailabilitySlot {
   id?: string;
-  day_of_week: number;
+  day_of_week?: number;
   start_time: string;
   end_time: string;
   is_recurring: boolean;
@@ -24,54 +22,48 @@ interface AvailabilitySlot {
 }
 
 const DAYS_OF_WEEK = [
-  'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
+  { value: 0, label: 'Sunday' },
+  { value: 1, label: 'Monday' },
+  { value: 2, label: 'Tuesday' },
+  { value: 3, label: 'Wednesday' },
+  { value: 4, label: 'Thursday' },
+  { value: 5, label: 'Friday' },
+  { value: 6, label: 'Saturday' },
 ];
 
 export const AvailabilityManager: React.FC = () => {
   const { user } = useAuth();
   const [availabilitySlots, setAvailabilitySlots] = useState<AvailabilitySlot[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSlot, setEditingSlot] = useState<AvailabilitySlot | null>(null);
-  const [formData, setFormData] = useState<AvailabilitySlot>({
-    day_of_week: 1,
-    start_time: '09:00',
-    end_time: '17:00',
-    is_recurring: true,
-    is_available: true,
-  });
 
   useEffect(() => {
-    fetchAvailability();
-  }, []);
+    if (user?.role === 'therapist') {
+      fetchAvailability();
+    }
+  }, [user]);
 
   const fetchAvailability = async () => {
-    if (!user) return;
-
     try {
-      // Use direct SQL query since the table is not in the generated types yet
       const { data, error } = await supabase
-        .rpc('get_therapist_availability', { therapist_id_param: user.id });
+        .from('therapist_availability')
+        .select('*')
+        .eq('therapist_id', user?.id)
+        .order('day_of_week', { ascending: true });
 
-      if (error) {
-        console.error('RPC call failed, falling back to direct query');
-        // Fallback to direct query
-        const response = await fetch('/api/therapist-availability', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ therapist_id: user.id }),
-        });
-        const result = await response.json();
-        if (response.ok) {
-          setAvailabilitySlots(result.data || []);
-        } else {
-          throw new Error(result.error);
-        }
-      } else {
-        setAvailabilitySlots(data || []);
-      }
+      if (error) throw error;
+
+      const formattedSlots = data?.map(slot => ({
+        id: slot.id,
+        day_of_week: slot.day_of_week,
+        start_time: slot.start_time,
+        end_time: slot.end_time,
+        is_recurring: slot.is_recurring,
+        specific_date: slot.specific_date,
+        is_available: slot.is_available,
+      })) || [];
+
+      setAvailabilitySlots(formattedSlots);
     } catch (error) {
       console.error('Error fetching availability:', error);
       toast({
@@ -84,43 +76,42 @@ export const AvailabilityManager: React.FC = () => {
     }
   };
 
-  const handleSaveSlot = async () => {
-    if (!user) return;
-
+  const handleSaveSlot = async (slot: AvailabilitySlot) => {
     try {
       const slotData = {
-        ...formData,
-        therapist_id: user.id,
+        therapist_id: user?.id,
+        day_of_week: slot.day_of_week,
+        start_time: slot.start_time,
+        end_time: slot.end_time,
+        is_recurring: slot.is_recurring,
+        specific_date: slot.specific_date,
+        is_available: slot.is_available,
       };
 
-      // Use API endpoint since direct Supabase calls won't work with missing types
-      const response = await fetch('/api/save-availability', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          slot: slotData,
-          isEdit: !!editingSlot?.id,
-          slotId: editingSlot?.id
-        }),
-      });
+      if (slot.id) {
+        // Update existing slot
+        const { error } = await supabase
+          .from('therapist_availability')
+          .update(slotData)
+          .eq('id', slot.id);
 
-      const result = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(result.error);
+        if (error) throw error;
+      } else {
+        // Create new slot
+        const { error } = await supabase
+          .from('therapist_availability')
+          .insert([slotData]);
+
+        if (error) throw error;
       }
 
+      await fetchAvailability();
+      setEditingSlot(null);
+      
       toast({
         title: "Success",
-        description: `Availability ${editingSlot ? 'updated' : 'added'} successfully`,
+        description: slot.id ? "Availability updated" : "Availability added",
       });
-
-      setDialogOpen(false);
-      setEditingSlot(null);
-      resetForm();
-      fetchAvailability();
     } catch (error) {
       console.error('Error saving availability:', error);
       toast({
@@ -131,28 +122,21 @@ export const AvailabilityManager: React.FC = () => {
     }
   };
 
-  const handleDeleteSlot = async (id: string) => {
+  const handleDeleteSlot = async (slotId: string) => {
     try {
-      const response = await fetch('/api/delete-availability', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ slotId: id }),
-      });
+      const { error } = await supabase
+        .from('therapist_availability')
+        .delete()
+        .eq('id', slotId);
 
-      const result = await response.json();
+      if (error) throw error;
+
+      await fetchAvailability();
       
-      if (!response.ok) {
-        throw new Error(result.error);
-      }
-
       toast({
         title: "Success",
-        description: "Availability slot deleted",
+        description: "Availability deleted",
       });
-
-      fetchAvailability();
     } catch (error) {
       console.error('Error deleting availability:', error);
       toast({
@@ -163,59 +147,13 @@ export const AvailabilityManager: React.FC = () => {
     }
   };
 
-  const handleToggleAvailability = async (slot: AvailabilitySlot) => {
-    if (!slot.id) return;
-
-    try {
-      const response = await fetch('/api/toggle-availability', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          slotId: slot.id, 
-          isAvailable: !slot.is_available 
-        }),
-      });
-
-      const result = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(result.error);
-      }
-
-      fetchAvailability();
-    } catch (error) {
-      console.error('Error toggling availability:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update availability",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      day_of_week: 1,
-      start_time: '09:00',
-      end_time: '17:00',
-      is_recurring: true,
-      is_available: true,
-    });
-  };
-
-  const openEditDialog = (slot: AvailabilitySlot) => {
-    setEditingSlot(slot);
-    setFormData(slot);
-    setDialogOpen(true);
-  };
-
-  const openAddDialog = () => {
-    setEditingSlot(null);
-    resetForm();
-    setDialogOpen(true);
-  };
+  if (user?.role !== 'therapist') {
+    return (
+      <div className="text-center p-8">
+        <p>This page is only available for therapists.</p>
+      </div>
+    );
+  }
 
   if (loading) {
     return <div className="flex justify-center p-8">Loading availability...</div>;
@@ -228,159 +166,165 @@ export const AvailabilityManager: React.FC = () => {
           <Calendar className="h-8 w-8 text-primary" />
           <h1 className="text-3xl font-bold">Manage Availability</h1>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={openAddDialog}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Availability
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {editingSlot ? 'Edit Availability' : 'Add Availability'}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="day_of_week">Day of Week</Label>
-                <Select
-                  value={formData.day_of_week.toString()}
-                  onValueChange={(value) => setFormData({ ...formData, day_of_week: parseInt(value) })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DAYS_OF_WEEK.map((day, index) => (
-                      <SelectItem key={index} value={index.toString()}>
-                        {day}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="start_time">Start Time</Label>
-                  <Input
-                    id="start_time"
-                    type="time"
-                    value={formData.start_time}
-                    onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-                  />
+        <Button onClick={() => setEditingSlot({
+          start_time: '09:00',
+          end_time: '17:00',
+          is_recurring: true,
+          is_available: true
+        })}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Availability
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {availabilitySlots.map((slot) => (
+          <Card key={slot.id}>
+            <CardHeader>
+              <CardTitle className="text-lg">
+                {slot.is_recurring && slot.day_of_week !== undefined
+                  ? DAYS_OF_WEEK.find(d => d.value === slot.day_of_week)?.label
+                  : slot.specific_date}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Clock className="h-4 w-4" />
+                  <span>{slot.start_time} - {slot.end_time}</span>
                 </div>
-                <div>
-                  <Label htmlFor="end_time">End Time</Label>
-                  <Input
-                    id="end_time"
-                    type="time"
-                    value={formData.end_time}
-                    onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+                <div className="flex items-center justify-between">
+                  <span className={`px-2 py-1 rounded text-xs ${
+                    slot.is_available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  }`}>
+                    {slot.is_available ? 'Available' : 'Unavailable'}
+                  </span>
+                  <div className="flex space-x-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setEditingSlot(slot)}
+                    >
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => slot.id && handleDeleteSlot(slot.id)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {editingSlot && (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              {editingSlot.id ? 'Edit Availability' : 'Add Availability'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Type</Label>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={editingSlot.is_recurring}
+                    onCheckedChange={(checked) =>
+                      setEditingSlot({ ...editingSlot, is_recurring: checked })
+                    }
                   />
+                  <span>{editingSlot.is_recurring ? 'Recurring' : 'Specific Date'}</span>
                 </div>
               </div>
 
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="is_recurring"
-                  checked={formData.is_recurring}
-                  onCheckedChange={(checked) => setFormData({ ...formData, is_recurring: checked })}
-                />
-                <Label htmlFor="is_recurring">Recurring weekly</Label>
-              </div>
-
-              {!formData.is_recurring && (
-                <div>
-                  <Label htmlFor="specific_date">Specific Date</Label>
+              {editingSlot.is_recurring ? (
+                <div className="space-y-2">
+                  <Label>Day of Week</Label>
+                  <Select
+                    value={editingSlot.day_of_week?.toString()}
+                    onValueChange={(value) =>
+                      setEditingSlot({ ...editingSlot, day_of_week: parseInt(value) })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select day" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DAYS_OF_WEEK.map((day) => (
+                        <SelectItem key={day.value} value={day.value.toString()}>
+                          {day.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label>Specific Date</Label>
                   <Input
-                    id="specific_date"
                     type="date"
-                    value={formData.specific_date || ''}
-                    onChange={(e) => setFormData({ ...formData, specific_date: e.target.value })}
+                    value={editingSlot.specific_date || ''}
+                    onChange={(e) =>
+                      setEditingSlot({ ...editingSlot, specific_date: e.target.value })
+                    }
                   />
                 </div>
               )}
 
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="is_available"
-                  checked={formData.is_available}
-                  onCheckedChange={(checked) => setFormData({ ...formData, is_available: checked })}
+              <div className="space-y-2">
+                <Label>Start Time</Label>
+                <Input
+                  type="time"
+                  value={editingSlot.start_time}
+                  onChange={(e) =>
+                    setEditingSlot({ ...editingSlot, start_time: e.target.value })
+                  }
                 />
-                <Label htmlFor="is_available">Available for booking</Label>
               </div>
 
-              <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleSaveSlot}>
-                  {editingSlot ? 'Update' : 'Add'} Availability
-                </Button>
+              <div className="space-y-2">
+                <Label>End Time</Label>
+                <Input
+                  type="time"
+                  value={editingSlot.end_time}
+                  onChange={(e) =>
+                    setEditingSlot({ ...editingSlot, end_time: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Availability</Label>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={editingSlot.is_available}
+                    onCheckedChange={(checked) =>
+                      setEditingSlot({ ...editingSlot, is_available: checked })
+                    }
+                  />
+                  <span>{editingSlot.is_available ? 'Available' : 'Unavailable'}</span>
+                </div>
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
 
-      <div className="grid gap-4">
-        {DAYS_OF_WEEK.map((day, dayIndex) => {
-          const daySlots = availabilitySlots.filter(slot => slot.day_of_week === dayIndex);
-          
-          return (
-            <Card key={dayIndex}>
-              <CardHeader>
-                <CardTitle className="text-lg">{day}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {daySlots.length === 0 ? (
-                  <p className="text-muted-foreground">No availability set</p>
-                ) : (
-                  <div className="space-y-2">
-                    {daySlots.map((slot) => (
-                      <div key={slot.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div className="flex items-center space-x-4">
-                          <div className="flex items-center space-x-2">
-                            <Clock className="h-4 w-4" />
-                            <span>{slot.start_time} - {slot.end_time}</span>
-                          </div>
-                          <Badge variant={slot.is_available ? "default" : "secondary"}>
-                            {slot.is_available ? 'Available' : 'Unavailable'}
-                          </Badge>
-                          {slot.is_recurring && (
-                            <Badge variant="outline">Recurring</Badge>
-                          )}
-                          {slot.specific_date && (
-                            <Badge variant="outline">{slot.specific_date}</Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            checked={slot.is_available}
-                            onCheckedChange={() => handleToggleAvailability(slot)}
-                          />
-                          <Button variant="ghost" size="sm" onClick={() => openEditDialog(slot)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => slot.id && handleDeleteSlot(slot.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+            <div className="flex justify-end space-x-2 mt-4">
+              <Button variant="outline" onClick={() => setEditingSlot(null)}>
+                Cancel
+              </Button>
+              <Button onClick={() => handleSaveSlot(editingSlot)}>
+                {editingSlot.id ? 'Update' : 'Add'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

@@ -48,10 +48,10 @@ serve(async (req) => {
       .single();
 
     let shouldChargeDirectly = true;
-    let sessionCost = 120000; // Standard UGX price per session
+    let sessionCost = 76000; // Standard UGX price per session
 
     if (!orgError && orgMember) {
-      // User is part of organization - check annual limits
+      // User is part of organization - check annual limits (8 sessions per year)
       const { data: orgSubscription, error: subError } = await supabaseAdmin
         .from('subscriptions')
         .select('sessions_included, sessions_used')
@@ -62,10 +62,11 @@ serve(async (req) => {
       if (!subError && orgSubscription) {
         if (orgSubscription.sessions_used < orgSubscription.sessions_included) {
           shouldChargeDirectly = false; // Covered by org subscription
+          sessionCost = 0;
         }
       }
     } else {
-      // Check individual professional subscription
+      // Check individual professional subscription (4 sessions per month)
       const { data: professionalSub, error: profError } = await supabaseAdmin
         .from('subscriptions')
         .select('sessions_included, sessions_used')
@@ -75,6 +76,23 @@ serve(async (req) => {
         .single();
 
       if (!profError && professionalSub) {
+        // Check if subscription is still valid for current month
+        const now = new Date();
+        const subStartDate = new Date(professionalSub.start_date);
+        const monthsDiff = (now.getFullYear() - subStartDate.getFullYear()) * 12 + 
+                          (now.getMonth() - subStartDate.getMonth());
+        
+        // Reset sessions_used if it's a new month
+        if (monthsDiff > 0) {
+          await supabaseAdmin
+            .from('subscriptions')
+            .update({ sessions_used: 0 })
+            .eq('profile_id', client_id)
+            .eq('plan_type', 'professional_monthly');
+          
+          professionalSub.sessions_used = 0;
+        }
+
         if (professionalSub.sessions_used < professionalSub.sessions_included) {
           shouldChargeDirectly = false; // Covered by professional subscription
           sessionCost = 0;
@@ -109,7 +127,7 @@ serve(async (req) => {
         .insert([{
           profile_id: client_id,
           session_id: session.id,
-          amount: sessionCost / 100, // Convert to decimal
+          amount: sessionCost,
           currency: 'UGX',
           status: 'pending',
           payment_type: 'session'
@@ -123,7 +141,7 @@ serve(async (req) => {
         await supabaseAdmin
           .from('subscriptions')
           .update({ 
-            sessions_used: supabaseAdmin.raw('sessions_used + 1')
+            sessions_used: orgMember.sessions_used + 1
           })
           .eq('organization_id', orgMember.organization_id)
           .eq('status', 'active');
@@ -132,7 +150,7 @@ serve(async (req) => {
         await supabaseAdmin
           .from('organization_members')
           .update({ 
-            sessions_used: supabaseAdmin.raw('sessions_used + 1')
+            sessions_used: orgMember.sessions_used + 1
           })
           .eq('profile_id', client_id);
       } else {

@@ -1,104 +1,147 @@
 
 import React from 'react';
-import { useRouter } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
-import { useProfile } from '@/hooks/useProfile';
-import { 
-  Calendar, 
-  MessageSquare, 
-  Users, 
-  Settings, 
-  BarChart3, 
-  CreditCard,
-  User,
-  Clock,
-  Shield,
-  FileText,
-  Video,
-  Bell
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import {
+  Calendar,
+  MessageSquare,
+  Users,
+  Settings,
+  BarChart3,
+  Clock,
+  CreditCard,
+  Bell,
+  UserCog,
+  Building,
+  Stethoscope,
+} from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
-const navigationItems = {
-  individual: [
-    { icon: BarChart3, label: 'Dashboard', href: '/dashboard' },
-    { icon: Calendar, label: 'Book Session', href: '/dashboard/book' },
-    { icon: Clock, label: 'My Sessions', href: '/dashboard/sessions' },
-    { icon: MessageSquare, label: 'Messages', href: '/dashboard/messages' },
-    { icon: User, label: 'Profile', href: '/dashboard/profile' },
-    { icon: CreditCard, label: 'Billing', href: '/dashboard/billing' },
-    { icon: Bell, label: 'Notifications', href: '/dashboard/notifications' },
-    { icon: Settings, label: 'Settings', href: '/dashboard/settings' },
-  ],
-  therapist: [
-    { icon: BarChart3, label: 'Dashboard', href: '/dashboard' },
-    { icon: Calendar, label: 'Availability', href: '/dashboard/availability' },
-    { icon: Clock, label: 'Sessions', href: '/dashboard/sessions' },
-    { icon: Users, label: 'Clients', href: '/dashboard/clients' },
-    { icon: MessageSquare, label: 'Messages', href: '/dashboard/messages' },
-    { icon: Video, label: 'Video Calls', href: '/dashboard/video' },
-    { icon: FileText, label: 'Session Notes', href: '/dashboard/notes' },
-    { icon: CreditCard, label: 'Earnings', href: '/dashboard/earnings' },
-    { icon: User, label: 'Profile', href: '/dashboard/profile' },
-    { icon: Settings, label: 'Settings', href: '/dashboard/settings' },
-  ],
-  org_admin: [
-    { icon: BarChart3, label: 'Dashboard', href: '/dashboard' },
-    { icon: Users, label: 'Members', href: '/dashboard/members' },
-    { icon: Calendar, label: 'Group Sessions', href: '/dashboard/group-sessions' },
-    { icon: CreditCard, label: 'Billing', href: '/dashboard/billing' },
-    { icon: FileText, label: 'Reports', href: '/dashboard/reports' },
-    { icon: Settings, label: 'Organization', href: '/dashboard/organization' },
-  ],
-  admin: [
-    { icon: BarChart3, label: 'Dashboard', href: '/dashboard' },
-    { icon: Shield, label: 'Approvals', href: '/dashboard/approvals' },
-    { icon: Users, label: 'User Management', href: '/dashboard/users' },
-    { icon: FileText, label: 'Audit Logs', href: '/dashboard/audit' },
-    { icon: Settings, label: 'System Settings', href: '/dashboard/system' },
-  ],
-};
+interface SidebarProps {
+  className?: string;
+}
 
-export const Sidebar: React.FC = () => {
-  const router = useRouter();
-  const { profile } = useProfile();
-  const currentPath = window.location.pathname;
+export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
+  const { user } = useAuth();
+  const location = useLocation();
 
-  if (!profile) return null;
+  const navigation = [
+    {
+      name: 'Dashboard',
+      href: '/dashboard',
+      icon: BarChart3,
+      roles: ['individual', 'therapist', 'org_admin', 'admin']
+    },
+    {
+      name: 'Book Session',
+      href: '/book-session',
+      icon: Calendar,
+      roles: ['individual']
+    },
+    {
+      name: 'Sessions',
+      href: '/sessions',
+      icon: Stethoscope,
+      roles: ['individual', 'therapist']
+    },
+    {
+      name: 'Availability',
+      href: '/availability',
+      icon: Clock,
+      roles: ['therapist']
+    },
+    {
+      name: 'Messages',
+      href: '/messages',
+      icon: MessageSquare,
+      roles: ['individual', 'therapist', 'org_admin']
+    },
+    {
+      name: 'Team Members',
+      href: '/team',
+      icon: Users,
+      roles: ['org_admin']
+    },
+    {
+      name: 'Organization',
+      href: '/organization',
+      icon: Building,
+      roles: ['org_admin']
+    },
+    {
+      name: 'Billing',
+      href: '/billing',
+      icon: CreditCard,
+      roles: ['individual', 'org_admin']
+    },
+    {
+      name: 'Users',
+      href: '/admin/users',
+      icon: UserCog,
+      roles: ['admin']
+    },
+    {
+      name: 'Notifications',
+      href: '/notifications',
+      icon: Bell,
+      roles: ['individual', 'therapist', 'org_admin', 'admin']
+    },
+    {
+      name: 'Settings',
+      href: '/settings',
+      icon: Settings,
+      roles: ['individual', 'therapist', 'org_admin', 'admin']
+    },
+  ];
 
-  const role = profile.role === 'sys_admin' || profile.role === 'super_admin' ? 'admin' : profile.role;
-  const items = navigationItems[role as keyof typeof navigationItems] || [];
+  const filteredNavigation = navigation.filter(item =>
+    item.roles.includes(user?.role || 'individual')
+  );
 
   return (
-    <aside className="w-64 bg-white border-r h-screen flex flex-col">
+    <div className={cn('flex flex-col h-full bg-card border-r', className)}>
+      {/* User Profile Section */}
       <div className="p-6 border-b">
-        <h2 className="text-xl font-semibold text-gray-900">
-          Mindlyfe
-        </h2>
+        <div className="flex items-center space-x-3">
+          <Avatar>
+            <AvatarImage src={user?.profile_photo_url} />
+            <AvatarFallback>
+              {user?.first_name?.[0]}{user?.last_name?.[0]}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">
+              {user?.first_name} {user?.last_name}
+            </p>
+            <p className="text-xs text-muted-foreground capitalize">
+              {user?.role?.replace('_', ' ')}
+            </p>
+          </div>
+        </div>
       </div>
-      
-      <nav className="flex-1 p-4 space-y-2">
-        {items.map((item) => {
-          const Icon = item.icon;
-          const isActive = currentPath === item.href;
-          
+
+      {/* Navigation */}
+      <nav className="flex-1 px-4 py-6 space-y-2">
+        {filteredNavigation.map((item) => {
+          const isActive = location.pathname === item.href;
           return (
-            <Button
-              key={item.href}
-              variant={isActive ? "default" : "ghost"}
+            <Link
+              key={item.name}
+              to={item.href}
               className={cn(
-                "w-full justify-start",
-                isActive && "bg-primary text-primary-foreground"
+                'flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors',
+                isActive
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
               )}
-              onClick={() => router.push(item.href)}
             >
-              <Icon className="mr-3 h-4 w-4" />
-              {item.label}
-            </Button>
+              <item.icon className="mr-3 h-4 w-4" />
+              {item.name}
+            </Link>
           );
         })}
       </nav>
-    </aside>
+    </div>
   );
 };

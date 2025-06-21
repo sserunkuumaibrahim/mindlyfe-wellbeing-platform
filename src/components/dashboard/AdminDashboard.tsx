@@ -1,216 +1,196 @@
 
-import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Shield, Users, FileText, AlertTriangle, TrendingUp, Settings } from 'lucide-react';
-import { useRouter } from 'next/router';
+import { Users, Calendar, DollarSign, TrendingUp } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
+
+interface AdminStats {
+  totalUsers: number;
+  totalSessions: number;
+  totalRevenue: number;
+  activeSubscriptions: number;
+}
+
+interface User {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  role: string;
+  created_at: string;
+  is_active: boolean;
+}
 
 export const AdminDashboard: React.FC = () => {
-  const router = useRouter();
+  const navigate = useNavigate();
+  const [stats, setStats] = useState<AdminStats>({
+    totalUsers: 0,
+    totalSessions: 0,
+    totalRevenue: 0,
+    activeSubscriptions: 0
+  });
+  const [recentUsers, setRecentUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      // Fetch user count
+      const { count: userCount } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true });
+
+      // Fetch session count
+      const { count: sessionCount } = await supabase
+        .from('therapy_sessions')
+        .select('*', { count: 'exact', head: true });
+
+      // Fetch revenue from paid invoices
+      const { data: invoices } = await supabase
+        .from('invoices')
+        .select('amount')
+        .eq('status', 'paid');
+
+      const totalRevenue = invoices?.reduce((sum, invoice) => sum + Number(invoice.amount), 0) || 0;
+
+      // Fetch active subscriptions
+      const { count: subscriptionCount } = await supabase
+        .from('subscriptions')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'active');
+
+      // Fetch recent users
+      const { data: users } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, email, role, created_at, is_active')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      setStats({
+        totalUsers: userCount || 0,
+        totalSessions: sessionCount || 0,
+        totalRevenue,
+        activeSubscriptions: subscriptionCount || 0
+      });
+
+      setRecentUsers(users || []);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load dashboard data",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="flex justify-center p-8">Loading dashboard...</div>;
+  }
 
   return (
     <div className="space-y-6">
-      {/* Welcome Section */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
-        <p className="text-muted-foreground">
-          Platform administration and oversight
-        </p>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
       </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Approvals</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">23</div>
-            <p className="text-xs text-muted-foreground">
-              8 therapists, 15 organizations
-            </p>
-          </CardContent>
-        </Card>
-
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Users</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1,245</div>
+            <div className="text-2xl font-bold">{stats.totalUsers}</div>
             <p className="text-xs text-muted-foreground">
-              +15% from last month
+              Registered users
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">System Alerts</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Total Sessions</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">3</div>
+            <div className="text-2xl font-bold">{stats.totalSessions}</div>
             <p className="text-xs text-muted-foreground">
-              2 critical, 1 warning
+              Therapy sessions
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Platform Health</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">UGX {stats.totalRevenue.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">
+              From payments
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Subscriptions</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">99.8%</div>
+            <div className="text-2xl font-bold">{stats.activeSubscriptions}</div>
             <p className="text-xs text-muted-foreground">
-              Uptime this month
+              Active subscriptions
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Pending Actions */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Pending Actions</CardTitle>
-            <CardDescription>
-              Items requiring admin attention
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 border rounded-lg border-orange-200 bg-orange-50">
-                <div>
-                  <h4 className="font-semibold">Therapist License Verification</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Dr. Michael Chen • License expires in 30 days
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Renewal documentation required
-                  </p>
-                </div>
-                <div className="flex space-x-2">
-                  <Button size="sm" variant="outline">Review</Button>
-                  <Button size="sm">Approve</Button>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-4 border rounded-lg border-blue-200 bg-blue-50">
-                <div>
-                  <h4 className="font-semibold">Organization Registration</h4>
-                  <p className="text-sm text-muted-foreground">
-                    TechCorp Inc. • Submitted 2 days ago
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    500+ employees, enterprise plan
-                  </p>
-                </div>
-                <div className="flex space-x-2">
-                  <Button size="sm" variant="outline">Review</Button>
-                  <Button size="sm">Approve</Button>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <h4 className="font-semibold">Content Moderation</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Reported content • Community guidelines
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    User complaint about inappropriate content
-                  </p>
-                </div>
-                <div className="flex space-x-2">
-                  <Button size="sm" variant="outline">Review</Button>
-                  <Button size="sm" variant="destructive">Remove</Button>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Admin Tools */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Admin Tools</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Button 
-                className="w-full justify-start"
-                onClick={() => router.push('/dashboard/admin/users')}
-              >
-                <Users className="mr-2 h-4 w-4" />
-                User Management
-              </Button>
-              <Button 
-                className="w-full justify-start" 
-                variant="outline"
-                onClick={() => router.push('/dashboard/admin/approvals')}
-              >
-                <FileText className="mr-2 h-4 w-4" />
-                Approvals Queue
-              </Button>
-              <Button 
-                className="w-full justify-start" 
-                variant="outline"
-                onClick={() => router.push('/dashboard/admin/analytics')}
-              >
-                <TrendingUp className="mr-2 h-4 w-4" />
-                Platform Analytics
-              </Button>
-              <Button 
-                className="w-full justify-start" 
-                variant="outline"
-                onClick={() => router.push('/dashboard/admin/settings')}
-              >
-                <Settings className="mr-2 h-4 w-4" />
-                System Settings
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>System Status</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Database</span>
-                  <div className="flex items-center">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                    <span className="text-sm text-green-600">Healthy</span>
+      {/* Recent Users */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Recent Users</CardTitle>
+            <Button onClick={() => navigate('/admin/users')}>
+              View All Users
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {recentUsers.map((user) => (
+              <div key={user.id} className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div>
+                    <p className="font-medium">{user.first_name} {user.last_name}</p>
+                    <p className="text-sm text-muted-foreground">{user.email}</p>
                   </div>
                 </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">API Services</span>
-                  <div className="flex items-center">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                    <span className="text-sm text-green-600">Operational</span>
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Payment Gateway</span>
-                  <div className="flex items-center">
-                    <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></div>
-                    <span className="text-sm text-yellow-600">Slow</span>
-                  </div>
+                <div className="flex items-center space-x-2">
+                  <Badge variant={user.role === 'therapist' ? 'default' : 'secondary'}>
+                    {user.role}
+                  </Badge>
+                  <Badge variant={user.is_active ? 'default' : 'destructive'}>
+                    {user.is_active ? 'Active' : 'Inactive'}
+                  </Badge>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

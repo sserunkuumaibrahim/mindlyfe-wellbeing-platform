@@ -1,11 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import Stripe from "https://esm.sh/stripe@14.21.0";
-
-const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
-  apiVersion: "2023-10-16",
-});
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,32 +18,65 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { amount, currency = 'ugx', profile_id, session_id, payment_type = 'session' } = await req.json();
+    const { amount, currency = 'UGX', profile_id, session_id, payment_type = 'session' } = await req.json();
 
-    console.log('Creating payment intent:', { amount, currency, profile_id, session_id, payment_type });
+    console.log('Creating DPO payment intent:', { amount, currency, profile_id, session_id, payment_type });
 
     // Get user details
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
-      .select('email, first_name, last_name')
+      .select('email, first_name, last_name, phone_number')
       .eq('id', profile_id)
       .single();
 
     if (profileError) throw profileError;
 
-    // Create payment intent
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100), // Convert to cents
-      currency: currency.toLowerCase(),
-      automatic_payment_methods: {
-        enabled: true,
-      },
-      metadata: {
-        profile_id,
-        session_id: session_id || '',
-        payment_type
+    // Create DPO payment request
+    const dpoApiUrl = "https://secure.3gdirectpay.com/API/v6/";
+    const dpoApiKey = Deno.env.get("DPO_API_KEY");
+    const dpoCompanyToken = Deno.env.get("DPO_COMPANY_TOKEN");
+
+    if (!dpoApiKey || !dpoCompanyToken) {
+      throw new Error("DPO API credentials not configured");
+    }
+
+    // Generate unique transaction reference
+    const transactionRef = `MINDLYFE_${Date.now()}_${profile_id.substring(0, 8)}`;
+
+    const dpoPaymentData = {
+      companyToken: dpoCompanyToken,
+      request: "createToken",
+      transaction: {
+        paymentAmount: amount,
+        paymentCurrency: currency,
+        companyRef: transactionRef,
+        redirectURL: `${Deno.env.get("SUPABASE_URL")}/functions/v1/payment-callback`,
+        backURL: `${window?.location?.origin || 'https://app.mindlyfe.org'}/dashboard`,
+        companyAccRef: profile_id,
+        customerFirstName: profile.first_name,
+        customerLastName: profile.last_name,
+        customerEmail: profile.email,
+        customerPhone: profile.phone_number || "",
       }
+    };
+
+    const dpoResponse = await fetch(dpoApiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(dpoPaymentData)
     });
+
+    if (!dpoResponse.ok) {
+      throw new Error(`DPO API error: ${dpoResponse.statusText}`);
+    }
+
+    const dpoResult = await dpoResponse.json();
+
+    if (dpoResult.result !== "000") {
+      throw new Error(`DPO payment creation failed: ${dpoResult.resultExplanation}`);
+    }
 
     // Create invoice record
     const { error: invoiceError } = await supabaseAdmin
@@ -57,26 +85,28 @@ serve(async (req) => {
         profile_id,
         session_id,
         amount: amount,
-        currency: currency.toUpperCase(),
+        currency: currency,
         status: 'pending',
-        stripe_payment_intent_id: paymentIntent.id,
-        payment_type
+        payment_type,
+        // Store DPO transaction reference instead of Stripe ID
+        stripe_payment_intent_id: transactionRef
       }]);
 
     if (invoiceError) throw invoiceError;
 
-    console.log('Payment intent created:', paymentIntent.id);
+    console.log('DPO payment token created:', dpoResult.transToken);
 
     return new Response(
       JSON.stringify({
-        client_secret: paymentIntent.client_secret,
-        payment_intent_id: paymentIntent.id
+        payment_url: `https://secure.3gdirectpay.com/payv2.php?ID=${dpoResult.transToken}`,
+        transaction_token: dpoResult.transToken,
+        transaction_ref: transactionRef
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
   } catch (error) {
-    console.error('Error creating payment intent:', error);
+    console.error('Error creating DPO payment:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }

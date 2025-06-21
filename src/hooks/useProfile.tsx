@@ -89,10 +89,20 @@ export const useProfile = () => {
 
     try {
       // Convert Date objects back to strings for database
-      const dbUpdates = {
-        ...updates,
-        date_of_birth: updates.date_of_birth ? updates.date_of_birth.toISOString().split('T')[0] : undefined,
-      };
+      const dbUpdates: Record<string, any> = {};
+      
+      Object.keys(updates).forEach(key => {
+        const value = updates[key as keyof typeof updates];
+        if (value instanceof Date) {
+          if (key === 'date_of_birth') {
+            dbUpdates[key] = value.toISOString().split('T')[0];
+          } else {
+            dbUpdates[key] = value.toISOString();
+          }
+        } else {
+          dbUpdates[key] = value;
+        }
+      });
 
       const { error } = await supabase
         .from('profiles')

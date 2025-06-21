@@ -1,15 +1,23 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import Stripe from "https://esm.sh/stripe@14.21.0";
-
-const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
-  apiVersion: "2023-10-16",
-});
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+const SUBSCRIPTION_PLANS = {
+  professional_monthly: {
+    amount: 200000, // UGX
+    sessions_included: 4,
+    duration_months: 1
+  },
+  organization_annual: {
+    amount: 680000, // UGX per user per year
+    sessions_included: 8,
+    duration_months: 12
+  }
 };
 
 serve(async (req) => {
@@ -23,122 +31,78 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { profile_id, organization_id, plan_type } = await req.json();
+    const { profile_id, organization_id, plan_type, num_users = 1 } = await req.json();
 
-    console.log('Creating subscription:', { profile_id, organization_id, plan_type });
+    console.log('Creating subscription:', { profile_id, organization_id, plan_type, num_users });
 
-    // Define plan details
-    const planDetails = {
-      'professional_monthly': {
-        amount_ugx: 200000,
-        sessions_included: 4,
-        interval: 'month'
-      },
-      'organization_annual': {
-        amount_ugx: 680000,
-        sessions_included: 8,
-        interval: 'year'
-      }
-    };
-
-    const plan = planDetails[plan_type as keyof typeof planDetails];
+    const plan = SUBSCRIPTION_PLANS[plan_type as keyof typeof SUBSCRIPTION_PLANS];
     if (!plan) {
-      throw new Error('Invalid plan type');
+      throw new Error("Invalid subscription plan");
     }
 
-    // Get user details
-    const { data: profile, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('email, first_name, last_name')
-      .eq('id', profile_id)
-      .single();
+    // Calculate total amount (for organization plans, multiply by number of users)
+    const totalAmount = plan_type === 'organization_annual' ? plan.amount * num_users : plan.amount;
+    const totalSessions = plan_type === 'organization_annual' ? plan.sessions_included * num_users : plan.sessions_included;
 
-    if (profileError) throw profileError;
-
-    // Create or get Stripe customer
-    let customer;
-    try {
-      const customers = await stripe.customers.list({
-        email: profile.email,
-        limit: 1
-      });
-      
-      if (customers.data.length > 0) {
-        customer = customers.data[0];
-      } else {
-        customer = await stripe.customers.create({
-          email: profile.email,
-          name: `${profile.first_name} ${profile.last_name}`,
-        });
-      }
-    } catch (error) {
-      throw new Error(`Failed to create/get customer: ${error.message}`);
-    }
-
-    // Create subscription in database first
+    // Calculate end date
+    const startDate = new Date();
     const endDate = new Date();
-    if (plan.interval === 'month') {
-      endDate.setMonth(endDate.getMonth() + 1);
-    } else {
-      endDate.setFullYear(endDate.getFullYear() + 1);
-    }
+    endDate.setMonth(endDate.getMonth() + plan.duration_months);
 
-    const { data: subscription, error: subError } = await supabaseAdmin
+    // Create subscription
+    const { data: subscription, error: subscriptionError } = await supabaseAdmin
       .from('subscriptions')
       .insert([{
-        profile_id: organization_id ? null : profile_id,
-        organization_id: organization_id || null,
+        profile_id: plan_type === 'professional_monthly' ? profile_id : null,
+        organization_id: plan_type === 'organization_annual' ? organization_id : null,
         plan_type,
-        amount_ugx: plan.amount_ugx,
-        sessions_included: plan.sessions_included,
+        status: 'pending',
+        sessions_included: totalSessions,
         sessions_used: 0,
-        end_date: endDate.toISOString(),
-        status: 'pending'
+        amount_ugx: totalAmount,
+        start_date: startDate.toISOString(),
+        end_date: endDate.toISOString()
       }])
       .select()
       .single();
 
-    if (subError) throw subError;
+    if (subscriptionError) throw subscriptionError;
 
-    // Create Stripe subscription
-    const stripeSubscription = await stripe.subscriptions.create({
-      customer: customer.id,
-      items: [{
-        price_data: {
-          currency: 'ugx',
-          product_data: {
-            name: `Mindlyfe ${plan_type.replace('_', ' ').toUpperCase()}`,
-          },
-          unit_amount: plan.amount_ugx * 100, // Convert to cents
-          recurring: {
-            interval: plan.interval as 'month' | 'year'
-          },
-        },
-      }],
-      metadata: {
-        subscription_id: subscription.id,
+    // Create payment intent for subscription
+    const { data: paymentData, error: paymentError } = await supabaseAdmin.functions.invoke('create-payment-intent', {
+      body: {
+        amount: totalAmount,
+        currency: 'UGX',
         profile_id,
-        organization_id: organization_id || '',
-        plan_type
+        payment_type: 'subscription',
+        subscription_id: subscription.id
       }
     });
 
-    // Update subscription with Stripe ID
-    await supabaseAdmin
-      .from('subscriptions')
-      .update({ 
-        stripe_subscription_id: stripeSubscription.id,
-        status: stripeSubscription.status === 'active' ? 'active' :subscriptions.status
-      })
-      .eq('id', subscription.id);
+    if (paymentError) throw paymentError;
 
-    console.log('Subscription created:', subscription.id);
+    // Send notification
+    const notificationMessage = plan_type === 'professional_monthly' 
+      ? `Your Professional Monthly subscription (${plan.sessions_included} sessions) is pending payment.`
+      : `Your Organization Annual subscription (${totalSessions} sessions for ${num_users} users) is pending payment.`;
+
+    await supabaseAdmin.from('notifications').insert([{
+      profile_id,
+      title: 'Subscription Created',
+      message: notificationMessage,
+      type: 'info',
+      data: { subscription_id: subscription.id }
+    }]);
+
+    console.log('Subscription created successfully:', subscription.id);
 
     return new Response(
       JSON.stringify({
-        subscription_id: subscription.id,
-        stripe_subscription_id: stripeSubscription.id,
-        client_secret: stripeSubscription.latest_invoice?.payment_intent?.client_secret
+        success: true,
+        subscription,
+        payment_url: paymentData.payment_url,
+        total_amount: totalAmount,
+        sessions_included: totalSessions
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

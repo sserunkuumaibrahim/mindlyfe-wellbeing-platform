@@ -1,197 +1,219 @@
 
-import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, Calendar, DollarSign, TrendingUp, Building, UserPlus } from 'lucide-react';
-import { useRouter } from 'next/router';
+import { Badge } from '@/components/ui/badge';
+import { Users, Calendar, DollarSign, Plus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from '@/hooks/use-toast';
+
+interface OrgStats {
+  totalMembers: number;
+  totalSessions: number;
+  sessionsUsed: number;
+  sessionsRemaining: number;
+}
+
+interface Member {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  sessions_used: number;
+  joined_at: string;
+}
 
 export const OrganizationDashboard: React.FC = () => {
-  const router = useRouter();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [stats, setStats] = useState<OrgStats>({
+    totalMembers: 0,
+    totalSessions: 0,
+    sessionsUsed: 0,
+    sessionsRemaining: 0
+  });
+  const [members, setMembers] = useState<Member[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (user?.role === 'org_admin') {
+      fetchDashboardData();
+    }
+  }, [user]);
+
+  const fetchDashboardData = async () => {
+    try {
+      // Get organization profile
+      const { data: orgProfile } = await supabase
+        .from('organization_profiles')
+        .select('id')
+        .eq('id', user?.id)
+        .single();
+
+      if (!orgProfile) throw new Error('Organization not found');
+
+      // Fetch organization members
+      const { data: orgMembers } = await supabase
+        .from('organization_members')
+        .select(`
+          sessions_used,
+          joined_at,
+          profiles:profile_id (
+            id,
+            first_name,
+            last_name,
+            email
+          )
+        `)
+        .eq('organization_id', orgProfile.id);
+
+      // Fetch active subscription
+      const { data: subscription } = await supabase
+        .from('subscriptions')
+        .select('sessions_included, sessions_used')
+        .eq('organization_id', orgProfile.id)
+        .eq('status', 'active')
+        .single();
+
+      const totalMembers = orgMembers?.length || 0;
+      const sessionsIncluded = subscription?.sessions_included || 0;
+      const sessionsUsed = subscription?.sessions_used || 0;
+      const sessionsRemaining = Math.max(0, sessionsIncluded - sessionsUsed);
+
+      setStats({
+        totalMembers,
+        totalSessions: sessionsIncluded,
+        sessionsUsed,
+        sessionsRemaining
+      });
+
+      // Format members data
+      const formattedMembers = orgMembers?.map(member => ({
+        id: member.profiles.id,
+        first_name: member.profiles.first_name,
+        last_name: member.profiles.last_name,
+        email: member.profiles.email,
+        sessions_used: member.sessions_used,
+        joined_at: member.joined_at
+      })) || [];
+
+      setMembers(formattedMembers);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load dashboard data",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="flex justify-center p-8">Loading dashboard...</div>;
+  }
 
   return (
     <div className="space-y-6">
-      {/* Welcome Section */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Organization Dashboard</h1>
-        <p className="text-muted-foreground">
-          Manage your team's mental health services
-        </p>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Organization Dashboard</h1>
+        <Button onClick={() => navigate('/team')}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Member
+        </Button>
       </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Members</CardTitle>
+            <CardTitle className="text-sm font-medium">Team Members</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">156</div>
+            <div className="text-2xl font-bold">{stats.totalMembers}</div>
             <p className="text-xs text-muted-foreground">
-              +12 this month
+              Active members
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Sessions</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Sessions</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">89</div>
+            <div className="text-2xl font-bold">{stats.totalSessions}</div>
             <p className="text-xs text-muted-foreground">
-              This month
+              Included in subscription
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Monthly Spend</CardTitle>
+            <CardTitle className="text-sm font-medium">Sessions Used</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$12,450</div>
+            <div className="text-2xl font-bold">{stats.sessionsUsed}</div>
             <p className="text-xs text-muted-foreground">
-              Within budget
+              By team members
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Utilization Rate</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Sessions Remaining</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">78%</div>
+            <div className="text-2xl font-bold">{stats.sessionsRemaining}</div>
             <p className="text-xs text-muted-foreground">
-              +5% from last month
+              Available for booking
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Activity */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>
-              Latest member activities and sessions
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <h4 className="font-semibold">Group Wellness Session</h4>
+      {/* Team Members */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Team Members</CardTitle>
+            <Button onClick={() => navigate('/team')}>
+              Manage Team
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {members.map((member) => (
+              <div key={member.id} className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div>
+                    <p className="font-medium">{member.first_name} {member.last_name}</p>
+                    <p className="text-sm text-muted-foreground">{member.email}</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Badge variant="secondary">
+                    {member.sessions_used} sessions used
+                  </Badge>
                   <p className="text-sm text-muted-foreground">
-                    15 participants • Today at 2:00 PM
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Stress Management Workshop
-                  </p>
-                </div>
-                <Button size="sm" variant="outline">View Details</Button>
-              </div>
-
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <h4 className="font-semibold">New Member Registration</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Sarah Johnson joined • 2 hours ago
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Marketing Department
-                  </p>
-                </div>
-                <Button size="sm" variant="outline">Approve</Button>
-              </div>
-
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <h4 className="font-semibold">Monthly Report Generated</h4>
-                  <p className="text-sm text-muted-foreground">
-                    October 2024 • Yesterday
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Team wellness metrics available
-                  </p>
-                </div>
-                <Button size="sm" variant="outline">Download</Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Quick Actions & Management */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Button 
-                className="w-full justify-start"
-                onClick={() => router.push('/dashboard/members')}
-              >
-                <UserPlus className="mr-2 h-4 w-4" />
-                Invite Members
-              </Button>
-              <Button 
-                className="w-full justify-start" 
-                variant="outline"
-                onClick={() => router.push('/dashboard/group-sessions')}
-              >
-                <Calendar className="mr-2 h-4 w-4" />
-                Schedule Group Session
-              </Button>
-              <Button 
-                className="w-full justify-start" 
-                variant="outline"
-                onClick={() => router.push('/dashboard/reports')}
-              >
-                <TrendingUp className="mr-2 h-4 w-4" />
-                View Reports
-              </Button>
-              <Button 
-                className="w-full justify-start" 
-                variant="outline"
-                onClick={() => router.push('/dashboard/organization')}
-              >
-                <Building className="mr-2 h-4 w-4" />
-                Org Settings
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Upcoming Events</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm font-medium">Mental Health Awareness Week</p>
-                  <p className="text-xs text-muted-foreground">
-                    Nov 15-22 • 8 events scheduled
-                  </p>
-                </div>
-                
-                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <p className="text-sm font-medium">Quarterly Wellness Survey</p>
-                  <p className="text-xs text-muted-foreground">
-                    Due Nov 30 • 45% completed
+                    Joined {new Date(member.joined_at).toLocaleDateString()}
                   </p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
