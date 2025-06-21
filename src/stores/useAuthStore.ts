@@ -193,6 +193,65 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       set({ loading: true, error: null });
       
+      // Handle file uploads for therapist registration
+      let documentUrls: Record<string, string> = {};
+      
+      if (data.role === 'therapist') {
+        const therapistData = data as TherapistRegisterDTO;
+        
+        // Upload documents to Supabase storage if they exist
+        if (therapistData.licenseDocument || therapistData.insuranceDocument || therapistData.idDocument) {
+          const uploadPromises: Promise<any>[] = [];
+          
+          if (therapistData.licenseDocument) {
+            const fileName = `license_${Date.now()}_${therapistData.licenseDocument.name}`;
+            uploadPromises.push(
+              supabase.storage
+                .from('therapist-documents')
+                .upload(fileName, therapistData.licenseDocument)
+                .then(({ data: uploadData, error }) => {
+                  if (error) throw error;
+                  documentUrls.license_document_url = uploadData.path;
+                })
+            );
+          }
+          
+          if (therapistData.insuranceDocument) {
+            const fileName = `insurance_${Date.now()}_${therapistData.insuranceDocument.name}`;
+            uploadPromises.push(
+              supabase.storage
+                .from('therapist-documents')
+                .upload(fileName, therapistData.insuranceDocument)
+                .then(({ data: uploadData, error }) => {
+                  if (error) throw error;
+                  documentUrls.insurance_document_url = uploadData.path;
+                })
+            );
+          }
+          
+          if (therapistData.idDocument) {
+            const fileName = `id_${Date.now()}_${therapistData.idDocument.name}`;
+            uploadPromises.push(
+              supabase.storage
+                .from('therapist-documents')
+                .upload(fileName, therapistData.idDocument)
+                .then(({ data: uploadData, error }) => {
+                  if (error) throw error;
+                  documentUrls.id_document_url = uploadData.path;
+                })
+            );
+          }
+          
+          // Wait for all uploads to complete
+          try {
+            await Promise.all(uploadPromises);
+          } catch (uploadError) {
+            console.error('Document upload error:', uploadError);
+            throw new Error('Failed to upload documents. Please try again.');
+          }
+        }
+      }
+      
       // Simplified and cleaned metadata preparation
       const metadata: Record<string, any> = {
         first_name: data.first_name.trim(),
@@ -316,6 +375,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           
           if (therapistData.bio?.trim()) {
             metadata.bio = therapistData.bio.trim();
+          }
+
+          // Add document URLs to metadata
+          if (documentUrls.license_document_url) {
+            metadata.license_document_url = documentUrls.license_document_url;
+          }
+          if (documentUrls.insurance_document_url) {
+            metadata.insurance_document_url = documentUrls.insurance_document_url;
+          }
+          if (documentUrls.id_document_url) {
+            metadata.id_document_url = documentUrls.id_document_url;
           }
         } else if (data.role === 'org_admin') {
           const orgData = data as OrganizationRegisterDTO;

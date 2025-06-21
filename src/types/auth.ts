@@ -50,6 +50,10 @@ export interface TherapistRegisterDTO extends BaseRegisterDTO {
   certifications?: string[];
   hourly_rate?: number;
   bio?: string;
+  // Document files
+  licenseDocument?: File | null;
+  insuranceDocument?: File | null;
+  idDocument?: File | null;
 }
 
 export interface OrganizationRegisterDTO extends BaseRegisterDTO {

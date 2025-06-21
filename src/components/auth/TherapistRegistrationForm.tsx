@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { FileUpload } from "@/components/ui/FileUpload";
 import { TherapistRegisterDTO, GenderType } from "@/types/auth";
 import { ArrowLeft, Plus, X, Eye, EyeOff } from "lucide-react";
 
@@ -24,25 +24,23 @@ const therapistSchema = z.object({
   first_name: z.string().min(1, "First name is required").max(50, "First name must be less than 50 characters"),
   last_name: z.string().min(1, "Last name is required").max(50, "Last name must be less than 50 characters"),
   phone_number: z.string().optional(),
-  date_of_birth: z.date().optional(),
+  date_of_birth: z.string().optional(),
   gender: z.enum(['male', 'female']).optional(),
   country: z.string().optional(),
   preferred_language: z.string().optional(),
   national_id_number: z.string().min(1, "National ID is required").max(50, "National ID must be less than 50 characters"),
   license_body: z.string().min(1, "License body is required").max(100, "License body must be less than 100 characters"),
   license_number: z.string().min(1, "License number is required").max(50, "License number must be less than 50 characters"),
-  license_expiry_date: z.date({
+  license_expiry_date: z.string({
     required_error: "License expiry date is required",
-    invalid_type_error: "Please enter a valid date"
-  }).refine((date) => date > new Date(), {
+  }).refine((date) => new Date(date) > new Date(), {
     message: "License expiry date must be in the future"
   }),
   insurance_provider: z.string().min(1, "Insurance provider is required").max(100, "Insurance provider must be less than 100 characters"),
   insurance_policy_number: z.string().min(1, "Insurance policy number is required").max(50, "Insurance policy number must be less than 50 characters"),
-  insurance_expiry_date: z.date({
+  insurance_expiry_date: z.string({
     required_error: "Insurance expiry date is required",
-    invalid_type_error: "Please enter a valid date"
-  }).refine((date) => date > new Date(), {
+  }).refine((date) => new Date(date) > new Date(), {
     message: "Insurance expiry date must be in the future"
   }),
   years_experience: z.number({
@@ -75,6 +73,11 @@ export function TherapistRegistrationForm({ onSubmit, loading, error, onBack }: 
   const [certifications, setCertifications] = useState<string[]>(['']);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  // File states
+  const [licenseDocument, setLicenseDocument] = useState<File | null>(null);
+  const [insuranceDocument, setInsuranceDocument] = useState<File | null>(null);
+  const [idDocument, setIdDocument] = useState<File | null>(null);
 
   const {
     register,
@@ -154,17 +157,17 @@ export function TherapistRegistrationForm({ onSubmit, loading, error, onBack }: 
       first_name: data.first_name,
       last_name: data.last_name,
       phone_number: data.phone_number,
-      date_of_birth: data.date_of_birth,
+      date_of_birth: data.date_of_birth ? new Date(data.date_of_birth) : undefined,
       gender: data.gender,
       country: data.country,
       preferred_language: data.preferred_language,
       national_id_number: data.national_id_number,
       license_body: data.license_body,
       license_number: data.license_number,
-      license_expiry_date: data.license_expiry_date,
+      license_expiry_date: new Date(data.license_expiry_date),
       insurance_provider: data.insurance_provider,
       insurance_policy_number: data.insurance_policy_number,
-      insurance_expiry_date: data.insurance_expiry_date,
+      insurance_expiry_date: new Date(data.insurance_expiry_date),
       years_experience: data.years_experience,
       specializations: specializations.filter(s => s.trim()),
       languages_spoken: languages.filter(l => l.trim()),
@@ -172,6 +175,10 @@ export function TherapistRegistrationForm({ onSubmit, loading, error, onBack }: 
       certifications: certifications.filter(c => c.trim()),
       hourly_rate: data.hourly_rate,
       bio: data.bio,
+      // Add document files
+      licenseDocument,
+      insuranceDocument,
+      idDocument,
     };
     await onSubmit(formData);
   };
@@ -457,6 +464,37 @@ export function TherapistRegistrationForm({ onSubmit, loading, error, onBack }: 
                 placeholder="0.00"
               />
             </div>
+          </div>
+        </div>
+
+        {/* Document Uploads */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Required Documents</h3>
+          <p className="text-sm text-muted-foreground">
+            Please upload the following documents to verify your credentials
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FileUpload
+              label="License Document"
+              description="Upload a copy of your professional license"
+              onChange={setLicenseDocument}
+              required
+            />
+            
+            <FileUpload
+              label="Insurance Document"
+              description="Upload your professional liability insurance certificate"
+              onChange={setInsuranceDocument}
+              required
+            />
+            
+            <FileUpload
+              label="ID Document"
+              description="Upload a copy of your government-issued ID"
+              onChange={setIdDocument}
+              required
+            />
           </div>
         </div>
 
