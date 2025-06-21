@@ -206,7 +206,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
       
       if (data.date_of_birth) {
-        metadata.date_of_birth = data.date_of_birth.toISOString().split('T')[0];
+        // Convert Date to ISO string format (YYYY-MM-DD)
+        metadata.date_of_birth = data.date_of_birth instanceof Date 
+          ? data.date_of_birth.toISOString().split('T')[0]
+          : data.date_of_birth;
       }
       
       if (data.gender?.trim()) {
@@ -280,11 +283,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           metadata.insurance_policy_number = therapistData.insurance_policy_number.trim();
           
           if (therapistData.license_expiry_date) {
-            metadata.license_expiry_date = therapistData.license_expiry_date.toISOString().split('T')[0];
+            metadata.license_expiry_date = therapistData.license_expiry_date instanceof Date
+              ? therapistData.license_expiry_date.toISOString().split('T')[0]
+              : therapistData.license_expiry_date;
           }
           
           if (therapistData.insurance_expiry_date) {
-            metadata.insurance_expiry_date = therapistData.insurance_expiry_date.toISOString().split('T')[0];
+            metadata.insurance_expiry_date = therapistData.insurance_expiry_date instanceof Date
+              ? therapistData.insurance_expiry_date.toISOString().split('T')[0]
+              : therapistData.insurance_expiry_date;
           }
           
           if (typeof therapistData.years_experience === 'number' && therapistData.years_experience >= 0) {
@@ -341,7 +348,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           }
           
           if (orgData.date_of_establishment) {
-            metadata.date_of_establishment = orgData.date_of_establishment.toISOString().split('T')[0];
+            metadata.date_of_establishment = orgData.date_of_establishment instanceof Date
+              ? orgData.date_of_establishment.toISOString().split('T')[0]
+              : orgData.date_of_establishment;
           }
           
           if (typeof orgData.num_employees === 'number' && orgData.num_employees > 0) {
