@@ -1,9 +1,9 @@
-export type UserRole = 'individual' | 'therapist' | 'org_admin' | 'sys_admin' | 'super_admin';
-export type ProfileStatus = 'pending_review' | 'approved' | 'rejected' | 'active' | 'inactive';
-export type CommunicationPreference = 'email' | 'sms' | 'both';
+
+export type UserRole = 'individual' | 'therapist' | 'org_admin';
 export type GenderType = 'male' | 'female';
+export type CommunicationPreference = 'email' | 'sms' | 'both';
 export type OrganizationType = 'private_company' | 'school' | 'ngo' | 'government' | 'healthcare' | 'other';
-export type TwoFAMethod = 'email' | 'sms' | 'authenticator';
+export type ProfileStatus = 'pending_review' | 'approved' | 'rejected' | 'suspended';
 
 export interface User {
   id: string;
@@ -40,7 +40,6 @@ export interface IndividualProfile {
   emergency_contact_name?: string;
   emergency_contact_phone?: string;
   preferred_therapist_gender?: GenderType;
-  session_preferences?: Record<string, any>;
   created_at: Date;
   updated_at: Date;
 }
@@ -50,26 +49,21 @@ export interface TherapistProfile {
   national_id_number: string;
   license_body: string;
   license_number: string;
-  license_expiry_date: Date;
-  insurance_provider: string;
-  insurance_policy_number: string;
-  insurance_expiry_date: Date;
+  license_expiry_date?: Date;
+  insurance_provider?: string;
+  insurance_policy_number?: string;
+  insurance_expiry_date?: Date;
   years_experience: number;
   specializations: string[];
   languages_spoken: string[];
   education_background?: string;
   certifications?: string[];
-  hourly_rate?: number;
-  currency: string;
-  status: ProfileStatus;
-  review_notes?: string;
-  reviewed_by?: string;
-  reviewed_at?: Date;
-  availability?: Record<string, any>;
   bio?: string;
+  status: ProfileStatus;
   license_document_url?: string;
   insurance_document_url?: string;
   id_document_url?: string;
+  other_documents_urls?: string;
   created_at: Date;
   updated_at: Date;
 }
@@ -79,40 +73,22 @@ export interface OrganizationProfile {
   organization_name: string;
   organization_type: OrganizationType;
   registration_number: string;
-  date_of_establishment: Date;
+  date_of_establishment?: Date;
   tax_id_number: string;
   num_employees: number;
-  official_website?: string;
-  address?: string;
-  city?: string;
-  state_province?: string;
-  postal_code?: string;
   representative_name: string;
   representative_job_title: string;
   representative_national_id: string;
-  status: ProfileStatus;
-  review_notes?: string;
-  reviewed_by?: string;
-  reviewed_at?: Date;
-  service_requirements?: Record<string, any>;
+  official_website?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
   billing_contact_email?: string;
   billing_contact_phone?: string;
-  proof_registration_url?: string;
-  auth_letter_url?: string;
-  tax_certificate_url?: string;
-  org_structure_url?: string;
+  status: ProfileStatus;
+  service_requirements?: Record<string, any>;
+  uploaded_documents?: Record<string, any>;
   created_at: Date;
   updated_at: Date;
-}
-
-export interface UserTwoFAMethod {
-  id: string;
-  profile_id: string;
-  method: TwoFAMethod;
-  secret?: string;
-  backup_codes?: string[];
-  is_verified: boolean;
-  is_primary: boolean;
-  created_at: Date;
-  verified_at?: Date;
 }
