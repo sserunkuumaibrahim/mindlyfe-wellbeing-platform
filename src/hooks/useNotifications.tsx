@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { notificationService } from '@/services/notificationService';
-import { useAuth } from './useAuth';
+import { useAuth } from '@/components/AuthProvider';
 
 export const useNotifications = () => {
   const { user } = useAuth();
@@ -15,7 +15,7 @@ export const useNotifications = () => {
 
     const fetchNotifications = async () => {
       try {
-        const data = await notificationService.getNotifications(user.id);
+        const data = await notificationService.getUserNotifications(user.id);
         setNotifications(data || []);
         setUnreadCount(data?.filter(n => !n.is_read).length || 0);
       } catch (error) {

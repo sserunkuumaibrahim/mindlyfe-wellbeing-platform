@@ -819,6 +819,7 @@ export type Database = {
           failed_login_attempts: number
           first_name: string
           full_name: string | null
+          gender: Database["public"]["Enums"]["gender_type"] | null
           id: string
           is_active: boolean
           is_email_verified: boolean
@@ -842,6 +843,7 @@ export type Database = {
           failed_login_attempts?: number
           first_name: string
           full_name?: string | null
+          gender?: Database["public"]["Enums"]["gender_type"] | null
           id?: string
           is_active?: boolean
           is_email_verified?: boolean
@@ -865,6 +867,7 @@ export type Database = {
           failed_login_attempts?: number
           first_name?: string
           full_name?: string | null
+          gender?: Database["public"]["Enums"]["gender_type"] | null
           id?: string
           is_active?: boolean
           is_email_verified?: boolean
