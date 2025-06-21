@@ -55,6 +55,9 @@ export type Database = {
       }
       individual_profiles: {
         Row: {
+          communication_pref:
+            | Database["public"]["Enums"]["communication_preference"]
+            | null
           created_at: string
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
@@ -62,10 +65,16 @@ export type Database = {
           mental_health_history: string | null
           opt_in_newsletter: boolean
           opt_in_sms: boolean
+          preferred_therapist_gender:
+            | Database["public"]["Enums"]["gender_type"]
+            | null
           therapy_goals: string[] | null
           updated_at: string
         }
         Insert: {
+          communication_pref?:
+            | Database["public"]["Enums"]["communication_preference"]
+            | null
           created_at?: string
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
@@ -73,10 +82,16 @@ export type Database = {
           mental_health_history?: string | null
           opt_in_newsletter?: boolean
           opt_in_sms?: boolean
+          preferred_therapist_gender?:
+            | Database["public"]["Enums"]["gender_type"]
+            | null
           therapy_goals?: string[] | null
           updated_at?: string
         }
         Update: {
+          communication_pref?:
+            | Database["public"]["Enums"]["communication_preference"]
+            | null
           created_at?: string
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
@@ -84,6 +99,9 @@ export type Database = {
           mental_health_history?: string | null
           opt_in_newsletter?: boolean
           opt_in_sms?: boolean
+          preferred_therapist_gender?:
+            | Database["public"]["Enums"]["gender_type"]
+            | null
           therapy_goals?: string[] | null
           updated_at?: string
         }
@@ -316,6 +334,9 @@ export type Database = {
           num_employees: number
           official_website: string | null
           organization_name: string
+          organization_type:
+            | Database["public"]["Enums"]["organization_type"]
+            | null
           postal_code: string | null
           registration_number: string
           representative_job_title: string
@@ -338,6 +359,9 @@ export type Database = {
           num_employees?: number
           official_website?: string | null
           organization_name: string
+          organization_type?:
+            | Database["public"]["Enums"]["organization_type"]
+            | null
           postal_code?: string | null
           registration_number: string
           representative_job_title: string
@@ -360,6 +384,9 @@ export type Database = {
           num_employees?: number
           official_website?: string | null
           organization_name?: string
+          organization_type?:
+            | Database["public"]["Enums"]["organization_type"]
+            | null
           postal_code?: string | null
           registration_number?: string
           representative_job_title?: string
@@ -402,6 +429,7 @@ export type Database = {
           phone_number: string | null
           preferred_language: string
           profile_photo_url: string | null
+          role: Database["public"]["Enums"]["user_role"] | null
           updated_at: string
         }
         Insert: {
@@ -424,6 +452,7 @@ export type Database = {
           phone_number?: string | null
           preferred_language?: string
           profile_photo_url?: string | null
+          role?: Database["public"]["Enums"]["user_role"] | null
           updated_at?: string
         }
         Update: {
@@ -446,6 +475,7 @@ export type Database = {
           phone_number?: string | null
           preferred_language?: string
           profile_photo_url?: string | null
+          role?: Database["public"]["Enums"]["user_role"] | null
           updated_at?: string
         }
         Relationships: []

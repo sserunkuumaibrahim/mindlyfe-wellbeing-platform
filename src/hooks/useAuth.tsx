@@ -25,24 +25,47 @@ export const useAuth = () => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.id);
+        
         if (session?.user) {
-          // Fetch user profile to get role
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('auth_uid', session.user.id)
-            .single();
-          
-          const userWithRole = {
-            ...session.user,
-            role: profile?.role as UserRole
-          };
-          
-          setAuthState({
-            user: userWithRole,
-            session,
-            loading: false,
-          });
+          try {
+            // Fetch user profile to get role with error handling
+            const { data: profile, error } = await supabase
+              .from('profiles')
+              .select('role')
+              .eq('auth_uid', session.user.id)
+              .single();
+            
+            if (error) {
+              console.error('Error fetching profile:', error);
+              // Set user without role if profile fetch fails
+              setAuthState({
+                user: { ...session.user, role: 'individual' },
+                session,
+                loading: false,
+              });
+              return;
+            }
+            
+            const userWithRole = {
+              ...session.user,
+              role: (profile?.role as UserRole) || 'individual'
+            };
+            
+            setAuthState({
+              user: userWithRole,
+              session,
+              loading: false,
+            });
+          } catch (err) {
+            console.error('Error in auth state change:', err);
+            // Fallback to user without role
+            setAuthState({
+              user: { ...session.user, role: 'individual' },
+              session,
+              loading: false,
+            });
+          }
         } else {
           setAuthState({
             user: null,
@@ -54,7 +77,13 @@ export const useAuth = () => {
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.error('Error getting session:', error);
+        setAuthState(prev => ({ ...prev, loading: false }));
+        return;
+      }
+      
       if (session?.user) {
         // Fetch user profile to get role
         supabase
@@ -62,10 +91,21 @@ export const useAuth = () => {
           .select('role')
           .eq('auth_uid', session.user.id)
           .single()
-          .then(({ data: profile }) => {
+          .then(({ data: profile, error }) => {
+            if (error) {
+              console.error('Error fetching profile on init:', error);
+              // Set user without role if profile fetch fails
+              setAuthState({
+                user: { ...session.user, role: 'individual' },
+                session,
+                loading: false,
+              });
+              return;
+            }
+            
             const userWithRole = {
               ...session.user,
-              role: profile?.role as UserRole
+              role: (profile?.role as UserRole) || 'individual'
             };
             
             setAuthState({
@@ -73,17 +113,32 @@ export const useAuth = () => {
               session,
               loading: false,
             });
+          })
+          .catch(err => {
+            console.error('Error in session init:', err);
+            setAuthState({
+              user: { ...session.user, role: 'individual' },
+              session,
+              loading: false,
+            });
           });
       } else {
         setAuthState(prev => ({ ...prev, loading: false }));
       }
+    }).catch(err => {
+      console.error('Error getting initial session:', err);
+      setAuthState(prev => ({ ...prev, loading: false }));
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   return {
