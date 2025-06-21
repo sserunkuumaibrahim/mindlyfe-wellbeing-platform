@@ -16,6 +16,7 @@ import {
   Stethoscope,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface SidebarProps {
@@ -24,6 +25,7 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
   const { user } = useAuth();
+  const { profile } = useProfile();
   const location = useLocation();
 
   const navigation = [
@@ -105,14 +107,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
       <div className="p-6 border-b">
         <div className="flex items-center space-x-3">
           <Avatar>
-            <AvatarImage src={user?.profile_photo_url} />
+            <AvatarImage src={profile?.profile_photo_url} />
             <AvatarFallback>
-              {user?.first_name?.[0]}{user?.last_name?.[0]}
+              {profile?.first_name?.[0]}{profile?.last_name?.[0]}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate">
-              {user?.first_name} {user?.last_name}
+              {profile?.first_name} {profile?.last_name}
             </p>
             <p className="text-xs text-muted-foreground capitalize">
               {user?.role?.replace('_', ' ')}
