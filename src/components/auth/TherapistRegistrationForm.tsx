@@ -119,17 +119,44 @@ export const TherapistRegistrationForm: React.FC<TherapistRegistrationFormProps>
   };
 
   const handleFormSubmit = (data: TherapistFormData) => {
+    // Ensure required fields are present
+    if (!data.national_id_number) {
+      throw new Error('National ID number is required');
+    }
+    if (!data.license_body) {
+      throw new Error('License body is required');
+    }
+    if (!data.license_number) {
+      throw new Error('License number is required');
+    }
+
     const therapistData: TherapistRegisterDTO = {
-      ...data,
-      role: 'therapist',
+      email: data.email,
+      password: data.password,
+      confirmPassword: data.confirmPassword,
+      first_name: data.first_name,
+      last_name: data.last_name,
+      phone_number: data.phone_number,
       date_of_birth: data.date_of_birth ? new Date(data.date_of_birth) : undefined,
+      gender: data.gender,
+      country: data.country,
+      preferred_language: data.preferred_language,
+      role: 'therapist',
+      national_id_number: data.national_id_number,
+      license_body: data.license_body,
+      license_number: data.license_number,
       license_expiry_date: data.license_expiry_date ? new Date(data.license_expiry_date) : undefined,
+      insurance_provider: data.insurance_provider,
+      insurance_policy_number: data.insurance_policy_number,
       insurance_expiry_date: data.insurance_expiry_date ? new Date(data.insurance_expiry_date) : undefined,
+      years_experience: data.years_experience,
       specializations: specializations.filter(s => s.trim() !== ''),
       languages_spoken: languages.filter(l => l.trim() !== ''),
+      education_background: data.education_background,
       certifications: certifications.filter(c => c.trim() !== '').length > 0 
         ? certifications.filter(c => c.trim() !== '') 
         : undefined,
+      bio: data.bio,
       
       // Add file uploads
       licenseDocument,
