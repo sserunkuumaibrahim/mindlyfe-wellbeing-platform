@@ -5,6 +5,7 @@ import { IndividualDashboard } from '@/components/dashboard/IndividualDashboard'
 import { TherapistDashboard } from '@/components/dashboard/TherapistDashboard';
 import { OrganizationDashboard } from '@/components/dashboard/OrganizationDashboard';
 import { AdminDashboard } from '@/components/dashboard/AdminDashboard';
+import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 
 export default function Dashboard() {
   const { user, loading } = useAuth();
@@ -25,20 +26,27 @@ export default function Dashboard() {
     );
   }
 
-  // Render appropriate dashboard based on user role
-  if (user.role === 'individual') {
-    return <IndividualDashboard />;
-  } else if (user.role === 'therapist') {
-    return <TherapistDashboard />;
-  } else if (user.role === 'org_admin') {
-    return <OrganizationDashboard />;
-  } else if (user.role === 'admin') {
-    return <AdminDashboard />;
-  }
+  const renderDashboard = () => {
+    if (user.role === 'individual') {
+      return <IndividualDashboard />;
+    } else if (user.role === 'therapist') {
+      return <TherapistDashboard />;
+    } else if (user.role === 'org_admin') {
+      return <OrganizationDashboard />;
+    } else if (user.role === 'admin') {
+      return <AdminDashboard />;
+    }
+
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p>Unknown user role: {user.role}</p>
+      </div>
+    );
+  };
 
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <p>Unknown user role: {user.role}</p>
-    </div>
+    <DashboardLayout>
+      {renderDashboard()}
+    </DashboardLayout>
   );
 }

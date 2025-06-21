@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, MessageSquare, CreditCard, Star, Clock, Bell } from 'lucide-react';
+import { Calendar, MessageSquare, CreditCard, Star, Clock, Bell, BookOpen, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +15,7 @@ export const IndividualDashboard: React.FC = () => {
   const { sessions: allSessions, loading } = useSessions();
   const [completedSessionsCount, setCompletedSessionsCount] = useState(0);
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+  const [upcomingWorkshops, setUpcomingWorkshops] = useState(0);
 
   // Filter sessions by status with proper typing
   const upcomingSessions = React.useMemo(() => {
@@ -34,35 +35,47 @@ export const IndividualDashboard: React.FC = () => {
   useEffect(() => {
     if (!user) return;
 
-    // Fetch completed sessions count for this month
-    const fetchCompletedSessions = async () => {
-      const startOfMonth = new Date();
-      startOfMonth.setDate(1);
-      startOfMonth.setHours(0, 0, 0, 0);
-      
-      const { count } = await supabase
-        .from('therapy_sessions')
-        .select('*', { count: 'exact', head: true })
-        .eq('client_id', user.id)
-        .eq('status', 'completed')
-        .gte('scheduled_at', startOfMonth.toISOString());
-      
-      setCompletedSessionsCount(count || 0);
+    const fetchDashboardData = async () => {
+      try {
+        // Fetch completed sessions count for this month
+        const startOfMonth = new Date();
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
+        
+        const { count: sessionCount } = await supabase
+          .from('therapy_sessions')
+          .select('*', { count: 'exact', head: true })
+          .eq('client_id', user.id)
+          .eq('status', 'completed')
+          .gte('scheduled_at', startOfMonth.toISOString());
+        
+        setCompletedSessionsCount(sessionCount || 0);
+
+        // Fetch unread messages count
+        const { count: messageCount } = await supabase
+          .from('messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('recipient_id', user.id)
+          .eq('is_read', false);
+        
+        setUnreadMessagesCount(messageCount || 0);
+
+        // Fetch upcoming workshops count
+        const { count: workshopCount } = await supabase
+          .from('workshop_enrollments')
+          .select('workshops!inner(*)', { count: 'exact', head: true })
+          .eq('profile_id', user.id)
+          .eq('status', 'enrolled')
+          .gte('workshops.scheduled_at', new Date().toISOString());
+        
+        setUpcomingWorkshops(workshopCount || 0);
+
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      }
     };
 
-    // Fetch unread messages count
-    const fetchUnreadMessages = async () => {
-      const { count } = await supabase
-        .from('messages')
-        .select('*', { count: 'exact', head: true })
-        .eq('recipient_id', user.id)
-        .eq('read', false);
-      
-      setUnreadMessagesCount(count || 0);
-    };
-
-    fetchCompletedSessions();
-    fetchUnreadMessages();
+    fetchDashboardData();
   }, [user]);
 
   const formatSessionDateTime = (scheduledAt: string) => {
@@ -76,15 +89,18 @@ export const IndividualDashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Welcome to Your Dashboard</h1>
-        <Button onClick={() => navigate('/dashboard/book')}>
+        <div>
+          <h1 className="text-3xl font-bold">Welcome back!</h1>
+          <p className="text-muted-foreground">Here's what's happening with your mental health journey</p>
+        </div>
+        <Button onClick={() => navigate('/booking')}>
           <Calendar className="h-4 w-4 mr-2" />
           Book Session
         </Button>
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Upcoming Sessions</CardTitle>
@@ -111,101 +127,159 @@ export const IndividualDashboard: React.FC = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Unread Messages</CardTitle>
+            <CardTitle className="text-sm font-medium">Messages</CardTitle>
             <MessageSquare className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{loading ? '...' : unreadMessagesCount}</div>
             <p className="text-xs text-muted-foreground">
-              <Button variant="link" className="p-0 h-auto" onClick={() => navigate('/dashboard/messages')}>
+              <Button variant="link" className="p-0 h-auto" onClick={() => navigate('/messages')}>
                 View all
               </Button>
             </p>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Workshops</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{loading ? '...' : upcomingWorkshops}</div>
+            <p className="text-xs text-muted-foreground">Enrolled</p>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Upcoming Sessions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Upcoming Sessions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {loading ? (
-              <div className="text-center py-4">Loading sessions...</div>
-            ) : upcomingSessions.length === 0 ? (
-              <div className="text-center py-4 text-muted-foreground">
-                No upcoming sessions. 
-                <Button variant="link" onClick={() => navigate('/dashboard/book')} className="p-0 ml-1">
-                  Book a session
-                </Button>
-              </div>
-            ) : (
-              upcomingSessions.map((session) => {
-                const { date, time } = formatSessionDateTime(session.scheduled_at);
-                return (
-                  <div key={session.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <div>
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Upcoming Sessions */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Upcoming Sessions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {loading ? (
+                <div className="text-center py-4">Loading sessions...</div>
+              ) : upcomingSessions.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg mb-2">No upcoming sessions</p>
+                  <p className="text-sm mb-4">Book your first therapy session to get started</p>
+                  <Button onClick={() => navigate('/booking')}>
+                    Book a Session
+                  </Button>
+                </div>
+              ) : (
+                upcomingSessions.map((session) => {
+                  const { date, time } = formatSessionDateTime(session.scheduled_at);
+                  return (
+                    <div key={session.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex items-center space-x-4">
+                        <div>
+                          <p className="font-medium">
+                            {session.therapist?.first_name} {session.therapist?.last_name}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {date} at {time}
+                          </p>
+                        </div>
+                        <Badge variant="outline">{session.session_type}</Badge>
+                      </div>
+                      <div className="space-x-2">
+                        <Button variant="outline" size="sm">Reschedule</Button>
+                        <Button size="sm">Join Session</Button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Quick Actions */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              <Button 
+                variant="outline" 
+                className="h-20 flex flex-col items-center justify-center"
+                onClick={() => navigate('/booking')}
+              >
+                <Calendar className="h-6 w-6 mb-2" />
+                Book Session
+              </Button>
+              <Button 
+                variant="outline" 
+                className="h-20 flex flex-col items-center justify-center"
+                onClick={() => navigate('/messages')}
+              >
+                <MessageSquare className="h-6 w-6 mb-2" />
+                Messages
+              </Button>
+              <Button 
+                variant="outline" 
+                className="h-20 flex flex-col items-center justify-center"
+                onClick={() => navigate('/workshops')}
+              >
+                <Users className="h-6 w-6 mb-2" />
+                Workshops
+              </Button>
+              <Button 
+                variant="outline" 
+                className="h-20 flex flex-col items-center justify-center"
+                onClick={() => navigate('/resources')}
+              >
+                <BookOpen className="h-6 w-6 mb-2" />
+                Resources
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Recent Sessions */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Sessions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {loading ? (
+                <div className="text-center py-4">Loading recent sessions...</div>
+              ) : recentSessions.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Star className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No completed sessions yet</p>
+                </div>
+              ) : (
+                recentSessions.slice(0, 3).map((session) => {
+                  const { date } = formatSessionDateTime(session.scheduled_at);
+                  return (
+                    <div key={session.id} className="p-4 border rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
                         <p className="font-medium">
                           {session.therapist?.first_name} {session.therapist?.last_name}
                         </p>
-                        <p className="text-sm text-muted-foreground">
-                          {date} at {time}
-                        </p>
+                        <Badge variant="secondary">Completed</Badge>
                       </div>
-                      <Badge variant="outline">{session.session_type}</Badge>
+                      <p className="text-sm text-muted-foreground mb-2">{date}</p>
+                      {session.notes && (
+                        <p className="text-sm bg-muted p-2 rounded">{session.notes}</p>
+                      )}
                     </div>
-                    <div className="space-x-2">
-                      <Button variant="outline" size="sm">Reschedule</Button>
-                      <Button size="sm">Join Session</Button>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Recent Sessions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Sessions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {loading ? (
-              <div className="text-center py-4">Loading recent sessions...</div>
-            ) : recentSessions.length === 0 ? (
-              <div className="text-center py-4 text-muted-foreground">
-                No completed sessions yet.
-              </div>
-            ) : (
-              recentSessions.map((session) => {
-                const { date } = formatSessionDateTime(session.scheduled_at);
-                return (
-                  <div key={session.id} className="p-4 border rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="font-medium">
-                        {session.therapist?.first_name} {session.therapist?.last_name}
-                      </p>
-                      <div className="flex items-center space-x-1">
-                        {session.rating && [...Array(session.rating)].map((_, i) => (
-                          <Star key={i} className="h-4 w-4 fill-current text-yellow-400" />
-                        ))}
-                      </div>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-2">{date}</p>
-                    {session.notes && <p className="text-sm">{session.notes}</p>}
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </CardContent>
-      </Card>
+                  );
+                })
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
