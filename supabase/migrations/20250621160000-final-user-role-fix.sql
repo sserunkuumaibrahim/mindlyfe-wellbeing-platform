@@ -36,14 +36,34 @@ BEGIN
     END IF;
 END $$;
 
--- Update the profiles table to ensure the role column uses the correct type
-ALTER TABLE public.profiles 
-ALTER COLUMN role TYPE user_role USING COALESCE(role::text::user_role, 'individual');
+-- Update the profiles table to ensure the role column exists and uses the correct type
+DO $$
+BEGIN
+    -- Check if role column exists, if not add it
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'profiles' AND column_name = 'role' AND table_schema = 'public') THEN
+        ALTER TABLE public.profiles ADD COLUMN role user_role NOT NULL DEFAULT 'individual';
+    ELSE
+        -- Column exists, just update its type
+        ALTER TABLE public.profiles 
+        ALTER COLUMN role TYPE user_role USING COALESCE(role::text::user_role, 'individual');
+    END IF;
+END $$;
 
--- Update individual_profiles table to ensure communication_pref uses correct type
-ALTER TABLE public.individual_profiles 
-ALTER COLUMN communication_pref TYPE communication_preference 
-USING COALESCE(communication_pref::text::communication_preference, 'email');
+-- Update individual_profiles table to ensure communication_pref column exists and uses correct type
+DO $$
+BEGIN
+    -- Check if communication_pref column exists, if not add it
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'individual_profiles' AND column_name = 'communication_pref' AND table_schema = 'public') THEN
+        ALTER TABLE public.individual_profiles ADD COLUMN communication_pref communication_preference NOT NULL DEFAULT 'email';
+    ELSE
+        -- Column exists, just update its type
+        ALTER TABLE public.individual_profiles 
+        ALTER COLUMN communication_pref TYPE communication_preference 
+        USING COALESCE(communication_pref::text::communication_preference, 'email');
+    END IF;
+END $$;
 
 -- Recreate the handle_new_user function with robust error handling
 CREATE OR REPLACE FUNCTION public.handle_new_user()
