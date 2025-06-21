@@ -3,6 +3,10 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import Stripe from "https://esm.sh/stripe@14.21.0";
 
+const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+  apiVersion: "2023-10-16",
+});
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -14,10 +18,6 @@ serve(async (req) => {
   }
 
   try {
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
-      apiVersion: "2023-10-16",
-    });
-
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
@@ -25,7 +25,7 @@ serve(async (req) => {
 
     const signature = req.headers.get("stripe-signature");
     const body = await req.text();
-    
+
     let event;
     try {
       event = stripe.webhooks.constructEvent(
@@ -34,76 +34,103 @@ serve(async (req) => {
         Deno.env.get("STRIPE_WEBHOOK_SECRET") || ""
       );
     } catch (err) {
-      console.error("Webhook signature verification failed:", err.message);
+      console.error("Webhook signature verification failed:", err);
       return new Response("Webhook signature verification failed", { status: 400 });
     }
 
+    console.log('Processing webhook event:', event.type);
+
     switch (event.type) {
-      case 'payment_intent.succeeded':
-        const paymentIntent = event.data.object;
+      case 'invoice.payment_succeeded': {
+        const invoice = event.data.object;
         
         // Update invoice status
-        const { error: updateError } = await supabaseAdmin
+        await supabaseAdmin
           .from('invoices')
           .update({ 
             status: 'paid',
             paid_at: new Date().toISOString(),
-            stripe_payment_intent_id: paymentIntent.id
+            stripe_invoice_id: invoice.id
           })
-          .eq('stripe_payment_intent_id', paymentIntent.id);
+          .eq('stripe_invoice_id', invoice.id);
 
-        if (updateError) throw updateError;
-
-        // Send confirmation notification
-        const { data: invoice } = await supabaseAdmin
+        // Send payment confirmation notification
+        const { data: invoiceData } = await supabaseAdmin
           .from('invoices')
-          .select('profile_id, session_id')
-          .eq('stripe_payment_intent_id', paymentIntent.id)
+          .select('profile_id, amount, currency')
+          .eq('stripe_invoice_id', invoice.id)
           .single();
 
-        if (invoice) {
+        if (invoiceData) {
           await supabaseAdmin.from('notifications').insert([{
-            profile_id: invoice.profile_id,
+            profile_id: invoiceData.profile_id,
             title: 'Payment Confirmed',
-            message: 'Your payment has been processed successfully.',
-            type: 'payment_confirmation',
-            data: { session_id: invoice.session_id }
+            message: `Your payment of ${invoiceData.amount} ${invoiceData.currency} has been processed successfully.`,
+            type: 'payment_confirmation'
           }]);
         }
         break;
+      }
 
-      case 'payment_intent.payment_failed':
-        const failedPayment = event.data.object;
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object;
         
         // Update invoice status
         await supabaseAdmin
           .from('invoices')
           .update({ status: 'failed' })
-          .eq('stripe_payment_intent_id', failedPayment.id);
+          .eq('stripe_invoice_id', invoice.id);
 
-        // Send failure notification
-        const { data: failedInvoice } = await supabaseAdmin
+        // Send payment failed notification
+        const { data: invoiceData } = await supabaseAdmin
           .from('invoices')
           .select('profile_id')
-          .eq('stripe_payment_intent_id', failedPayment.id)
+          .eq('stripe_invoice_id', invoice.id)
           .single();
 
-        if (failedInvoice) {
+        if (invoiceData) {
           await supabaseAdmin.from('notifications').insert([{
-            profile_id: failedInvoice.profile_id,
+            profile_id: invoiceData.profile_id,
             title: 'Payment Failed',
-            message: 'Your payment could not be processed. Please try again.',
+            message: 'Your payment could not be processed. Please update your payment method.',
             type: 'payment_failed'
           }]);
         }
         break;
+      }
+
+      case 'customer.subscription.created':
+      case 'customer.subscription.updated': {
+        const subscription = event.data.object;
+        
+        // Update subscription status in database
+        await supabaseAdmin
+          .from('subscriptions')
+          .update({ 
+            status: subscription.status === 'active' ? 'active' : 'pending',
+            stripe_subscription_id: subscription.id
+          })
+          .eq('stripe_subscription_id', subscription.id);
+        break;
+      }
+
+      case 'customer.subscription.deleted': {
+        const subscription = event.data.object;
+        
+        // Mark subscription as cancelled
+        await supabaseAdmin
+          .from('subscriptions')
+          .update({ status: 'cancelled' })
+          .eq('stripe_subscription_id', subscription.id);
+        break;
+      }
 
       default:
-        console.log(`Unhandled event type ${event.type}`);
+        console.log(`Unhandled event type: ${event.type}`);
     }
 
     return new Response(JSON.stringify({ received: true }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
 
   } catch (error) {

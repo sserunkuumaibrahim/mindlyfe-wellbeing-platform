@@ -20,12 +20,16 @@ serve(async (req) => {
 
     const { user_id } = await req.json();
 
-    // Get distinct conversations with last message and unread count
+    console.log('Getting conversations for user:', user_id);
+
+    // Get distinct conversations with last message and unread count using the database function
     const { data: conversationsData, error } = await supabase.rpc('get_user_conversations', {
       user_id_param: user_id
     });
 
     if (error) throw error;
+
+    console.log(`Found ${conversationsData?.length || 0} conversations`);
 
     return new Response(
       JSON.stringify({ conversations: conversationsData || [] }),

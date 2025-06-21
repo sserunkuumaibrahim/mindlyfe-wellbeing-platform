@@ -109,6 +109,213 @@ export type Database = {
           },
         ]
       }
+      invoices: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          due_date: string | null
+          id: string
+          paid_at: string | null
+          payment_type: string | null
+          profile_id: string | null
+          session_id: string | null
+          status: string
+          stripe_invoice_id: string | null
+          stripe_payment_intent_id: string | null
+          subscription_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          due_date?: string | null
+          id?: string
+          paid_at?: string | null
+          payment_type?: string | null
+          profile_id?: string | null
+          session_id?: string | null
+          status?: string
+          stripe_invoice_id?: string | null
+          stripe_payment_intent_id?: string | null
+          subscription_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          due_date?: string | null
+          id?: string
+          paid_at?: string | null
+          payment_type?: string | null
+          profile_id?: string | null
+          session_id?: string | null
+          status?: string
+          stripe_invoice_id?: string | null
+          stripe_payment_intent_id?: string | null
+          subscription_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "therapy_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          file_url: string | null
+          id: string
+          is_read: boolean
+          message_type: string
+          recipient_id: string
+          sender_id: string
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          file_url?: string | null
+          id?: string
+          is_read?: boolean
+          message_type?: string
+          recipient_id: string
+          sender_id: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          file_url?: string | null
+          id?: string
+          is_read?: boolean
+          message_type?: string
+          recipient_id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          data: Json | null
+          id: string
+          is_read: boolean
+          message: string
+          profile_id: string
+          title: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json | null
+          id?: string
+          is_read?: boolean
+          message: string
+          profile_id: string
+          title: string
+          type?: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json | null
+          id?: string
+          is_read?: boolean
+          message?: string
+          profile_id?: string
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_members: {
+        Row: {
+          id: string
+          joined_at: string
+          organization_id: string
+          profile_id: string
+          role: string
+          sessions_used: number
+        }
+        Insert: {
+          id?: string
+          joined_at?: string
+          organization_id: string
+          profile_id: string
+          role?: string
+          sessions_used?: number
+        }
+        Update: {
+          id?: string
+          joined_at?: string
+          organization_id?: string
+          profile_id?: string
+          role?: string
+          sessions_used?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_members_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_profiles: {
         Row: {
           address: string | null
@@ -267,6 +474,116 @@ export type Database = {
         }
         Relationships: []
       }
+      subscriptions: {
+        Row: {
+          amount_ugx: number
+          created_at: string
+          end_date: string
+          id: string
+          organization_id: string | null
+          plan_type: string
+          profile_id: string | null
+          sessions_included: number
+          sessions_used: number
+          start_date: string
+          status: string
+          stripe_subscription_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_ugx: number
+          created_at?: string
+          end_date: string
+          id?: string
+          organization_id?: string | null
+          plan_type: string
+          profile_id?: string | null
+          sessions_included?: number
+          sessions_used?: number
+          start_date?: string
+          status?: string
+          stripe_subscription_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_ugx?: number
+          created_at?: string
+          end_date?: string
+          id?: string
+          organization_id?: string | null
+          plan_type?: string
+          profile_id?: string | null
+          sessions_included?: number
+          sessions_used?: number
+          start_date?: string
+          status?: string
+          stripe_subscription_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      therapist_availability: {
+        Row: {
+          created_at: string
+          day_of_week: number | null
+          end_time: string
+          id: string
+          is_available: boolean
+          is_recurring: boolean
+          specific_date: string | null
+          start_time: string
+          therapist_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week?: number | null
+          end_time: string
+          id?: string
+          is_available?: boolean
+          is_recurring?: boolean
+          specific_date?: string | null
+          start_time: string
+          therapist_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number | null
+          end_time?: string
+          id?: string
+          is_available?: boolean
+          is_recurring?: boolean
+          specific_date?: string | null
+          start_time?: string
+          therapist_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "therapist_availability_therapist_id_fkey"
+            columns: ["therapist_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       therapist_profiles: {
         Row: {
           bio: string | null
@@ -352,6 +669,7 @@ export type Database = {
           client_id: string
           created_at: string
           duration_minutes: number
+          google_meet_url: string | null
           id: string
           notes: string | null
           recording_url: string | null
@@ -365,6 +683,7 @@ export type Database = {
           client_id: string
           created_at?: string
           duration_minutes?: number
+          google_meet_url?: string | null
           id?: string
           notes?: string | null
           recording_url?: string | null
@@ -378,6 +697,7 @@ export type Database = {
           client_id?: string
           created_at?: string
           duration_minutes?: number
+          google_meet_url?: string | null
           id?: string
           notes?: string | null
           recording_url?: string | null
@@ -491,7 +811,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_conversations: {
+        Args: { user_id_param: string }
+        Returns: {
+          conversation_id: string
+          other_user_id: string
+          other_user_name: string
+          other_user_photo: string
+          last_message: string
+          last_message_time: string
+          unread_count: number
+        }[]
+      }
     }
     Enums: {
       communication_preference: "email" | "sms" | "both"

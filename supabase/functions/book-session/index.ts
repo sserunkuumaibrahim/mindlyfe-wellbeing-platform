@@ -20,6 +20,8 @@ serve(async (req) => {
 
     const { therapist_id, client_id, scheduled_at, duration_minutes, session_type } = await req.json();
 
+    console.log('Booking session:', { therapist_id, client_id, scheduled_at, duration_minutes, session_type });
+
     // Check for scheduling conflicts
     const { data: conflicts, error: conflictError } = await supabaseAdmin
       .from('therapy_sessions')
@@ -36,6 +38,48 @@ serve(async (req) => {
         JSON.stringify({ error: "Time slot is no longer available" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
+    }
+
+    // Check if client is part of organization
+    const { data: orgMember, error: orgError } = await supabaseAdmin
+      .from('organization_members')
+      .select('organization_id, sessions_used')
+      .eq('profile_id', client_id)
+      .single();
+
+    let shouldChargeDirectly = true;
+    let sessionCost = 120000; // Standard UGX price per session
+
+    if (!orgError && orgMember) {
+      // User is part of organization - check annual limits
+      const { data: orgSubscription, error: subError } = await supabaseAdmin
+        .from('subscriptions')
+        .select('sessions_included, sessions_used')
+        .eq('organization_id', orgMember.organization_id)
+        .eq('status', 'active')
+        .single();
+
+      if (!subError && orgSubscription) {
+        if (orgSubscription.sessions_used < orgSubscription.sessions_included) {
+          shouldChargeDirectly = false; // Covered by org subscription
+        }
+      }
+    } else {
+      // Check individual professional subscription
+      const { data: professionalSub, error: profError } = await supabaseAdmin
+        .from('subscriptions')
+        .select('sessions_included, sessions_used')
+        .eq('profile_id', client_id)
+        .eq('plan_type', 'professional_monthly')
+        .eq('status', 'active')
+        .single();
+
+      if (!profError && professionalSub) {
+        if (professionalSub.sessions_used < professionalSub.sessions_included) {
+          shouldChargeDirectly = false; // Covered by professional subscription
+          sessionCost = 0;
+        }
+      }
     }
 
     // Generate Google Meet link
@@ -58,18 +102,51 @@ serve(async (req) => {
 
     if (sessionError) throw sessionError;
 
-    // Create invoice
-    const { error: invoiceError } = await supabaseAdmin
-      .from('invoices')
-      .insert([{
-        profile_id: client_id,
-        session_id: session.id,
-        amount: 120.00,
-        currency: 'USD',
-        status: 'pending'
-      }]);
+    // Create invoice only if direct payment is needed
+    if (shouldChargeDirectly && sessionCost > 0) {
+      const { error: invoiceError } = await supabaseAdmin
+        .from('invoices')
+        .insert([{
+          profile_id: client_id,
+          session_id: session.id,
+          amount: sessionCost / 100, // Convert to decimal
+          currency: 'UGX',
+          status: 'pending',
+          payment_type: 'session'
+        }]);
 
-    if (invoiceError) throw invoiceError;
+      if (invoiceError) throw invoiceError;
+    } else {
+      // Update session usage counters
+      if (orgMember) {
+        // Update organization subscription usage
+        await supabaseAdmin
+          .from('subscriptions')
+          .update({ 
+            sessions_used: supabaseAdmin.raw('sessions_used + 1')
+          })
+          .eq('organization_id', orgMember.organization_id)
+          .eq('status', 'active');
+
+        // Update member usage
+        await supabaseAdmin
+          .from('organization_members')
+          .update({ 
+            sessions_used: supabaseAdmin.raw('sessions_used + 1')
+          })
+          .eq('profile_id', client_id);
+      } else {
+        // Update professional subscription usage
+        await supabaseAdmin
+          .from('subscriptions')
+          .update({ 
+            sessions_used: supabaseAdmin.raw('sessions_used + 1')
+          })
+          .eq('profile_id', client_id)
+          .eq('plan_type', 'professional_monthly')
+          .eq('status', 'active');
+      }
+    }
 
     // Send notifications
     await Promise.all([
@@ -91,8 +168,15 @@ serve(async (req) => {
       }])
     ]);
 
+    console.log('Session booked successfully:', session.id);
+
     return new Response(
-      JSON.stringify({ success: true, session }),
+      JSON.stringify({ 
+        success: true, 
+        session,
+        payment_required: shouldChargeDirectly && sessionCost > 0,
+        amount: sessionCost
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 

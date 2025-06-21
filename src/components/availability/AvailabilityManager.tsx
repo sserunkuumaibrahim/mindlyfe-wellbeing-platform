@@ -49,14 +49,29 @@ export const AvailabilityManager: React.FC = () => {
     if (!user) return;
 
     try {
+      // Use direct SQL query since the table is not in the generated types yet
       const { data, error } = await supabase
-        .from('therapist_availability')
-        .select('*')
-        .eq('therapist_id', user.id)
-        .order('day_of_week', { ascending: true });
+        .rpc('get_therapist_availability', { therapist_id_param: user.id });
 
-      if (error) throw error;
-      setAvailabilitySlots(data || []);
+      if (error) {
+        console.error('RPC call failed, falling back to direct query');
+        // Fallback to direct query
+        const response = await fetch('/api/therapist-availability', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ therapist_id: user.id }),
+        });
+        const result = await response.json();
+        if (response.ok) {
+          setAvailabilitySlots(result.data || []);
+        } else {
+          throw new Error(result.error);
+        }
+      } else {
+        setAvailabilitySlots(data || []);
+      }
     } catch (error) {
       console.error('Error fetching availability:', error);
       toast({
@@ -78,19 +93,23 @@ export const AvailabilityManager: React.FC = () => {
         therapist_id: user.id,
       };
 
-      if (editingSlot?.id) {
-        const { error } = await supabase
-          .from('therapist_availability')
-          .update(slotData)
-          .eq('id', editingSlot.id);
-        
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('therapist_availability')
-          .insert([slotData]);
-        
-        if (error) throw error;
+      // Use API endpoint since direct Supabase calls won't work with missing types
+      const response = await fetch('/api/save-availability', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          slot: slotData,
+          isEdit: !!editingSlot?.id,
+          slotId: editingSlot?.id
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error);
       }
 
       toast({
@@ -114,12 +133,19 @@ export const AvailabilityManager: React.FC = () => {
 
   const handleDeleteSlot = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('therapist_availability')
-        .delete()
-        .eq('id', id);
+      const response = await fetch('/api/delete-availability', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ slotId: id }),
+      });
 
-      if (error) throw error;
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error);
+      }
 
       toast({
         title: "Success",
@@ -141,12 +167,22 @@ export const AvailabilityManager: React.FC = () => {
     if (!slot.id) return;
 
     try {
-      const { error } = await supabase
-        .from('therapist_availability')
-        .update({ is_available: !slot.is_available })
-        .eq('id', slot.id);
+      const response = await fetch('/api/toggle-availability', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          slotId: slot.id, 
+          isAvailable: !slot.is_available 
+        }),
+      });
 
-      if (error) throw error;
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error);
+      }
 
       fetchAvailability();
     } catch (error) {

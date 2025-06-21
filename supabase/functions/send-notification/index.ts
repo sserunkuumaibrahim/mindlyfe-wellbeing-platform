@@ -20,6 +20,8 @@ serve(async (req) => {
 
     const { profile_id, title, message, type, data, send_email, send_sms } = await req.json();
 
+    console.log('Sending notification:', { profile_id, title, message, type });
+
     // Insert notification
     const { error: notificationError } = await supabaseAdmin
       .from('notifications')
@@ -33,7 +35,7 @@ serve(async (req) => {
 
     if (notificationError) throw notificationError;
 
-    // Get user preferences and contact info
+    // Get user preferences and contact info for email/SMS
     if (send_email || send_sms) {
       const { data: profile, error: profileError } = await supabaseAdmin
         .from('profiles')
@@ -45,16 +47,18 @@ serve(async (req) => {
 
       // Send email if requested and user opted in
       if (send_email && profile.individual_profiles?.opt_in_newsletter) {
-        // TODO: Integrate with SendGrid
+        // TODO: Integrate with email service (Resend/SendGrid)
         console.log('Would send email to:', profile.email);
       }
 
       // Send SMS if requested and user opted in
       if (send_sms && profile.individual_profiles?.opt_in_sms && profile.phone_number) {
-        // TODO: Integrate with Twilio
+        // TODO: Integrate with SMS service (Twilio)
         console.log('Would send SMS to:', profile.phone_number);
       }
     }
+
+    console.log('Notification sent successfully');
 
     return new Response(
       JSON.stringify({ success: true }),

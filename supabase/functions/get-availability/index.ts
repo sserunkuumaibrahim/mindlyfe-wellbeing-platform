@@ -20,6 +20,8 @@ serve(async (req) => {
 
     const { therapist_id } = await req.json();
 
+    console.log('Getting availability for therapist:', therapist_id);
+
     // Get therapist availability for the next 14 days
     const { data: availability, error } = await supabase
       .from('therapist_availability')
@@ -71,12 +73,15 @@ serve(async (req) => {
               therapist_id,
               date: time.toISOString().split('T')[0],
               time: time.toTimeString().slice(0, 5),
+              datetime: slotTime,
               available: true
             });
           }
         }
       }
     }
+
+    console.log(`Generated ${slots.length} available slots`);
 
     return new Response(
       JSON.stringify({ slots: slots.slice(0, 50) }), // Limit to 50 slots
