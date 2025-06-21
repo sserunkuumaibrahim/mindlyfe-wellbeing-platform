@@ -17,8 +17,8 @@ export function AuthLayout({ children }: AuthLayoutProps) {
       className="min-h-screen w-full flex flex-col justify-center items-center"
       style={{
         background:
-          "linear-gradient(120deg, #93A6FF 0%, #E5DEFF 100%)",
-        // Soft purple gradient. You can adjust as needed.
+          "linear-gradient(120deg, #8EBC40 0%, #B8D470 50%, #E5F2C8 100%)",
+        // Green gradient using the specified CMYK color
       }}
     >
       {/* Centered Mindlyfe logo */}
@@ -30,18 +30,18 @@ export function AuthLayout({ children }: AuthLayoutProps) {
             className="w-20 h-20 md:w-24 md:h-24 object-contain"
             draggable={false}
             style={{
-              filter: "drop-shadow(0 2px 12px rgba(50,50,140,0.10))",
+              filter: "drop-shadow(0 2px 12px rgba(142,188,64,0.15))",
             }}
           />
         </div>
-        <span className="text-muted-foreground text-xs font-bold tracking-wide uppercase mt-1 select-none opacity-70">
+        <span className="text-white/90 text-xs font-bold tracking-wide uppercase mt-1 select-none opacity-90">
           Live Better
         </span>
       </div>
       <main className="w-full flex-1 flex justify-center items-start md:items-center px-2">
         {children}
       </main>
-      <footer className="py-4 text-center w-full text-xs text-muted-foreground opacity-85 backdrop-blur-sm font-medium">
+      <footer className="py-4 text-center w-full text-xs text-white/80 opacity-85 backdrop-blur-sm font-medium">
         © {new Date().getFullYear()} Mindlyfe. All rights reserved.
       </footer>
     </div>
