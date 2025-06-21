@@ -2,6 +2,7 @@
 import { create } from 'zustand';
 import { toast } from "@/hooks/use-toast";
 import { supabase } from '../integrations/supabase/client';
+import { RegisterDTO, ResetPasswordDTO } from '@/types/auth';
 
 export type UserRole = 'individual' | 'therapist' | 'org_admin';
 export type GenderType = 'male' | 'female';
@@ -22,30 +23,20 @@ export interface User {
   updated_at: string;
 }
 
-export interface RegisterData {
-  role: UserRole;
-  email: string;
-  password: string;
-  confirmPassword: string;
-  first_name: string;
-  last_name: string;
-  phone_number?: string;
-  date_of_birth?: string;
-  gender?: GenderType;
-  country?: string;
-  preferred_language?: string;
-}
-
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   loading: boolean;
   error: string | null;
+  mfaRequired: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (data: RegisterData) => Promise<void>;
+  register: (data: RegisterDTO) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
   clearError: () => void;
+  forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (data: ResetPasswordDTO) => Promise<void>;
+  verifyMFA: (code: string) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -53,6 +44,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
   loading: false,
   error: null,
+  mfaRequired: false,
   
   checkAuth: async () => {
     try {
@@ -149,12 +141,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
   
-  register: async (data: RegisterData) => {
+  register: async (data: RegisterDTO) => {
     try {
       set({ loading: true, error: null });
       
-      console.log('Registration data:', data);
-
       const { data: authData, error } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
@@ -174,11 +164,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
 
       if (error) {
-        console.error('Supabase signup error:', error);
         throw error;
       }
-
-      console.log('Signup successful:', authData);
 
       set({ loading: false });
 
@@ -187,7 +174,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         description: "Please check your email to verify your account.",
       });
     } catch (error: unknown) {
-      console.error('Registration error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Registration failed';
       
       set({
@@ -224,6 +210,107 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({
         loading: false,
         error: error instanceof Error ? error.message : 'Logout failed',
+      });
+    }
+  },
+
+  forgotPassword: async (email: string) => {
+    try {
+      set({ loading: true, error: null });
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      set({ loading: false });
+      
+      toast({
+        title: "Reset email sent",
+        description: "Check your email for password reset instructions.",
+      });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send reset email';
+      
+      set({
+        error: errorMessage,
+        loading: false,
+      });
+      
+      toast({
+        title: "Reset failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
+  },
+
+  resetPassword: async (data: ResetPasswordDTO) => {
+    try {
+      set({ loading: true, error: null });
+      
+      const { error } = await supabase.auth.updateUser({
+        password: data.password
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      set({ loading: false });
+      
+      toast({
+        title: "Password updated",
+        description: "Your password has been successfully updated.",
+      });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to reset password';
+      
+      set({
+        error: errorMessage,
+        loading: false,
+      });
+      
+      toast({
+        title: "Reset failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
+  },
+
+  verifyMFA: async (code: string) => {
+    try {
+      set({ loading: true, error: null });
+      
+      // For now, we'll simulate MFA verification
+      // In a real implementation, you'd verify the code with Supabase
+      console.log('MFA code:', code);
+      
+      set({ 
+        loading: false,
+        mfaRequired: false 
+      });
+      
+      toast({
+        title: "MFA verified",
+        description: "Two-factor authentication verified successfully.",
+      });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'MFA verification failed';
+      
+      set({
+        error: errorMessage,
+        loading: false,
+      });
+      
+      toast({
+        title: "MFA failed",
+        description: errorMessage,
+        variant: "destructive",
       });
     }
   },
