@@ -177,7 +177,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ loading: true, error: null });
       
       // Handle file uploads for therapist registration
-      let documentUrls: Record<string, string> = {};
+      const documentUrls: Record<string, string> = {};
       
       if (data.role === 'therapist') {
         const therapistData = data as TherapistRegisterDTO;
