@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { toast } from "@/hooks/use-toast";
 import { User, UserRole, IndividualProfile, TherapistProfile, OrganizationProfile } from '../types/user';
@@ -6,28 +7,19 @@ import { supabase } from '../integrations/supabase/client';
 
 type RegisterData = IndividualRegisterDTO | TherapistRegisterDTO | OrganizationRegisterDTO;
 
-// Type for Supabase profile data
+// Type for Supabase profile data - simplified to match actual database schema
 interface SupabaseProfile {
   id: string;
   auth_uid: string;
   role: UserRole;
   first_name: string;
   last_name: string;
-  full_name: string;
   email: string;
   phone_number?: string;
   date_of_birth?: string;
   gender?: string;
   country?: string;
   preferred_language: string;
-  profile_photo_url?: string;
-  is_active: boolean;
-  is_email_verified: boolean;
-  is_phone_verified: boolean;
-  last_login_at?: string;
-  password_changed_at: string;
-  failed_login_attempts: number;
-  locked_until?: string;
   created_at: string;
   updated_at: string;
 }
@@ -57,13 +49,19 @@ interface AuthState {
 const convertProfileToUser = (profile: SupabaseProfile): User => {
   return {
     ...profile,
-    full_name: profile.full_name || `${profile.first_name} ${profile.last_name}`,
+    full_name: `${profile.first_name} ${profile.last_name}`,
     date_of_birth: profile.date_of_birth ? new Date(profile.date_of_birth) : undefined,
-    last_login_at: profile.last_login_at ? new Date(profile.last_login_at) : undefined,
-    password_changed_at: new Date(profile.password_changed_at),
-    locked_until: profile.locked_until ? new Date(profile.locked_until) : undefined,
     created_at: new Date(profile.created_at),
     updated_at: new Date(profile.updated_at),
+    // Add default values for missing fields
+    profile_photo_url: undefined,
+    is_active: true,
+    is_email_verified: false,
+    is_phone_verified: false,
+    last_login_at: undefined,
+    password_changed_at: new Date(profile.created_at),
+    failed_login_attempts: 0,
+    locked_until: undefined,
   } as User;
 };
 
@@ -143,23 +141,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           .single();
 
         if (profile && !profileError) {
-          // Update last login
-          await supabase
-            .from('profiles')
-            .update({ last_login_at: new Date().toISOString() })
-            .eq('id', profile.id);
-
-          // Log the login
-          await supabase
-            .from('audit_logs')
-            .insert({
-              profile_id: profile.id,
-              action: 'USER_LOGIN',
-              resource_type: 'profile',
-              resource_id: profile.id,
-              details: { email: credentials.email }
-            });
-
           set({
             user: convertProfileToUser(profile),
             isAuthenticated: true,
@@ -200,7 +181,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const therapistData = data as TherapistRegisterDTO;
         
         // Upload documents to Supabase storage if they exist
-        if (therapistData.licenseDocument || therapistData.insuranceDocument || therapistData.idDocument) {
+        if (therapistData.licenseDocument || therapistData.insuranceDocument || therapistData.idDocument || therapistData.otherDocuments?.length) {
           const uploadPromises: Promise<any>[] = [];
           
           if (therapistData.licenseDocument) {
@@ -240,6 +221,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                   documentUrls.id_document_url = uploadData.path;
                 })
             );
+          }
+          
+          // Upload other documents
+          if (therapistData.otherDocuments?.length) {
+            therapistData.otherDocuments.forEach((doc, index) => {
+              const fileName = `other_${Date.now()}_${index}_${doc.name}`;
+              uploadPromises.push(
+                supabase.storage
+                  .from('therapist-documents')
+                  .upload(fileName, doc)
+                  .then(({ data: uploadData, error }) => {
+                    if (error) throw error;
+                    if (!documentUrls.other_documents_urls) {
+                      documentUrls.other_documents_urls = '';
+                    }
+                    documentUrls.other_documents_urls += (documentUrls.other_documents_urls ? ',' : '') + uploadData.path;
+                  })
+              );
+            });
           }
           
           // Wait for all uploads to complete
@@ -328,23 +328,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           if (!therapistData.license_number?.trim()) {
             throw new Error('License number is required for therapists');
           }
-          if (!therapistData.insurance_provider?.trim()) {
-            throw new Error('Insurance provider is required for therapists');
-          }
-          if (!therapistData.insurance_policy_number?.trim()) {
-            throw new Error('Insurance policy number is required for therapists');
-          }
           
           metadata.national_id_number = therapistData.national_id_number.trim();
           metadata.license_body = therapistData.license_body.trim();
           metadata.license_number = therapistData.license_number.trim();
-          metadata.insurance_provider = therapistData.insurance_provider.trim();
-          metadata.insurance_policy_number = therapistData.insurance_policy_number.trim();
           
           if (therapistData.license_expiry_date) {
             metadata.license_expiry_date = therapistData.license_expiry_date instanceof Date
               ? therapistData.license_expiry_date.toISOString().split('T')[0]
               : therapistData.license_expiry_date;
+          }
+          
+          // Insurance fields are now optional
+          if (therapistData.insurance_provider?.trim()) {
+            metadata.insurance_provider = therapistData.insurance_provider.trim();
+          }
+          
+          if (therapistData.insurance_policy_number?.trim()) {
+            metadata.insurance_policy_number = therapistData.insurance_policy_number.trim();
           }
           
           if (therapistData.insurance_expiry_date) {
@@ -386,6 +387,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           }
           if (documentUrls.id_document_url) {
             metadata.id_document_url = documentUrls.id_document_url;
+          }
+          if (documentUrls.other_documents_urls) {
+            metadata.other_documents_urls = documentUrls.other_documents_urls;
           }
         } else if (data.role === 'org_admin') {
           const orgData = data as OrganizationRegisterDTO;
@@ -527,20 +531,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   logout: async () => {
     try {
       set({ loading: true });
-      
-      const { user } = get();
-      
-      // Log the logout
-      if (user) {
-        await supabase
-          .from('audit_logs')
-          .insert({
-            profile_id: user.id,
-            action: 'USER_LOGOUT',
-            resource_type: 'profile',
-            resource_id: user.id,
-          });
-      }
       
       await supabase.auth.signOut();
       

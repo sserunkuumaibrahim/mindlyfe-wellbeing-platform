@@ -40,20 +40,20 @@ export interface TherapistRegisterDTO extends BaseRegisterDTO {
   license_body: string;
   license_number: string;
   license_expiry_date: Date;
-  insurance_provider: string;
-  insurance_policy_number: string;
-  insurance_expiry_date: Date;
+  insurance_provider?: string;
+  insurance_policy_number?: string;
+  insurance_expiry_date?: Date;
   years_experience: number;
   specializations: string[];
   languages_spoken: string[];
   education_background?: string;
   certifications?: string[];
-  hourly_rate?: number;
   bio?: string;
   // Document files
   licenseDocument?: File | null;
   insuranceDocument?: File | null;
   idDocument?: File | null;
+  otherDocuments?: File[];
 }
 
 export interface OrganizationRegisterDTO extends BaseRegisterDTO {

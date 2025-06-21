@@ -36,13 +36,9 @@ const therapistSchema = z.object({
   }).refine((date) => new Date(date) > new Date(), {
     message: "License expiry date must be in the future"
   }),
-  insurance_provider: z.string().min(1, "Insurance provider is required").max(100, "Insurance provider must be less than 100 characters"),
-  insurance_policy_number: z.string().min(1, "Insurance policy number is required").max(50, "Insurance policy number must be less than 50 characters"),
-  insurance_expiry_date: z.string({
-    required_error: "Insurance expiry date is required",
-  }).refine((date) => new Date(date) > new Date(), {
-    message: "Insurance expiry date must be in the future"
-  }),
+  insurance_provider: z.string().max(100, "Insurance provider must be less than 100 characters").optional(),
+  insurance_policy_number: z.string().max(50, "Insurance policy number must be less than 50 characters").optional(),
+  insurance_expiry_date: z.string().optional(),
   years_experience: z.number({
     required_error: "Years of experience is required",
     invalid_type_error: "Please enter a valid number"
@@ -51,7 +47,6 @@ const therapistSchema = z.object({
   languages_spoken: z.array(z.string().min(1, "Language cannot be empty")).min(1, "At least one language is required").max(10, "Maximum 10 languages allowed"),
   education_background: z.string().max(1000, "Education background must be less than 1000 characters").optional(),
   certifications: z.array(z.string().min(1, "Certification cannot be empty")).max(20, "Maximum 20 certifications allowed").optional(),
-  hourly_rate: z.number().min(0, "Hourly rate must be positive").max(10000, "Hourly rate must be less than 10,000").optional(),
   bio: z.string().max(2000, "Bio must be less than 2000 characters").optional(),
   terms_accepted: z.boolean().refine(val => val === true, "You must accept the terms and conditions"),
   privacy_accepted: z.boolean().refine(val => val === true, "You must accept the privacy policy"),
@@ -78,6 +73,7 @@ export function TherapistRegistrationForm({ onSubmit, loading, error, onBack }: 
   const [licenseDocument, setLicenseDocument] = useState<File | null>(null);
   const [insuranceDocument, setInsuranceDocument] = useState<File | null>(null);
   const [idDocument, setIdDocument] = useState<File | null>(null);
+  const [otherDocuments, setOtherDocuments] = useState<File[]>([]);
 
   const {
     register,
@@ -148,6 +144,16 @@ export function TherapistRegistrationForm({ onSubmit, loading, error, onBack }: 
     setValue('certifications', newCerts.filter(c => c.trim()));
   };
 
+  const handleOtherDocumentAdd = (file: File | null) => {
+    if (file) {
+      setOtherDocuments([...otherDocuments, file]);
+    }
+  };
+
+  const removeOtherDocument = (index: number) => {
+    setOtherDocuments(otherDocuments.filter((_, i) => i !== index));
+  };
+
   const onFormSubmit = async (data: z.infer<typeof therapistSchema>) => {
     const formData: TherapistRegisterDTO = {
       role: 'therapist',
@@ -167,18 +173,18 @@ export function TherapistRegistrationForm({ onSubmit, loading, error, onBack }: 
       license_expiry_date: new Date(data.license_expiry_date),
       insurance_provider: data.insurance_provider,
       insurance_policy_number: data.insurance_policy_number,
-      insurance_expiry_date: new Date(data.insurance_expiry_date),
+      insurance_expiry_date: data.insurance_expiry_date ? new Date(data.insurance_expiry_date) : undefined,
       years_experience: data.years_experience,
       specializations: specializations.filter(s => s.trim()),
       languages_spoken: languages.filter(l => l.trim()),
       education_background: data.education_background,
       certifications: certifications.filter(c => c.trim()),
-      hourly_rate: data.hourly_rate,
       bio: data.bio,
       // Add document files
       licenseDocument,
       insuranceDocument,
       idDocument,
+      otherDocuments,
     };
     await onSubmit(formData);
   };
@@ -326,7 +332,7 @@ export function TherapistRegistrationForm({ onSubmit, loading, error, onBack }: 
               <Input
                 id="date_of_birth"
                 type="date"
-                {...register("date_of_birth", { valueAsDate: true })}
+                {...register("date_of_birth")}
               />
             </div>
 
@@ -396,7 +402,7 @@ export function TherapistRegistrationForm({ onSubmit, loading, error, onBack }: 
               <Input
                 id="license_expiry_date"
                 type="date"
-                {...register("license_expiry_date", { valueAsDate: true })}
+                {...register("license_expiry_date")}
               />
               {errors.license_expiry_date && (
                 <p className="text-sm text-destructive">{errors.license_expiry_date.message}</p>
@@ -404,11 +410,11 @@ export function TherapistRegistrationForm({ onSubmit, loading, error, onBack }: 
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="insurance_provider">Insurance Provider *</Label>
+              <Label htmlFor="insurance_provider">Insurance Provider</Label>
               <Input
                 id="insurance_provider"
                 {...register("insurance_provider")}
-                placeholder="Enter insurance provider"
+                placeholder="Enter insurance provider (optional)"
               />
               {errors.insurance_provider && (
                 <p className="text-sm text-destructive">{errors.insurance_provider.message}</p>
@@ -416,11 +422,11 @@ export function TherapistRegistrationForm({ onSubmit, loading, error, onBack }: 
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="insurance_policy_number">Insurance Policy Number *</Label>
+              <Label htmlFor="insurance_policy_number">Insurance Policy Number</Label>
               <Input
                 id="insurance_policy_number"
                 {...register("insurance_policy_number")}
-                placeholder="Enter policy number"
+                placeholder="Enter policy number (optional)"
               />
               {errors.insurance_policy_number && (
                 <p className="text-sm text-destructive">{errors.insurance_policy_number.message}</p>
@@ -428,11 +434,11 @@ export function TherapistRegistrationForm({ onSubmit, loading, error, onBack }: 
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="insurance_expiry_date">Insurance Expiry Date *</Label>
+              <Label htmlFor="insurance_expiry_date">Insurance Expiry Date</Label>
               <Input
                 id="insurance_expiry_date"
                 type="date"
-                {...register("insurance_expiry_date", { valueAsDate: true })}
+                {...register("insurance_expiry_date")}
               />
               {errors.insurance_expiry_date && (
                 <p className="text-sm text-destructive">{errors.insurance_expiry_date.message}</p>
@@ -452,26 +458,14 @@ export function TherapistRegistrationForm({ onSubmit, loading, error, onBack }: 
                 <p className="text-sm text-destructive">{errors.years_experience.message}</p>
               )}
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="hourly_rate">Hourly Rate (USD)</Label>
-              <Input
-                id="hourly_rate"
-                type="number"
-                min="0"
-                step="0.01"
-                {...register("hourly_rate", { valueAsNumber: true })}
-                placeholder="0.00"
-              />
-            </div>
           </div>
         </div>
 
         {/* Document Uploads */}
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Required Documents</h3>
+          <h3 className="text-lg font-semibold">Document Uploads</h3>
           <p className="text-sm text-muted-foreground">
-            Please upload the following documents to verify your credentials
+            Upload your professional documents for verification
           </p>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -484,9 +478,8 @@ export function TherapistRegistrationForm({ onSubmit, loading, error, onBack }: 
             
             <FileUpload
               label="Insurance Document"
-              description="Upload your professional liability insurance certificate"
+              description="Upload your professional liability insurance certificate (optional)"
               onChange={setInsuranceDocument}
-              required
             />
             
             <FileUpload
@@ -495,6 +488,47 @@ export function TherapistRegistrationForm({ onSubmit, loading, error, onBack }: 
               onChange={setIdDocument}
               required
             />
+          </div>
+
+          {/* Other Documents */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label>Additional Documents</Label>
+              <Button 
+                type="button" 
+                onClick={() => handleOtherDocumentAdd}
+                size="sm" 
+                variant="outline"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Document
+              </Button>
+            </div>
+            
+            <FileUpload
+              label="Upload Additional Document"
+              description="Upload any additional relevant documents (certifications, degrees, etc.)"
+              onChange={handleOtherDocumentAdd}
+            />
+            
+            {otherDocuments.length > 0 && (
+              <div className="space-y-2">
+                <Label>Uploaded Additional Documents:</Label>
+                {otherDocuments.map((doc, index) => (
+                  <div key={index} className="flex items-center justify-between p-2 border rounded">
+                    <span className="text-sm">{doc.name}</span>
+                    <Button
+                      type="button"
+                      onClick={() => removeOtherDocument(index)}
+                      size="sm"
+                      variant="ghost"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
