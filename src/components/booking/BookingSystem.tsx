@@ -52,12 +52,10 @@ export const BookingSystem: React.FC = () => {
             specializations,
             languages_spoken,
             years_experience,
-            bio,
-            status
+            bio
           )
         `)
-        .eq('role', 'therapist')
-        .eq('therapist_profiles.status', 'approved');
+        .eq('role', 'therapist');
 
       if (error) throw error;
 
