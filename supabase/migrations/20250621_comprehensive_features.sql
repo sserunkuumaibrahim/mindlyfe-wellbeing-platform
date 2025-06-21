@@ -117,6 +117,13 @@ ALTER TABLE public.session_feedback ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.group_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.group_session_enrollments ENABLE ROW LEVEL SECURITY;
 
+-- RLS Policies for profiles
+CREATE POLICY "Users can view their own profile" ON public.profiles
+  FOR SELECT USING (auth_uid = auth.uid());
+
+CREATE POLICY "Users can update their own profile" ON public.profiles
+  FOR UPDATE USING (auth_uid = auth.uid());
+
 -- RLS Policies for therapy_sessions
 CREATE POLICY "Users can view their own sessions" ON public.therapy_sessions
   FOR SELECT USING (client_id = auth.uid() OR therapist_id = auth.uid());

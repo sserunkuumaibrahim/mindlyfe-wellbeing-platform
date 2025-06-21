@@ -457,8 +457,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         password: data.password,
         options: {
           emailRedirectTo: `${window.location.origin}/`,
-          data: metadata,
-        },
+          data: metadata
+        }
       });
 
       if (error) {
@@ -485,8 +485,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ loading: false });
 
       toast({
-        title: "Registration successful",
-        description: "Please check your email to verify your account.",
+        title: "Registration successful!",
+        description: "Your account has been created successfully. You can now log in immediately.",
       });
     } catch (error: unknown) {
       console.error('Registration error:', error);
