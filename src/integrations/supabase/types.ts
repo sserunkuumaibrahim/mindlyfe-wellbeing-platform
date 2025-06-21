@@ -53,6 +53,156 @@ export type Database = {
           },
         ]
       }
+      calendar_events: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          end_time: string
+          event_type: string | null
+          google_calendar_id: string | null
+          id: string
+          profile_id: string | null
+          related_id: string | null
+          reminder_minutes: number | null
+          start_time: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          end_time: string
+          event_type?: string | null
+          google_calendar_id?: string | null
+          id?: string
+          profile_id?: string | null
+          related_id?: string | null
+          reminder_minutes?: number | null
+          start_time: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          end_time?: string
+          event_type?: string | null
+          google_calendar_id?: string | null
+          id?: string
+          profile_id?: string | null
+          related_id?: string | null
+          reminder_minutes?: number | null
+          start_time?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_events_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_categories: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          required_for_role: string[] | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          required_for_role?: string[] | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          required_for_role?: string[] | null
+        }
+        Relationships: []
+      }
+      documents: {
+        Row: {
+          category_id: string | null
+          created_at: string | null
+          expiry_date: string | null
+          file_name: string
+          file_path: string
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          notes: string | null
+          profile_id: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string | null
+          expiry_date?: string | null
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          notes?: string | null
+          profile_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string | null
+          expiry_date?: string | null
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          notes?: string | null
+          profile_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "document_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       group_session_enrollments: {
         Row: {
           enrolled_at: string
@@ -379,29 +529,142 @@ export type Database = {
           },
         ]
       }
+      organization_invitations: {
+        Row: {
+          accepted_at: string | null
+          created_at: string | null
+          email: string
+          expires_at: string | null
+          id: string
+          invited_by: string | null
+          organization_id: string | null
+          role: string | null
+          status: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string | null
+          email: string
+          expires_at?: string | null
+          id?: string
+          invited_by?: string | null
+          organization_id?: string | null
+          role?: string | null
+          status?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string | null
+          email?: string
+          expires_at?: string | null
+          id?: string
+          invited_by?: string | null
+          organization_id?: string | null
+          role?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_invitations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_invoices: {
+        Row: {
+          amount_ugx: number
+          billing_period_end: string
+          billing_period_start: string
+          created_at: string | null
+          due_date: string | null
+          id: string
+          notes: string | null
+          num_users: number
+          organization_id: string | null
+          paid_at: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount_ugx: number
+          billing_period_end: string
+          billing_period_start: string
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          num_users: number
+          organization_id?: string | null
+          paid_at?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount_ugx?: number
+          billing_period_end?: string
+          billing_period_start?: string
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          num_users?: number
+          organization_id?: string | null
+          paid_at?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_invoices_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_members: {
         Row: {
+          annual_sessions_limit: number | null
+          annual_sessions_used: number | null
           id: string
           joined_at: string
           organization_id: string
           profile_id: string
           role: string
+          sessions_reset_date: string | null
           sessions_used: number
         }
         Insert: {
+          annual_sessions_limit?: number | null
+          annual_sessions_used?: number | null
           id?: string
           joined_at?: string
           organization_id: string
           profile_id: string
           role?: string
+          sessions_reset_date?: string | null
           sessions_used?: number
         }
         Update: {
+          annual_sessions_limit?: number | null
+          annual_sessions_used?: number | null
           id?: string
           joined_at?: string
           organization_id?: string
           profile_id?: string
           role?: string
+          sessions_reset_date?: string | null
           sessions_used?: number
         }
         Relationships: [
@@ -506,6 +769,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      pricing_plans: {
+        Row: {
+          billing_cycle: string
+          created_at: string | null
+          description: string | null
+          features: Json | null
+          id: string
+          is_active: boolean | null
+          name: string
+          plan_type: string
+          price_ugx: number
+          sessions_included: number | null
+        }
+        Insert: {
+          billing_cycle: string
+          created_at?: string | null
+          description?: string | null
+          features?: Json | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          plan_type: string
+          price_ugx: number
+          sessions_included?: number | null
+        }
+        Update: {
+          billing_cycle?: string
+          created_at?: string | null
+          description?: string | null
+          features?: Json | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          plan_type?: string
+          price_ugx?: number
+          sessions_included?: number | null
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -631,12 +933,41 @@ export type Database = {
           },
         ]
       }
+      session_pricing: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          price_ugx: number
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          price_ugx: number
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          price_ugx?: number
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           amount_ugx: number
+          billing_type: string | null
           created_at: string
           end_date: string
           id: string
+          num_users: number | null
           organization_id: string | null
           plan_type: string
           profile_id: string | null
@@ -649,9 +980,11 @@ export type Database = {
         }
         Insert: {
           amount_ugx: number
+          billing_type?: string | null
           created_at?: string
           end_date: string
           id?: string
+          num_users?: number | null
           organization_id?: string | null
           plan_type: string
           profile_id?: string | null
@@ -664,9 +997,11 @@ export type Database = {
         }
         Update: {
           amount_ugx?: number
+          billing_type?: string | null
           created_at?: string
           end_date?: string
           id?: string
+          num_users?: number | null
           organization_id?: string | null
           plan_type?: string
           profile_id?: string | null
@@ -957,11 +1292,130 @@ export type Database = {
           },
         ]
       }
+      workshop_enrollments: {
+        Row: {
+          enrolled_at: string | null
+          id: string
+          payment_status: string | null
+          profile_id: string | null
+          status: string | null
+          workshop_id: string | null
+        }
+        Insert: {
+          enrolled_at?: string | null
+          id?: string
+          payment_status?: string | null
+          profile_id?: string | null
+          status?: string | null
+          workshop_id?: string | null
+        }
+        Update: {
+          enrolled_at?: string | null
+          id?: string
+          payment_status?: string | null
+          profile_id?: string | null
+          status?: string | null
+          workshop_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workshop_enrollments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workshop_enrollments_workshop_id_fkey"
+            columns: ["workshop_id"]
+            isOneToOne: false
+            referencedRelation: "workshops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workshops: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          duration_minutes: number | null
+          facilitator_id: string | null
+          google_meet_url: string | null
+          id: string
+          materials_urls: string[] | null
+          max_participants: number | null
+          organization_id: string | null
+          price_ugx: number | null
+          scheduled_at: string
+          status: string | null
+          title: string
+          updated_at: string | null
+          workshop_type: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          duration_minutes?: number | null
+          facilitator_id?: string | null
+          google_meet_url?: string | null
+          id?: string
+          materials_urls?: string[] | null
+          max_participants?: number | null
+          organization_id?: string | null
+          price_ugx?: number | null
+          scheduled_at: string
+          status?: string | null
+          title: string
+          updated_at?: string | null
+          workshop_type?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          duration_minutes?: number | null
+          facilitator_id?: string | null
+          google_meet_url?: string | null
+          id?: string
+          materials_urls?: string[] | null
+          max_participants?: number | null
+          organization_id?: string | null
+          price_ugx?: number | null
+          scheduled_at?: string
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+          workshop_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workshops_facilitator_id_fkey"
+            columns: ["facilitator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workshops_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      check_session_payment_required: {
+        Args: { user_profile_id: string }
+        Returns: Json
+      }
+      get_organization_dashboard_stats: {
+        Args: { org_id: string }
+        Returns: Json
+      }
       get_user_conversations: {
         Args: { user_id_param: string }
         Returns: {

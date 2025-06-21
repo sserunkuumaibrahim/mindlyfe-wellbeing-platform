@@ -34,11 +34,12 @@ export const pricingService = {
       .insert({
         profile_id: profileId,
         organization_id: organizationId,
-        plan_type: plan.name,
+        plan_type: plan.plan_type,
         amount_ugx: plan.price_ugx,
         sessions_included: plan.sessions_included,
         end_date: endDate.toISOString(),
-        status: 'active'
+        status: 'active',
+        billing_type: organizationId ? 'manual' : 'automatic'
       })
       .select()
       .single();
@@ -58,6 +59,14 @@ export const pricingService = {
       .single();
 
     if (error && error.code !== 'PGRST116') throw error;
+    return data;
+  },
+
+  async checkSessionPaymentRequired(profileId: string) {
+    const { data, error } = await supabase
+      .rpc('check_session_payment_required', { user_profile_id: profileId });
+
+    if (error) throw error;
     return data;
   }
 };

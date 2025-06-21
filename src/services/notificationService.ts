@@ -14,14 +14,16 @@ export const notificationService = {
       .from('notifications')
       .insert({
         profile_id: profileId,
-        ...notification,
-      });
+        ...notification
+      })
+      .select()
+      .single();
 
     if (error) throw error;
     return data;
   },
 
-  async getNotifications(profileId: string, limit = 50) {
+  async getUserNotifications(profileId: string, limit = 50) {
     const { data, error } = await supabase
       .from('notifications')
       .select('*')
@@ -50,5 +52,5 @@ export const notificationService = {
       .eq('is_read', false);
 
     if (error) throw error;
-  },
+  }
 };

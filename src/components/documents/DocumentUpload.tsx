@@ -1,194 +1,194 @@
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, FileText, Check, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
 import { documentService } from '@/services/documentService';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Upload, FileText, CheckCircle, XCircle, Clock } from 'lucide-react';
+
+interface DocumentCategory {
+  id: string;
+  name: string;
+  description: string;
+  required_for_role: string[];
+}
+
+interface Document {
+  id: string;
+  profile_id: string;
+  category_id: string;
+  file_name: string;
+  file_path: string;
+  file_size: number;
+  mime_type: string;
+  status: string;
+  created_at: string;
+  category: DocumentCategory;
+}
 
 interface DocumentUploadProps {
+  userRole: 'therapist' | 'org_admin' | 'individual';
   profileId: string;
 }
 
-export const DocumentUpload: React.FC<DocumentUploadProps> = ({ profileId }) => {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [expiryDate, setExpiryDate] = useState<string>('');
-  const queryClient = useQueryClient();
+export const DocumentUpload: React.FC<DocumentUploadProps> = ({ userRole, profileId }) => {
+  const [categories, setCategories] = useState<DocumentCategory[]>([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [uploading, setUploading] = useState<string | null>(null);
+  const { toast } = useToast();
 
-  const { data: categories } = useQuery({
-    queryKey: ['document-categories'],
-    queryFn: documentService.getDocumentCategories
-  });
+  useEffect(() => {
+    loadCategories();
+    loadDocuments();
+  }, [profileId]);
 
-  const { data: userDocuments } = useQuery({
-    queryKey: ['user-documents', profileId],
-    queryFn: () => documentService.getUserDocuments(profileId)
-  });
+  const loadCategories = async () => {
+    try {
+      const data = await documentService.getDocumentCategories();
+      // Filter categories based on user role
+      const filteredCategories = data.filter(category => 
+        category.required_for_role.includes(userRole)
+      );
+      setCategories(filteredCategories);
+    } catch (error) {
+      console.error('Error loading categories:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load document categories",
+        variant: "destructive"
+      });
+    }
+  };
 
-  const uploadMutation = useMutation({
-    mutationFn: documentService.uploadDocument,
-    onSuccess: () => {
+  const loadDocuments = async () => {
+    try {
+      const data = await documentService.getUserDocuments(profileId);
+      setDocuments(data || []);
+    } catch (error) {
+      console.error('Error loading documents:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load documents",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleFileUpload = async (categoryId: string, file: File) => {
+    if (!file) return;
+
+    setUploading(categoryId);
+    try {
+      await documentService.uploadDocument({
+        profile_id: profileId,
+        category_id: categoryId,
+        file
+      });
+
       toast({
         title: "Success",
-        description: "Document uploaded successfully!"
+        description: "Document uploaded successfully",
       });
-      setSelectedFile(null);
-      setSelectedCategory('');
-      setExpiryDate('');
-      queryClient.invalidateQueries({ queryKey: ['user-documents', profileId] });
-    },
-    onError: () => {
+
+      loadDocuments();
+    } catch (error) {
+      console.error('Error uploading document:', error);
       toast({
         title: "Error",
         description: "Failed to upload document",
         variant: "destructive"
       });
-    }
-  });
-
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      if (file.size > 10 * 1024 * 1024) { // 10MB limit
-        toast({
-          title: "Error",
-          description: "File size must be less than 10MB",
-          variant: "destructive"
-        });
-        return;
-      }
-      setSelectedFile(file);
+    } finally {
+      setUploading(null);
     }
   };
 
-  const handleUpload = () => {
-    if (!selectedFile || !selectedCategory) return;
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return <Badge variant="default" className="bg-green-500"><CheckCircle className="w-3 h-3 mr-1" />Approved</Badge>;
+      case 'rejected':
+        return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />Rejected</Badge>;
+      case 'pending_review':
+      default:
+        return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" />Pending Review</Badge>;
+    }
+  };
 
-    uploadMutation.mutate({
-      profile_id: profileId,
-      category_id: selectedCategory,
-      file: selectedFile,
-      expiry_date: expiryDate || undefined
-    });
+  const getCategoryDocument = (categoryId: string) => {
+    return documents.find(doc => doc.category_id === categoryId);
   };
 
   return (
     <div className="space-y-6">
-      <Card className="border border-blue-100">
-        <CardHeader>
-          <CardTitle className="text-blue-900">Upload Document</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Document Category
-            </label>
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select document type" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories?.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      <div>
+        <h2 className="text-2xl font-bold mb-2">Document Upload</h2>
+        <p className="text-muted-foreground">
+          Upload required documents for verification. All documents are reviewed by our team.
+        </p>
+      </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Select File
-            </label>
-            <div className="border-2 border-dashed border-blue-200 rounded-lg p-6 text-center">
-              <input
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                onChange={handleFileSelect}
-                className="hidden"
-                id="file-upload"
-              />
-              <label
-                htmlFor="file-upload"
-                className="cursor-pointer flex flex-col items-center"
-              >
-                <Upload className="h-8 w-8 text-blue-500 mb-2" />
-                <span className="text-sm text-gray-600">
-                  {selectedFile ? selectedFile.name : 'Click to upload file'}
-                </span>
-                <span className="text-xs text-gray-400 mt-1">
-                  PDF, JPG, PNG, DOC (max 10MB)
-                </span>
-              </label>
-            </div>
-          </div>
+      <div className="grid gap-4">
+        {categories.map((category) => {
+          const existingDoc = getCategoryDocument(category.id);
+          const isUploading = uploading === category.id;
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Expiry Date (Optional)
-            </label>
-            <Input
-              type="date"
-              value={expiryDate}
-              onChange={(e) => setExpiryDate(e.target.value)}
-            />
-          </div>
-
-          <Button
-            onClick={handleUpload}
-            disabled={!selectedFile || !selectedCategory || uploadMutation.isPending}
-            className="w-full bg-green-600 hover:bg-green-700"
-          >
-            {uploadMutation.isPending ? 'Uploading...' : 'Upload Document'}
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card className="border border-blue-100">
-        <CardHeader>
-          <CardTitle className="text-blue-900">My Documents</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {userDocuments?.map((doc) => (
-              <div
-                key={doc.id}
-                className="flex items-center justify-between p-3 border border-gray-200 rounded-md"
-              >
-                <div className="flex items-center space-x-3">
-                  <FileText className="h-5 w-5 text-blue-500" />
+          return (
+            <Card key={category.id}>
+              <CardHeader>
+                <div className="flex items-center justify-between">
                   <div>
-                    <div className="font-medium text-sm">{doc.file_name}</div>
-                    <div className="text-xs text-gray-500">
-                      {doc.category?.name}
+                    <CardTitle className="text-lg">{category.name}</CardTitle>
+                    <CardDescription>{category.description}</CardDescription>
+                  </div>
+                  {existingDoc && getStatusBadge(existingDoc.status)}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {existingDoc ? (
+                  <div className="flex items-center gap-3">
+                    <FileText className="w-5 h-5 text-blue-500" />
+                    <div className="flex-1">
+                      <p className="font-medium">{existingDoc.file_name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Uploaded on {new Date(existingDoc.created_at).toLocaleDateString()}
+                      </p>
                     </div>
                   </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  {doc.status === 'approved' && (
-                    <Check className="h-4 w-4 text-green-500" />
-                  )}
-                  {doc.status === 'rejected' && (
-                    <AlertCircle className="h-4 w-4 text-red-500" />
-                  )}
-                  <span className={`text-xs px-2 py-1 rounded ${
-                    doc.status === 'approved' ? 'bg-green-100 text-green-800' :
-                    doc.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                    'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {doc.status.replace('_', ' ')}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+                ) : (
+                  <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center">
+                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Click to upload {category.name.toLowerCase()}
+                    </p>
+                    <input
+                      type="file"
+                      id={`file-${category.id}`}
+                      className="hidden"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          handleFileUpload(category.id, file);
+                        }
+                      }}
+                      disabled={isUploading}
+                    />
+                    <Button
+                      onClick={() => document.getElementById(`file-${category.id}`)?.click()}
+                      disabled={isUploading}
+                      variant="outline"
+                    >
+                      {isUploading ? 'Uploading...' : 'Choose File'}
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 };
