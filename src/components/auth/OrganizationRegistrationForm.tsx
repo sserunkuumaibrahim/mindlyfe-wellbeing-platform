@@ -1,3 +1,4 @@
+
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -23,14 +24,17 @@ const organizationSchema = z.object({
   first_name: z.string().min(1, "Representative first name is required"),
   last_name: z.string().min(1, "Representative last name is required"),
   phone_number: z.string().optional(),
-  date_of_birth: z.string().optional(),
+  date_of_birth: z.date().optional(),
   gender: z.enum(['male', 'female']).optional(),
   country: z.string().optional(),
   preferred_language: z.string().optional(),
   organization_name: z.string().min(1, "Organization name is required"),
   organization_type: z.enum(['private_company', 'school', 'ngo', 'government', 'healthcare', 'other']),
   registration_number: z.string().min(1, "Registration number is required"),
-  date_of_establishment: z.string().min(1, "Date of establishment is required"),
+  date_of_establishment: z.date({
+    required_error: "Date of establishment is required",
+    invalid_type_error: "Please enter a valid date"
+  }),
   tax_id_number: z.string().min(1, "Tax ID number is required"),
   num_employees: z.number({
     required_error: "Number of employees is required",
@@ -96,7 +100,7 @@ export function OrganizationRegistrationForm({ onSubmit, loading, error, onBack 
       organization_name: data.organization_name,
       organization_type: data.organization_type,
       registration_number: data.registration_number,
-      date_of_establishment: new Date(data.date_of_establishment),
+      date_of_establishment: data.date_of_establishment,
       tax_id_number: data.tax_id_number,
       num_employees: data.num_employees,
       official_website: data.official_website || undefined,
@@ -282,7 +286,7 @@ export function OrganizationRegistrationForm({ onSubmit, loading, error, onBack 
               <Input
                 id="date_of_birth"
                 type="date"
-                {...register("date_of_birth")}
+                {...register("date_of_birth", { valueAsDate: true })}
               />
             </div>
 
@@ -360,7 +364,7 @@ export function OrganizationRegistrationForm({ onSubmit, loading, error, onBack 
               <Input
                 id="date_of_establishment"
                 type="date"
-                {...register("date_of_establishment")}
+                {...register("date_of_establishment", { valueAsDate: true })}
               />
               {errors.date_of_establishment && (
                 <p className="text-sm text-destructive">{errors.date_of_establishment.message}</p>

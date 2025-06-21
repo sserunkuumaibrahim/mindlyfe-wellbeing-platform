@@ -1,7 +1,7 @@
 
-export type UserRole = 'individual' | 'therapist' | 'org_admin';
-export type GenderType = 'male' | 'female';
-export type OrganizationType = 'private_company' | 'school' | 'ngo' | 'government' | 'healthcare' | 'other';
+import { User, UserRole, GenderType, CommunicationPreference, OrganizationType } from './user';
+
+export type { GenderType, CommunicationPreference, OrganizationType } from './user';
 
 export interface LoginDTO {
   email: string;
@@ -9,21 +9,32 @@ export interface LoginDTO {
   rememberMe?: boolean;
 }
 
-export interface RegisterDTO {
-  role: UserRole;
+export interface BaseRegisterDTO {
   email: string;
   password: string;
   confirmPassword: string;
   first_name: string;
   last_name: string;
   phone_number?: string;
-  date_of_birth?: string;
+  date_of_birth?: Date;
   gender?: GenderType;
   country?: string;
   preferred_language?: string;
 }
 
-export interface TherapistRegisterDTO extends RegisterDTO {
+export interface IndividualRegisterDTO extends BaseRegisterDTO {
+  role: 'individual';
+  mental_health_history?: string;
+  therapy_goals?: string[];
+  communication_pref?: CommunicationPreference;
+  opt_in_newsletter?: boolean;
+  opt_in_sms?: boolean;
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
+  preferred_therapist_gender?: GenderType;
+}
+
+export interface TherapistRegisterDTO extends BaseRegisterDTO {
   role: 'therapist';
   national_id_number: string;
   license_body: string;
@@ -41,7 +52,7 @@ export interface TherapistRegisterDTO extends RegisterDTO {
   bio?: string;
 }
 
-export interface OrganizationRegisterDTO extends RegisterDTO {
+export interface OrganizationRegisterDTO extends BaseRegisterDTO {
   role: 'org_admin';
   organization_name: string;
   organization_type: OrganizationType;
@@ -61,6 +72,8 @@ export interface OrganizationRegisterDTO extends RegisterDTO {
   billing_contact_phone?: string;
 }
 
+export type RegisterDTO = IndividualRegisterDTO | TherapistRegisterDTO | OrganizationRegisterDTO;
+
 export interface ResetPasswordDTO {
   token: string;
   password: string;
@@ -68,18 +81,23 @@ export interface ResetPasswordDTO {
 }
 
 export interface AuthResponse {
+  user: User;
   token: string;
   refreshToken: string;
-  user: any;
   mfaRequired?: boolean;
 }
 
 export interface MfaSetupResponse {
-  qrCode: string;
   secret: string;
+  qrCode: string;
 }
 
 export interface MfaStatus {
   enabled: boolean;
-  backupCodes?: string[];
+  verified: boolean;
+}
+
+export interface VerificationCodeResponse {
+  success: boolean;
+  message: string;
 }

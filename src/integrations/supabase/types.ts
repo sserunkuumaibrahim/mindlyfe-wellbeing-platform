@@ -9,64 +9,759 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string | null
+          details: Json | null
+          id: string
+          ip_address: unknown | null
+          new_values: Json | null
+          old_values: Json | null
+          profile_id: string | null
+          resource_id: string | null
+          resource_type: string | null
+          session_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          ip_address?: unknown | null
+          new_values?: Json | null
+          old_values?: Json | null
+          profile_id?: string | null
+          resource_id?: string | null
+          resource_type?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          ip_address?: unknown | null
+          new_values?: Json | null
+          old_values?: Json | null
+          profile_id?: string | null
+          resource_id?: string | null
+          resource_type?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consent_records: {
+        Row: {
+          consent_text: string
+          consent_type: string
+          consent_version: string
+          consented_at: string | null
+          id: string
+          ip_address: unknown | null
+          profile_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          consent_text: string
+          consent_type: string
+          consent_version: string
+          consented_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          profile_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          consent_text?: string
+          consent_type?: string
+          consent_version?: string
+          consented_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          profile_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consent_records_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      individual_profiles: {
+        Row: {
+          created_at: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          id: string
+          mental_health_history: string | null
+          opt_in_newsletter: boolean | null
+          opt_in_sms: boolean | null
+          preferred_therapist_gender:
+            | Database["public"]["Enums"]["gender_type"]
+            | null
+          session_preferences: Json | null
+          therapy_goals: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          id: string
+          mental_health_history?: string | null
+          opt_in_newsletter?: boolean | null
+          opt_in_sms?: boolean | null
+          preferred_therapist_gender?:
+            | Database["public"]["Enums"]["gender_type"]
+            | null
+          session_preferences?: Json | null
+          therapy_goals?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          id?: string
+          mental_health_history?: string | null
+          opt_in_newsletter?: boolean | null
+          opt_in_sms?: boolean | null
+          preferred_therapist_gender?:
+            | Database["public"]["Enums"]["gender_type"]
+            | null
+          session_preferences?: Json | null
+          therapy_goals?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "individual_profiles_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_members: {
+        Row: {
+          id: string
+          invited_by: string | null
+          is_active: boolean | null
+          joined_at: string | null
+          organization_id: string | null
+          permissions: Json | null
+          profile_id: string | null
+          role_within_org: string
+        }
+        Insert: {
+          id?: string
+          invited_by?: string | null
+          is_active?: boolean | null
+          joined_at?: string | null
+          organization_id?: string | null
+          permissions?: Json | null
+          profile_id?: string | null
+          role_within_org: string
+        }
+        Update: {
+          id?: string
+          invited_by?: string | null
+          is_active?: boolean | null
+          joined_at?: string | null
+          organization_id?: string | null
+          permissions?: Json | null
+          profile_id?: string | null
+          role_within_org?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_members_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_members_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_profiles: {
+        Row: {
+          address: string | null
+          auth_letter_url: string | null
+          billing_contact_email: string | null
+          billing_contact_phone: string | null
+          city: string | null
+          created_at: string | null
+          date_of_establishment: string
+          id: string
+          num_employees: number
+          official_website: string | null
+          org_structure_url: string | null
+          organization_name: string
+          postal_code: string | null
+          proof_registration_url: string | null
+          registration_number: string
+          representative_job_title: string
+          representative_name: string
+          representative_national_id: string
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          service_requirements: Json | null
+          state: string | null
+          state_province: string | null
+          tax_certificate_url: string | null
+          tax_id_number: string
+          updated_at: string | null
+          uploaded_documents: Json | null
+        }
+        Insert: {
+          address?: string | null
+          auth_letter_url?: string | null
+          billing_contact_email?: string | null
+          billing_contact_phone?: string | null
+          city?: string | null
+          created_at?: string | null
+          date_of_establishment: string
+          id: string
+          num_employees: number
+          official_website?: string | null
+          org_structure_url?: string | null
+          organization_name: string
+          postal_code?: string | null
+          proof_registration_url?: string | null
+          registration_number: string
+          representative_job_title: string
+          representative_name: string
+          representative_national_id: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          service_requirements?: Json | null
+          state?: string | null
+          state_province?: string | null
+          tax_certificate_url?: string | null
+          tax_id_number: string
+          updated_at?: string | null
+          uploaded_documents?: Json | null
+        }
+        Update: {
+          address?: string | null
+          auth_letter_url?: string | null
+          billing_contact_email?: string | null
+          billing_contact_phone?: string | null
+          city?: string | null
+          created_at?: string | null
+          date_of_establishment?: string
+          id?: string
+          num_employees?: number
+          official_website?: string | null
+          org_structure_url?: string | null
+          organization_name?: string
+          postal_code?: string | null
+          proof_registration_url?: string | null
+          registration_number?: string
+          representative_job_title?: string
+          representative_name?: string
+          representative_national_id?: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          service_requirements?: Json | null
+          state?: string | null
+          state_province?: string | null
+          tax_certificate_url?: string | null
+          tax_id_number?: string
+          updated_at?: string | null
+          uploaded_documents?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_profiles_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_profiles_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      password_history: {
+        Row: {
+          changed_at: string | null
+          id: string
+          password_hash: string
+          profile_id: string | null
+        }
+        Insert: {
+          changed_at?: string | null
+          id?: string
+          password_hash: string
+          profile_id?: string | null
+        }
+        Update: {
+          changed_at?: string | null
+          id?: string
+          password_hash?: string
+          profile_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "password_history_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
-          auth_uid: string
+          auth_uid: string | null
           country: string | null
           created_at: string | null
           date_of_birth: string | null
           email: string
+          failed_login_attempts: number | null
           first_name: string
+          full_name: string
           gender: Database["public"]["Enums"]["gender_type"] | null
           id: string
-          last_name: string
+          is_active: boolean | null
+          is_email_verified: boolean | null
+          is_phone_verified: boolean | null
+          last_login_at: string | null
+          last_name: string | null
+          locked_until: string | null
+          password_changed_at: string | null
           phone_number: string | null
           preferred_language: string | null
-          role: Database["public"]["Enums"]["user_role"]
+          profile_photo_url: string | null
+          role: Database["public"]["Enums"]["user_role"] | null
           updated_at: string | null
         }
         Insert: {
-          auth_uid: string
+          auth_uid?: string | null
           country?: string | null
           created_at?: string | null
           date_of_birth?: string | null
           email: string
+          failed_login_attempts?: number | null
           first_name: string
+          full_name: string
           gender?: Database["public"]["Enums"]["gender_type"] | null
           id?: string
-          last_name: string
+          is_active?: boolean | null
+          is_email_verified?: boolean | null
+          is_phone_verified?: boolean | null
+          last_login_at?: string | null
+          last_name?: string | null
+          locked_until?: string | null
+          password_changed_at?: string | null
           phone_number?: string | null
           preferred_language?: string | null
-          role?: Database["public"]["Enums"]["user_role"]
+          profile_photo_url?: string | null
+          role?: Database["public"]["Enums"]["user_role"] | null
           updated_at?: string | null
         }
         Update: {
-          auth_uid?: string
+          auth_uid?: string | null
           country?: string | null
           created_at?: string | null
           date_of_birth?: string | null
           email?: string
+          failed_login_attempts?: number | null
           first_name?: string
+          full_name?: string
           gender?: Database["public"]["Enums"]["gender_type"] | null
           id?: string
-          last_name?: string
+          is_active?: boolean | null
+          is_email_verified?: boolean | null
+          is_phone_verified?: boolean | null
+          last_login_at?: string | null
+          last_name?: string | null
+          locked_until?: string | null
+          password_changed_at?: string | null
           phone_number?: string | null
           preferred_language?: string | null
-          role?: Database["public"]["Enums"]["user_role"]
+          profile_photo_url?: string | null
+          role?: Database["public"]["Enums"]["user_role"] | null
           updated_at?: string | null
         }
         Relationships: []
+      }
+      therapist_profiles: {
+        Row: {
+          availability: Json | null
+          bio: string | null
+          certifications: string[] | null
+          created_at: string | null
+          currency: string | null
+          education_background: string | null
+          hourly_rate: number | null
+          id: string
+          id_document_url: string | null
+          insurance_document_url: string | null
+          insurance_expiry_date: string
+          insurance_policy_number: string
+          insurance_provider: string
+          languages_spoken: string[]
+          license_body: string
+          license_document_url: string | null
+          license_expiry_date: string
+          license_number: string
+          national_id_number: string
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          specializations: string[]
+          updated_at: string | null
+          uploaded_documents: Json | null
+          years_experience: number
+        }
+        Insert: {
+          availability?: Json | null
+          bio?: string | null
+          certifications?: string[] | null
+          created_at?: string | null
+          currency?: string | null
+          education_background?: string | null
+          hourly_rate?: number | null
+          id: string
+          id_document_url?: string | null
+          insurance_document_url?: string | null
+          insurance_expiry_date: string
+          insurance_policy_number: string
+          insurance_provider: string
+          languages_spoken: string[]
+          license_body: string
+          license_document_url?: string | null
+          license_expiry_date: string
+          license_number: string
+          national_id_number: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          specializations: string[]
+          updated_at?: string | null
+          uploaded_documents?: Json | null
+          years_experience: number
+        }
+        Update: {
+          availability?: Json | null
+          bio?: string | null
+          certifications?: string[] | null
+          created_at?: string | null
+          currency?: string | null
+          education_background?: string | null
+          hourly_rate?: number | null
+          id?: string
+          id_document_url?: string | null
+          insurance_document_url?: string | null
+          insurance_expiry_date?: string
+          insurance_policy_number?: string
+          insurance_provider?: string
+          languages_spoken?: string[]
+          license_body?: string
+          license_document_url?: string | null
+          license_expiry_date?: string
+          license_number?: string
+          national_id_number?: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          specializations?: string[]
+          updated_at?: string | null
+          uploaded_documents?: Json | null
+          years_experience?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "therapist_profiles_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "therapist_profiles_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      therapy_sessions: {
+        Row: {
+          client_id: string
+          client_rating: number | null
+          created_at: string | null
+          duration_minutes: number
+          id: string
+          meeting_url: string | null
+          organization_id: string | null
+          recording_url: string | null
+          scheduled_at: string
+          session_notes: string | null
+          therapist_id: string
+          therapist_notes: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          client_id: string
+          client_rating?: number | null
+          created_at?: string | null
+          duration_minutes?: number
+          id?: string
+          meeting_url?: string | null
+          organization_id?: string | null
+          recording_url?: string | null
+          scheduled_at: string
+          session_notes?: string | null
+          therapist_id: string
+          therapist_notes?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          client_rating?: number | null
+          created_at?: string | null
+          duration_minutes?: number
+          id?: string
+          meeting_url?: string | null
+          organization_id?: string | null
+          recording_url?: string | null
+          scheduled_at?: string
+          session_notes?: string | null
+          therapist_id?: string
+          therapist_notes?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "therapy_sessions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "therapy_sessions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organization_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "therapy_sessions_therapist_id_fkey"
+            columns: ["therapist_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_2fa_methods: {
+        Row: {
+          backup_codes: string[] | null
+          created_at: string | null
+          id: string
+          is_primary: boolean | null
+          is_verified: boolean | null
+          profile_id: string | null
+          secret: string | null
+          verified_at: string | null
+        }
+        Insert: {
+          backup_codes?: string[] | null
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean | null
+          is_verified?: boolean | null
+          profile_id?: string | null
+          secret?: string | null
+          verified_at?: string | null
+        }
+        Update: {
+          backup_codes?: string[] | null
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean | null
+          is_verified?: boolean | null
+          profile_id?: string | null
+          secret?: string | null
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_2fa_methods_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_sessions: {
+        Row: {
+          created_at: string | null
+          expires_at: string
+          id: string
+          ip_address: unknown | null
+          is_active: boolean | null
+          last_activity_at: string | null
+          profile_id: string | null
+          refresh_token: string | null
+          session_token: string
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          ip_address?: unknown | null
+          is_active?: boolean | null
+          last_activity_at?: string | null
+          profile_id?: string | null
+          refresh_token?: string | null
+          session_token: string
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          ip_address?: unknown | null
+          is_active?: boolean | null
+          last_activity_at?: string | null
+          profile_id?: string | null
+          refresh_token?: string | null
+          session_token?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_sessions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      verification_codes: {
+        Row: {
+          attempts: number | null
+          code: string
+          created_at: string | null
+          expires_at: string
+          id: string
+          is_used: boolean | null
+          max_attempts: number | null
+          profile_id: string | null
+        }
+        Insert: {
+          attempts?: number | null
+          code: string
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          is_used?: boolean | null
+          max_attempts?: number | null
+          profile_id?: string | null
+        }
+        Update: {
+          attempts?: number | null
+          code?: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          is_used?: boolean | null
+          max_attempts?: number | null
+          profile_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verification_codes_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      cleanup_expired_codes: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      upload_document: {
+        Args: { file_path: string; file_type: string; profile_type: string }
+        Returns: Json
+      }
     }
     Enums: {
+      communication_preference: "email" | "sms" | "both"
       gender_type: "male" | "female"
+      organization_type:
+        | "private_company"
+        | "school"
+        | "ngo"
+        | "government"
+        | "healthcare"
+        | "other"
+      profile_status: "pending_review" | "approved" | "rejected" | "suspended"
+      session_status:
+        | "scheduled"
+        | "in_progress"
+        | "completed"
+        | "cancelled"
+        | "no_show"
+      session_type: "virtual" | "in_person"
+      two_fa_method: "totp" | "sms" | "email"
       user_role: "individual" | "therapist" | "org_admin"
+      verification_purpose: "signup" | "password_reset" | "2fa" | "login"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -182,8 +877,28 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      communication_preference: ["email", "sms", "both"],
       gender_type: ["male", "female"],
+      organization_type: [
+        "private_company",
+        "school",
+        "ngo",
+        "government",
+        "healthcare",
+        "other",
+      ],
+      profile_status: ["pending_review", "approved", "rejected", "suspended"],
+      session_status: [
+        "scheduled",
+        "in_progress",
+        "completed",
+        "cancelled",
+        "no_show",
+      ],
+      session_type: ["virtual", "in_person"],
+      two_fa_method: ["totp", "sms", "email"],
       user_role: ["individual", "therapist", "org_admin"],
+      verification_purpose: ["signup", "password_reset", "2fa", "login"],
     },
   },
 } as const

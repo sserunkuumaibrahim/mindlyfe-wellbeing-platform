@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,17 +24,27 @@ const therapistSchema = z.object({
   first_name: z.string().min(1, "First name is required").max(50, "First name must be less than 50 characters"),
   last_name: z.string().min(1, "Last name is required").max(50, "Last name must be less than 50 characters"),
   phone_number: z.string().optional(),
-  date_of_birth: z.string().optional(),
+  date_of_birth: z.date().optional(),
   gender: z.enum(['male', 'female']).optional(),
   country: z.string().optional(),
   preferred_language: z.string().optional(),
   national_id_number: z.string().min(1, "National ID is required").max(50, "National ID must be less than 50 characters"),
   license_body: z.string().min(1, "License body is required").max(100, "License body must be less than 100 characters"),
   license_number: z.string().min(1, "License number is required").max(50, "License number must be less than 50 characters"),
-  license_expiry_date: z.string().min(1, "License expiry date is required"),
+  license_expiry_date: z.date({
+    required_error: "License expiry date is required",
+    invalid_type_error: "Please enter a valid date"
+  }).refine((date) => date > new Date(), {
+    message: "License expiry date must be in the future"
+  }),
   insurance_provider: z.string().min(1, "Insurance provider is required").max(100, "Insurance provider must be less than 100 characters"),
   insurance_policy_number: z.string().min(1, "Insurance policy number is required").max(50, "Insurance policy number must be less than 50 characters"),
-  insurance_expiry_date: z.string().min(1, "Insurance expiry date is required"),
+  insurance_expiry_date: z.date({
+    required_error: "Insurance expiry date is required",
+    invalid_type_error: "Please enter a valid date"
+  }).refine((date) => date > new Date(), {
+    message: "Insurance expiry date must be in the future"
+  }),
   years_experience: z.number({
     required_error: "Years of experience is required",
     invalid_type_error: "Please enter a valid number"
@@ -150,10 +161,10 @@ export function TherapistRegistrationForm({ onSubmit, loading, error, onBack }: 
       national_id_number: data.national_id_number,
       license_body: data.license_body,
       license_number: data.license_number,
-      license_expiry_date: new Date(data.license_expiry_date),
+      license_expiry_date: data.license_expiry_date,
       insurance_provider: data.insurance_provider,
       insurance_policy_number: data.insurance_policy_number,
-      insurance_expiry_date: new Date(data.insurance_expiry_date),
+      insurance_expiry_date: data.insurance_expiry_date,
       years_experience: data.years_experience,
       specializations: specializations.filter(s => s.trim()),
       languages_spoken: languages.filter(l => l.trim()),
@@ -308,7 +319,7 @@ export function TherapistRegistrationForm({ onSubmit, loading, error, onBack }: 
               <Input
                 id="date_of_birth"
                 type="date"
-                {...register("date_of_birth")}
+                {...register("date_of_birth", { valueAsDate: true })}
               />
             </div>
 
@@ -378,7 +389,7 @@ export function TherapistRegistrationForm({ onSubmit, loading, error, onBack }: 
               <Input
                 id="license_expiry_date"
                 type="date"
-                {...register("license_expiry_date")}
+                {...register("license_expiry_date", { valueAsDate: true })}
               />
               {errors.license_expiry_date && (
                 <p className="text-sm text-destructive">{errors.license_expiry_date.message}</p>
@@ -414,7 +425,7 @@ export function TherapistRegistrationForm({ onSubmit, loading, error, onBack }: 
               <Input
                 id="insurance_expiry_date"
                 type="date"
-                {...register("insurance_expiry_date")}
+                {...register("insurance_expiry_date", { valueAsDate: true })}
               />
               {errors.insurance_expiry_date && (
                 <p className="text-sm text-destructive">{errors.insurance_expiry_date.message}</p>

@@ -5,9 +5,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { RegisterDTO, GenderType } from "@/types/auth";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
+import { IndividualRegisterDTO, GenderType, CommunicationPreference } from "@/types/auth";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 
 const formSchema = z.object({
@@ -20,12 +22,23 @@ const formSchema = z.object({
     .min(8, "Password must be at least 8 characters")
     .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
     .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-    .regex(/[0-9]/, "Password must contain at least one number"),
+    .regex(/[0-9]/, "Password must contain at least one number")
+    .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
   confirmPassword: z.string().min(1, "Please confirm your password"),
   date_of_birth: z.string().optional(),
   gender: z.enum(['male', 'female']).optional(),
   country: z.string().optional(),
   preferred_language: z.string().optional(),
+  mental_health_history: z.string().optional(),
+  therapy_goals: z.string().optional(),
+  communication_pref: z.enum(['email', 'sms', 'both']).optional(),
+  opt_in_newsletter: z.boolean().optional(),
+  opt_in_sms: z.boolean().optional(),
+  emergency_contact_name: z.string().optional(),
+  emergency_contact_phone: z.string().optional(),
+  preferred_therapist_gender: z.enum(['male', 'female']).optional(),
+  terms_accepted: z.boolean().refine(val => val === true, "You must accept the terms and conditions"),
+  privacy_accepted: z.boolean().refine(val => val === true, "You must accept the privacy policy"),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -34,7 +47,7 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>;
 
 interface IndividualRegistrationFormProps {
-  onSubmit: (data: RegisterDTO) => Promise<void>;
+  onSubmit: (data: IndividualRegisterDTO) => Promise<void>;
   loading: boolean;
   error: string | null;
   onBack: () => void;
@@ -57,11 +70,23 @@ export function IndividualRegistrationForm({ onSubmit, loading, error, onBack }:
       gender: undefined,
       country: "",
       preferred_language: "",
+      mental_health_history: "",
+      therapy_goals: "",
+      communication_pref: "email",
+      opt_in_newsletter: false,
+      opt_in_sms: false,
+      emergency_contact_name: "",
+      emergency_contact_phone: "",
+      preferred_therapist_gender: undefined,
+      terms_accepted: false,
+      privacy_accepted: false,
     },
   });
 
   const handleSubmit = async (data: FormData) => {
-    const registrationData: RegisterDTO = {
+    const therapyGoals = data.therapy_goals ? data.therapy_goals.split(',').map(goal => goal.trim()) : [];
+    
+    const registrationData: IndividualRegisterDTO = {
       role: 'individual',
       first_name: data.first_name,
       last_name: data.last_name,
@@ -69,10 +94,18 @@ export function IndividualRegistrationForm({ onSubmit, loading, error, onBack }:
       password: data.password,
       confirmPassword: data.confirmPassword,
       phone_number: data.phone_number,
-      date_of_birth: data.date_of_birth,
+      date_of_birth: data.date_of_birth ? new Date(data.date_of_birth) : undefined,
       gender: data.gender as GenderType,
       country: data.country,
       preferred_language: data.preferred_language,
+      mental_health_history: data.mental_health_history,
+      therapy_goals: therapyGoals,
+      communication_pref: data.communication_pref as CommunicationPreference,
+      opt_in_newsletter: data.opt_in_newsletter,
+      opt_in_sms: data.opt_in_sms,
+      emergency_contact_name: data.emergency_contact_name,
+      emergency_contact_phone: data.emergency_contact_phone,
+      preferred_therapist_gender: data.preferred_therapist_gender as GenderType,
     };
 
     await onSubmit(registrationData);
@@ -92,22 +125,55 @@ export function IndividualRegistrationForm({ onSubmit, loading, error, onBack }:
           Back
         </Button>
         <div>
-          <h2 className="text-2xl font-bold">Create Individual Account</h2>
-          <p className="text-muted-foreground">Join our mental health platform</p>
+          <h2 className="text-2xl font-bold">Individual Client Registration</h2>
+          <p className="text-muted-foreground">Create your account to access mental health services</p>
         </div>
       </div>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          {/* Personal Information */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Personal Information</h3>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="first_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>First Name *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter your first name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="last_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Last Name *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter your last name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             <FormField
               control={form.control}
-              name="first_name"
+              name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>First Name *</FormLabel>
+                  <FormLabel>Email Address *</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter your first name" {...field} />
+                    <Input type="email" placeholder="name@example.com" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -116,12 +182,146 @@ export function IndividualRegistrationForm({ onSubmit, loading, error, onBack }:
 
             <FormField
               control={form.control}
-              name="last_name"
+              name="phone_number"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Last Name *</FormLabel>
+                  <FormLabel>Phone Number</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter your last name" {...field} />
+                    <Input type="tel" placeholder="+1 (555) 000-0000" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="date_of_birth"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Date of Birth</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="gender"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Gender</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select gender" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="male">Male</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="country"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Country</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter your country" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="preferred_language"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Preferred Language</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., English" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </div>
+
+          {/* Account Information */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Account Information</h3>
+            
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password *</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Create a password"
+                        {...field}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </Button>
+                    </div>
+                  </FormControl>
+                  <FormDescription>
+                    Must contain at least 8 characters with uppercase, lowercase, number and special character
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="confirmPassword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Confirm Password *</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Input
+                        type={showConfirmPassword ? "text" : "password"}
+                        placeholder="Confirm your password"
+                        {...field}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      >
+                        {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </Button>
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -129,44 +329,25 @@ export function IndividualRegistrationForm({ onSubmit, loading, error, onBack }:
             />
           </div>
 
-          <FormField
-            control={form.control}
-            name="email"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Email Address *</FormLabel>
-                <FormControl>
-                  <Input type="email" placeholder="name@example.com" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="phone_number"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Phone Number</FormLabel>
-                <FormControl>
-                  <Input type="tel" placeholder="+1 (555) 000-0000" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <div className="grid grid-cols-2 gap-4">
+          {/* Health Information */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Health Information (Optional)</h3>
+            
             <FormField
               control={form.control}
-              name="date_of_birth"
+              name="mental_health_history"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Date of Birth</FormLabel>
+                  <FormLabel>Mental Health History</FormLabel>
                   <FormControl>
-                    <Input type="date" {...field} />
+                    <Textarea
+                      placeholder="Brief description of your mental health history..."
+                      {...field}
+                    />
                   </FormControl>
+                  <FormDescription>
+                    This information helps us provide better care
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -174,14 +355,34 @@ export function IndividualRegistrationForm({ onSubmit, loading, error, onBack }:
 
             <FormField
               control={form.control}
-              name="gender"
+              name="therapy_goals"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Gender</FormLabel>
+                  <FormLabel>Therapy Goals</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="e.g., Anxiety management, Depression support, Stress relief"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Separate multiple goals with commas
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="preferred_therapist_gender"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Preferred Therapist Gender</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select gender" />
+                        <SelectValue placeholder="Select preference" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -195,16 +396,126 @@ export function IndividualRegistrationForm({ onSubmit, loading, error, onBack }:
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          {/* Emergency Contact */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Emergency Contact (Optional)</h3>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="emergency_contact_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Emergency Contact Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Full name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="emergency_contact_phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Emergency Contact Phone</FormLabel>
+                    <FormControl>
+                      <Input type="tel" placeholder="+1 (555) 000-0000" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </div>
+
+          {/* Communication Preferences */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Communication Preferences</h3>
+            
             <FormField
               control={form.control}
-              name="country"
+              name="communication_pref"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Country</FormLabel>
+                  <FormLabel>Preferred Contact Method</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select contact method" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="email">Email</SelectItem>
+                      <SelectItem value="sms">SMS</SelectItem>
+                      <SelectItem value="both">Both</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="space-y-3">
+              <FormField
+                control={form.control}
+                name="opt_in_newsletter"
+                render={({ field }) => (
+                  <FormItem className="flex items-center space-x-2 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel className="text-sm font-normal">
+                      I want to receive newsletters and wellness tips
+                    </FormLabel>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="opt_in_sms"
+                render={({ field }) => (
+                  <FormItem className="flex items-center space-x-2 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel className="text-sm font-normal">
+                      I want to receive SMS alerts and reminders
+                    </FormLabel>
+                  </FormItem>
+                )}
+              />
+            </div>
+          </div>
+
+          {/* Terms & Conditions */}
+          <div className="space-y-3 border-t pt-4">
+            <FormField
+              control={form.control}
+              name="terms_accepted"
+              render={({ field }) => (
+                <FormItem className="flex items-center space-x-2 space-y-0">
                   <FormControl>
-                    <Input placeholder="Enter your country" {...field} />
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
                   </FormControl>
+                  <FormLabel className="text-sm font-normal">
+                    I agree to the{" "}
+                    <a href="/terms" className="text-primary hover:underline">
+                      Terms of Service
+                    </a> *
+                  </FormLabel>
                   <FormMessage />
                 </FormItem>
               )}
@@ -212,76 +523,26 @@ export function IndividualRegistrationForm({ onSubmit, loading, error, onBack }:
 
             <FormField
               control={form.control}
-              name="preferred_language"
+              name="privacy_accepted"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Preferred Language</FormLabel>
+                <FormItem className="flex items-center space-x-2 space-y-0">
                   <FormControl>
-                    <Input placeholder="e.g., English" {...field} />
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
                   </FormControl>
+                  <FormLabel className="text-sm font-normal">
+                    I agree to the{" "}
+                    <a href="/privacy" className="text-primary hover:underline">
+                      Privacy Policy
+                    </a> *
+                  </FormLabel>
                   <FormMessage />
                 </FormItem>
               )}
             />
           </div>
-
-          <FormField
-            control={form.control}
-            name="password"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Password *</FormLabel>
-                <FormControl>
-                  <div className="relative">
-                    <Input
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Create a password"
-                      {...field}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </Button>
-                  </div>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="confirmPassword"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Confirm Password *</FormLabel>
-                <FormControl>
-                  <div className="relative">
-                    <Input
-                      type={showConfirmPassword ? "text" : "password"}
-                      placeholder="Confirm your password"
-                      {...field}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    >
-                      {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </Button>
-                  </div>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
 
           {error && (
             <div className="bg-destructive/15 text-destructive text-sm p-3 rounded-md">
@@ -292,7 +553,7 @@ export function IndividualRegistrationForm({ onSubmit, loading, error, onBack }:
           <Button 
             type="submit" 
             className="w-full h-12"
-            disabled={loading}
+            disabled={loading || !form.formState.isValid}
           >
             {loading ? (
               <span className="flex items-center gap-2">

@@ -6,6 +6,8 @@ import { AuthLayout } from "@/components/auth/AuthLayout";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { RoleSelection } from "@/components/auth/RoleSelection";
 import { IndividualRegistrationForm } from "@/components/auth/IndividualRegistrationForm";
+import { TherapistRegistrationForm } from "@/components/auth/TherapistRegistrationForm";
+import { OrganizationRegistrationForm } from "@/components/auth/OrganizationRegistrationForm";
 import { UserRole } from "@/types/user";
 import { RegisterDTO } from "@/types/auth";
 
@@ -51,21 +53,33 @@ export default function Register() {
     }
   };
 
+  const renderRegistrationForm = () => {
+    const commonProps = {
+      onSubmit: handleRegistration,
+      loading,
+      error,
+      onBack: handleBackToRoleSelection,
+    };
+
+    switch (selectedRole) {
+      case 'individual':
+        return <IndividualRegistrationForm {...commonProps} />;
+      case 'therapist':
+        return <TherapistRegistrationForm {...commonProps} />;
+      case 'org_admin':
+        return <OrganizationRegistrationForm {...commonProps} />;
+      default:
+        return null;
+    }
+  };
+
   const renderStep = () => {
     switch (step) {
       case 'role-selection':
         return <RoleSelection onRoleSelect={handleRoleSelect} />;
       
       case 'registration':
-        // For now, only show individual registration - can add others later
-        return (
-          <IndividualRegistrationForm
-            onSubmit={handleRegistration}
-            loading={loading}
-            error={error}
-            onBack={handleBackToRoleSelection}
-          />
-        );
+        return renderRegistrationForm();
       
       case 'verification':
         return (
@@ -75,6 +89,14 @@ export default function Register() {
               We've sent a verification email to <strong>{email}</strong>.
               Please check your email and click the verification link to activate your account.
             </p>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Didn't receive the email? Check your spam folder or
+              </p>
+              <button className="text-primary hover:underline text-sm">
+                Resend verification email
+              </button>
+            </div>
             <Link
               to="/login"
               className="inline-block text-primary hover:underline mt-4"
