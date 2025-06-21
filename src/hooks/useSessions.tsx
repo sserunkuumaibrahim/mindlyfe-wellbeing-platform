@@ -3,8 +3,11 @@ import { useState, useEffect } from 'react';
 import { sessionService } from '@/services/sessionService';
 import { useAuth } from './useAuth';
 import { toast } from '@/hooks/use-toast';
+import { Database } from '@/integrations/supabase/types';
 
-export const useSessions = (status?: string) => {
+type SessionStatus = Database['public']['Enums']['session_status'];
+
+export const useSessions = (status?: SessionStatus) => {
   const { user } = useAuth();
   const [sessions, setSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,7 +86,7 @@ export const useSessions = (status?: string) => {
       setSessions(prev =>
         prev.map(s =>
           s.id === sessionId 
-            ? { ...s, scheduled_at: newDate, status: 'rescheduled' } 
+            ? { ...s, scheduled_at: newDate, status: 'scheduled' } 
             : s
         )
       );

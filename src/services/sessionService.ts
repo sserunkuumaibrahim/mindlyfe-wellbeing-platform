@@ -1,12 +1,16 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { Database } from '@/integrations/supabase/types';
+
+type SessionStatus = Database['public']['Enums']['session_status'];
+type SessionType = Database['public']['Enums']['session_type'];
 
 export interface BookSessionData {
   therapist_id: string;
   client_id: string;
   scheduled_at: string;
   duration_minutes: number;
-  session_type: 'virtual' | 'in_person' | 'phone';
+  session_type: SessionType;
 }
 
 export interface RescheduleData {
@@ -26,7 +30,7 @@ export const sessionService = {
     return session;
   },
 
-  async getSessions(userId: string, status?: string) {
+  async getSessions(userId: string, status?: SessionStatus) {
     let query = supabase
       .from('therapy_sessions')
       .select(`
@@ -46,7 +50,7 @@ export const sessionService = {
     return data;
   },
 
-  async updateSessionStatus(sessionId: string, status: string) {
+  async updateSessionStatus(sessionId: string, status: SessionStatus) {
     const { error } = await supabase
       .from('therapy_sessions')
       .update({ status })
@@ -60,7 +64,7 @@ export const sessionService = {
       .from('therapy_sessions')
       .update({ 
         scheduled_at: data.new_scheduled_at,
-        status: 'rescheduled'
+        status: 'scheduled' as SessionStatus
       })
       .eq('id', data.session_id);
 
@@ -70,7 +74,7 @@ export const sessionService = {
   async cancelSession(sessionId: string) {
     const { error } = await supabase
       .from('therapy_sessions')
-      .update({ status: 'cancelled' })
+      .update({ status: 'cancelled' as SessionStatus })
       .eq('id', sessionId);
 
     if (error) throw error;

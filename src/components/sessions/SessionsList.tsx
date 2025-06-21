@@ -3,9 +3,12 @@ import React from 'react';
 import { SessionCard } from './SessionCard';
 import { useSessions } from '@/hooks/useSessions';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Database } from '@/integrations/supabase/types';
+
+type SessionStatus = Database['public']['Enums']['session_status'];
 
 interface SessionsListProps {
-  status?: string;
+  status?: SessionStatus;
   onJoinSession?: (session: any) => void;
 }
 
