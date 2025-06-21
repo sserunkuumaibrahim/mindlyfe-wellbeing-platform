@@ -6,6 +6,7 @@ import { TherapistDashboard } from '@/components/dashboard/TherapistDashboard';
 import { OrganizationDashboard } from '@/components/dashboard/OrganizationDashboard';
 import { AdminDashboard } from '@/components/dashboard/AdminDashboard';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 export default function Dashboard() {
   const { user, loading } = useAuth();
@@ -13,7 +14,7 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+        <LoadingSpinner />
       </div>
     );
   }
@@ -27,21 +28,22 @@ export default function Dashboard() {
   }
 
   const renderDashboard = () => {
-    if (user.role === 'individual') {
-      return <IndividualDashboard />;
-    } else if (user.role === 'therapist') {
-      return <TherapistDashboard />;
-    } else if (user.role === 'org_admin') {
-      return <OrganizationDashboard />;
-    } else if (user.role === 'admin') {
-      return <AdminDashboard />;
+    switch (user.role) {
+      case 'individual':
+        return <IndividualDashboard />;
+      case 'therapist':
+        return <TherapistDashboard />;
+      case 'org_admin':
+        return <OrganizationDashboard />;
+      case 'admin':
+        return <AdminDashboard />;
+      default:
+        return (
+          <div className="flex items-center justify-center min-h-screen">
+            <p>Unknown user role: {user.role}</p>
+          </div>
+        );
     }
-
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p>Unknown user role: {user.role}</p>
-      </div>
-    );
   };
 
   return (

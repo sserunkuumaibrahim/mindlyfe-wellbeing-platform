@@ -16,8 +16,9 @@ import ResetPassword from "./pages/auth/ResetPassword";
 import MfaVerify from "./pages/auth/MfaVerify";
 import MfaSetup from "./pages/auth/MfaSetup";
 
-// App Pages - Use the real dashboard from pages/dashboard/index.tsx
+// App Pages
 import Dashboard from "./pages/dashboard/index";
+import { BookingSystem } from "./components/booking/BookingSystem";
 
 // Custom Redirect component for "/" route
 function RootRedirect() {
@@ -79,8 +80,12 @@ const App = () => {
               }
             />
 
-            {/* Main dashboard - using the real database-connected dashboard */}
+            {/* Main dashboard - database-connected */}
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            
+            {/* Booking system */}
+            <Route path="/book-session" element={<ProtectedRoute><BookingSystem /></ProtectedRoute>} />
+            <Route path="/booking" element={<ProtectedRoute><BookingSystem /></ProtectedRoute>} />
 
             {/* Catch-all Route - redirect to dashboard or login */}
             <Route path="*" element={<Navigate to="/" replace />} />

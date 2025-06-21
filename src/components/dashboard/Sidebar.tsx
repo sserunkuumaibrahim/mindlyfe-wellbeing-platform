@@ -14,17 +14,19 @@ import {
   UserCog,
   Building,
   Stethoscope,
+  LogOut,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 
 interface SidebarProps {
   className?: string;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { profile } = useProfile();
   const location = useLocation();
 
@@ -101,8 +103,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
     item.roles.includes(user?.role || 'individual')
   );
 
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
   return (
-    <div className={cn('flex flex-col h-full bg-card border-r', className)}>
+    <div className={cn('flex flex-col h-full bg-card border-r w-64', className)}>
       {/* User Profile Section */}
       <div className="p-6 border-b">
         <div className="flex items-center space-x-3">
@@ -144,6 +154,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
           );
         })}
       </nav>
+
+      {/* Sign Out Button */}
+      <div className="p-4 border-t">
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={handleSignOut}
+        >
+          <LogOut className="mr-2 h-4 w-4" />
+          Sign Out
+        </Button>
+      </div>
     </div>
   );
 };
