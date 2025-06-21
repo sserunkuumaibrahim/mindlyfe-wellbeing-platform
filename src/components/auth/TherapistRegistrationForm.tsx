@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TherapistRegisterDTO, GenderType } from "@/types/auth";
-import { ArrowLeft, Plus, X } from "lucide-react";
+import { ArrowLeft, Plus, X, Eye, EyeOff } from "lucide-react";
 
 const therapistSchema = z.object({
   role: z.literal('therapist'),
@@ -19,7 +20,7 @@ const therapistSchema = z.object({
     .regex(/[a-z]/, "Password must contain at least one lowercase letter")
     .regex(/[0-9]/, "Password must contain at least one number")
     .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
-  confirmPassword: z.string(),
+  confirmPassword: z.string().min(1, "Please confirm your password"),
   first_name: z.string().min(1, "First name is required").max(50, "First name must be less than 50 characters"),
   last_name: z.string().min(1, "Last name is required").max(50, "Last name must be less than 50 characters"),
   phone_number: z.string().optional(),
@@ -72,6 +73,8 @@ export function TherapistRegistrationForm({ onSubmit, loading, error, onBack }: 
   const [specializations, setSpecializations] = useState<string[]>(['']);
   const [languages, setLanguages] = useState<string[]>(['']);
   const [certifications, setCertifications] = useState<string[]>(['']);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const {
     register,
@@ -86,6 +89,8 @@ export function TherapistRegistrationForm({ onSubmit, loading, error, onBack }: 
       specializations: [],
       languages_spoken: [],
       certifications: [],
+      terms_accepted: false,
+      privacy_accepted: false,
     },
   });
 
@@ -184,7 +189,10 @@ export function TherapistRegistrationForm({ onSubmit, loading, error, onBack }: 
           <ArrowLeft className="h-4 w-4" />
           Back
         </Button>
-        <h2 className="text-2xl font-bold">Therapist Registration</h2>
+        <div>
+          <h2 className="text-2xl font-bold">Therapist Registration</h2>
+          <p className="text-muted-foreground">Join our network of licensed professionals</p>
+        </div>
       </div>
 
       {error && (
@@ -237,13 +245,33 @@ export function TherapistRegistrationForm({ onSubmit, loading, error, onBack }: 
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password *</Label>
+              <Label htmlFor="phone_number">Phone Number</Label>
               <Input
-                id="password"
-                type="password"
-                {...register("password")}
-                placeholder="Enter your password"
+                id="phone_number"
+                {...register("phone_number")}
+                placeholder="Enter your phone number"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Password *</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  {...register("password")}
+                  placeholder="Enter your password"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </Button>
+              </div>
               {errors.password && (
                 <p className="text-sm text-destructive">{errors.password.message}</p>
               )}
@@ -251,24 +279,26 @@ export function TherapistRegistrationForm({ onSubmit, loading, error, onBack }: 
 
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm Password *</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                {...register("confirmPassword")}
-                placeholder="Confirm your password"
-              />
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  {...register("confirmPassword")}
+                  placeholder="Confirm your password"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </Button>
+              </div>
               {errors.confirmPassword && (
                 <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
               )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="phone_number">Phone Number</Label>
-              <Input
-                id="phone_number"
-                {...register("phone_number")}
-                placeholder="Enter your phone number"
-              />
             </div>
 
             <div className="space-y-2">
@@ -299,6 +329,15 @@ export function TherapistRegistrationForm({ onSubmit, loading, error, onBack }: 
                 id="country"
                 {...register("country")}
                 placeholder="Enter your country"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="preferred_language">Preferred Language</Label>
+              <Input
+                id="preferred_language"
+                {...register("preferred_language")}
+                placeholder="e.g., English"
               />
             </div>
           </div>
@@ -540,8 +579,50 @@ export function TherapistRegistrationForm({ onSubmit, loading, error, onBack }: 
           </div>
         </div>
 
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Creating Account..." : "Create Therapist Account"}
+        {/* Terms & Conditions */}
+        <div className="space-y-3 border-t pt-4">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="terms_accepted"
+              {...register("terms_accepted")}
+            />
+            <Label htmlFor="terms_accepted" className="text-sm font-normal">
+              I agree to the{" "}
+              <a href="/terms" className="text-primary hover:underline">
+                Terms of Service
+              </a> *
+            </Label>
+          </div>
+          {errors.terms_accepted && (
+            <p className="text-sm text-destructive">{errors.terms_accepted.message}</p>
+          )}
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="privacy_accepted"
+              {...register("privacy_accepted")}
+            />
+            <Label htmlFor="privacy_accepted" className="text-sm font-normal">
+              I agree to the{" "}
+              <a href="/privacy" className="text-primary hover:underline">
+                Privacy Policy
+              </a> *
+            </Label>
+          </div>
+          {errors.privacy_accepted && (
+            <p className="text-sm text-destructive">{errors.privacy_accepted.message}</p>
+          )}
+        </div>
+
+        <Button type="submit" className="w-full h-12" disabled={loading}>
+          {loading ? (
+            <span className="flex items-center gap-2">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
+              Creating Account...
+            </span>
+          ) : (
+            "Create Therapist Account"
+          )}
         </Button>
       </form>
     </div>

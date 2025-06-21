@@ -1,3 +1,4 @@
+
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -6,14 +7,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { OrganizationRegisterDTO, OrganizationType } from "@/types/auth";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { useState } from "react";
 
 const organizationSchema = z.object({
   role: z.literal('org_admin'),
   email: z.string().email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  confirmPassword: z.string(),
+  password: z.string().min(8, "Password must be at least 8 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number")
+    .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
+  confirmPassword: z.string().min(1, "Please confirm your password"),
   first_name: z.string().min(1, "Representative first name is required"),
   last_name: z.string().min(1, "Representative last name is required"),
   phone_number: z.string().optional(),
@@ -24,9 +31,15 @@ const organizationSchema = z.object({
   organization_name: z.string().min(1, "Organization name is required"),
   organization_type: z.enum(['private_company', 'school', 'ngo', 'government', 'healthcare', 'other']),
   registration_number: z.string().min(1, "Registration number is required"),
-  date_of_establishment: z.date(),
+  date_of_establishment: z.date({
+    required_error: "Date of establishment is required",
+    invalid_type_error: "Please enter a valid date"
+  }),
   tax_id_number: z.string().min(1, "Tax ID number is required"),
-  num_employees: z.number().min(1, "Number of employees must be at least 1"),
+  num_employees: z.number({
+    required_error: "Number of employees is required",
+    invalid_type_error: "Please enter a valid number"
+  }).min(1, "Number of employees must be at least 1"),
   official_website: z.string().url("Invalid URL").optional().or(z.literal("")),
   address: z.string().optional(),
   city: z.string().optional(),
@@ -37,6 +50,8 @@ const organizationSchema = z.object({
   service_requirements: z.record(z.any()).optional(),
   billing_contact_email: z.string().email("Invalid email").optional().or(z.literal("")),
   billing_contact_phone: z.string().optional(),
+  terms_accepted: z.boolean().refine(val => val === true, "You must accept the terms and conditions"),
+  privacy_accepted: z.boolean().refine(val => val === true, "You must accept the privacy policy"),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -50,6 +65,9 @@ interface OrganizationRegistrationFormProps {
 }
 
 export function OrganizationRegistrationForm({ onSubmit, loading, error, onBack }: OrganizationRegistrationFormProps) {
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const {
     register,
     handleSubmit,
@@ -59,6 +77,8 @@ export function OrganizationRegistrationForm({ onSubmit, loading, error, onBack 
     resolver: zodResolver(organizationSchema),
     defaultValues: {
       role: 'org_admin',
+      terms_accepted: false,
+      privacy_accepted: false,
     },
   });
 
@@ -108,7 +128,10 @@ export function OrganizationRegistrationForm({ onSubmit, loading, error, onBack 
           <ArrowLeft className="h-4 w-4" />
           Back
         </Button>
-        <h2 className="text-2xl font-bold">Organization Registration</h2>
+        <div>
+          <h2 className="text-2xl font-bold">Organization Registration</h2>
+          <p className="text-muted-foreground">Register your organization for mental health services</p>
+        </div>
       </div>
 
       {error && (
@@ -148,6 +171,76 @@ export function OrganizationRegistrationForm({ onSubmit, loading, error, onBack 
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="email">Email *</Label>
+              <Input
+                id="email"
+                type="email"
+                {...register("email")}
+                placeholder="Enter your email"
+              />
+              {errors.email && (
+                <p className="text-sm text-destructive">{errors.email.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phone_number">Phone Number</Label>
+              <Input
+                id="phone_number"
+                {...register("phone_number")}
+                placeholder="Enter your phone number"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Password *</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  {...register("password")}
+                  placeholder="Enter your password"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </Button>
+              </div>
+              {errors.password && (
+                <p className="text-sm text-destructive">{errors.password.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm Password *</Label>
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  {...register("confirmPassword")}
+                  placeholder="Confirm your password"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </Button>
+              </div>
+              {errors.confirmPassword && (
+                <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="gender">Gender</Label>
               <Select onValueChange={(value: 'male' | 'female') => setValue("gender", value)}>
                 <SelectTrigger>
@@ -173,28 +266,6 @@ export function OrganizationRegistrationForm({ onSubmit, loading, error, onBack 
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email *</Label>
-              <Input
-                id="email"
-                type="email"
-                {...register("email")}
-                placeholder="Enter your email"
-              />
-              {errors.email && (
-                <p className="text-sm text-destructive">{errors.email.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="phone_number">Phone Number</Label>
-              <Input
-                id="phone_number"
-                {...register("phone_number")}
-                placeholder="Enter your phone number"
-              />
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="representative_national_id">Representative National ID *</Label>
               <Input
                 id="representative_national_id"
@@ -207,29 +278,30 @@ export function OrganizationRegistrationForm({ onSubmit, loading, error, onBack 
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password *</Label>
+              <Label htmlFor="date_of_birth">Date of Birth</Label>
               <Input
-                id="password"
-                type="password"
-                {...register("password")}
-                placeholder="Enter your password"
+                id="date_of_birth"
+                type="date"
+                {...register("date_of_birth", { valueAsDate: true })}
               />
-              {errors.password && (
-                <p className="text-sm text-destructive">{errors.password.message}</p>
-              )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password *</Label>
+              <Label htmlFor="country">Country</Label>
               <Input
-                id="confirmPassword"
-                type="password"
-                {...register("confirmPassword")}
-                placeholder="Confirm your password"
+                id="country"
+                {...register("country")}
+                placeholder="Enter country"
               />
-              {errors.confirmPassword && (
-                <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
-              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="preferred_language">Preferred Language</Label>
+              <Input
+                id="preferred_language"
+                {...register("preferred_language")}
+                placeholder="e.g., English"
+              />
             </div>
           </div>
         </div>
@@ -333,21 +405,12 @@ export function OrganizationRegistrationForm({ onSubmit, loading, error, onBack 
                 <p className="text-sm text-destructive">{errors.official_website.message}</p>
               )}
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="country">Country</Label>
-              <Input
-                id="country"
-                {...register("country")}
-                placeholder="Enter country"
-              />
-            </div>
           </div>
         </div>
 
         {/* Address Information */}
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Address Information</h3>
+          <h3 className="text-lg font-semibold">Address Information (Optional)</h3>
           
           <div className="space-y-2">
             <Label htmlFor="address">Street Address</Label>
@@ -391,7 +454,7 @@ export function OrganizationRegistrationForm({ onSubmit, loading, error, onBack 
 
         {/* Billing Information */}
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Billing Information</h3>
+          <h3 className="text-lg font-semibold">Billing Information (Optional)</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -418,8 +481,50 @@ export function OrganizationRegistrationForm({ onSubmit, loading, error, onBack 
           </div>
         </div>
 
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Creating Account..." : "Create Organization Account"}
+        {/* Terms & Conditions */}
+        <div className="space-y-3 border-t pt-4">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="terms_accepted"
+              {...register("terms_accepted")}
+            />
+            <Label htmlFor="terms_accepted" className="text-sm font-normal">
+              I agree to the{" "}
+              <a href="/terms" className="text-primary hover:underline">
+                Terms of Service
+              </a> *
+            </Label>
+          </div>
+          {errors.terms_accepted && (
+            <p className="text-sm text-destructive">{errors.terms_accepted.message}</p>
+          )}
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="privacy_accepted"
+              {...register("privacy_accepted")}
+            />
+            <Label htmlFor="privacy_accepted" className="text-sm font-normal">
+              I agree to the{" "}
+              <a href="/privacy" className="text-primary hover:underline">
+                Privacy Policy
+              </a> *
+            </Label>
+          </div>
+          {errors.privacy_accepted && (
+            <p className="text-sm text-destructive">{errors.privacy_accepted.message}</p>
+          )}
+        </div>
+
+        <Button type="submit" className="w-full h-12" disabled={loading}>
+          {loading ? (
+            <span className="flex items-center gap-2">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
+              Creating Account...
+            </span>
+          ) : (
+            "Create Organization Account"
+          )}
         </Button>
       </form>
     </div>

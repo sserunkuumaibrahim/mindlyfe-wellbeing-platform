@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { IndividualRegisterDTO, GenderType, CommunicationPreference } from "@/types/auth";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 
 const formSchema = z.object({
   first_name: z.string().min(2, "First name must be at least 2 characters"),
@@ -24,7 +24,7 @@ const formSchema = z.object({
     .regex(/[a-z]/, "Password must contain at least one lowercase letter")
     .regex(/[0-9]/, "Password must contain at least one number")
     .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
-  confirmPassword: z.string(),
+  confirmPassword: z.string().min(1, "Please confirm your password"),
   date_of_birth: z.string().optional(),
   gender: z.enum(['male', 'female']).optional(),
   country: z.string().optional(),
@@ -113,9 +113,21 @@ export function IndividualRegistrationForm({ onSubmit, loading, error, onBack }:
 
   return (
     <div className="space-y-6">
-      <div className="text-center">
-        <h2 className="text-2xl font-bold">Individual Client Registration</h2>
-        <p className="text-muted-foreground">Create your account to access mental health services</p>
+      <div className="flex items-center gap-4">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={onBack}
+          className="flex items-center gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back
+        </Button>
+        <div>
+          <h2 className="text-2xl font-bold">Individual Client Registration</h2>
+          <p className="text-muted-foreground">Create your account to access mental health services</p>
+        </div>
       </div>
 
       <Form {...form}>
@@ -279,6 +291,9 @@ export function IndividualRegistrationForm({ onSubmit, loading, error, onBack }:
                       </Button>
                     </div>
                   </FormControl>
+                  <FormDescription>
+                    Must contain at least 8 characters with uppercase, lowercase, number and special character
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -483,7 +498,7 @@ export function IndividualRegistrationForm({ onSubmit, loading, error, onBack }:
           </div>
 
           {/* Terms & Conditions */}
-          <div className="space-y-3">
+          <div className="space-y-3 border-t pt-4">
             <FormField
               control={form.control}
               name="terms_accepted"
@@ -499,8 +514,9 @@ export function IndividualRegistrationForm({ onSubmit, loading, error, onBack }:
                     I agree to the{" "}
                     <a href="/terms" className="text-primary hover:underline">
                       Terms of Service
-                    </a>
+                    </a> *
                   </FormLabel>
+                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -520,8 +536,9 @@ export function IndividualRegistrationForm({ onSubmit, loading, error, onBack }:
                     I agree to the{" "}
                     <a href="/privacy" className="text-primary hover:underline">
                       Privacy Policy
-                    </a>
+                    </a> *
                   </FormLabel>
+                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -533,21 +550,20 @@ export function IndividualRegistrationForm({ onSubmit, loading, error, onBack }:
             </div>
           )}
 
-          <div className="flex gap-4">
-            <Button type="button" variant="outline" onClick={onBack} className="flex-1">
-              Back
-            </Button>
-            <Button type="submit" className="flex-1" disabled={loading}>
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
-                  Creating Account...
-                </span>
-              ) : (
-                "Create Account"
-              )}
-            </Button>
-          </div>
+          <Button 
+            type="submit" 
+            className="w-full h-12"
+            disabled={loading || !form.formState.isValid}
+          >
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
+                Creating Account...
+              </span>
+            ) : (
+              "Create Account"
+            )}
+          </Button>
         </form>
       </Form>
     </div>
