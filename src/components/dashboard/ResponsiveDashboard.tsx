@@ -7,10 +7,19 @@ import { IndividualDashboard } from './IndividualDashboard';
 import { TherapistDashboard } from './TherapistDashboard';
 import { OrganizationDashboard } from './OrganizationDashboard';
 import { AdminDashboard } from './AdminDashboard';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 export const ResponsiveDashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const isMobile = useIsMobile();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <LoadingSpinner />
+      </div>
+    );
+  }
 
   if (!user) {
     return (

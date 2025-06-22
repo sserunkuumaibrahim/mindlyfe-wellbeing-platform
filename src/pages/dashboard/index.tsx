@@ -12,7 +12,7 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-[#e3f1fa] via-[#f5fafe] to-[#fff]">
         <LoadingSpinner />
       </div>
     );
@@ -20,8 +20,8 @@ export default function Dashboard() {
 
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p>Please log in to access the dashboard.</p>
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-[#e3f1fa] via-[#f5fafe] to-[#fff]">
+        <p>Authentication required. Please refresh the page.</p>
       </div>
     );
   }

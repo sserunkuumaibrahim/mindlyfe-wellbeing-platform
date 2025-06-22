@@ -26,8 +26,6 @@ export const useOptimizedTherapists = () => {
       setLoading(true);
       setError(null);
 
-      console.log('Fetching therapists with optimized query...');
-      
       const { data, error } = await supabase
         .from('profiles')
         .select(`
@@ -46,18 +44,15 @@ export const useOptimizedTherapists = () => {
         `)
         .eq('role', 'therapist')
         .eq('is_active', true)
-        .limit(20); // Limit for performance
+        .limit(10);
 
       if (error) {
         console.error('Supabase error:', error);
         throw error;
       }
 
-      console.log('Raw therapists data:', data);
-
       if (!data || data.length === 0) {
-        console.log('No therapists found, creating sample data...');
-        // If no therapists exist, create some sample data for demo
+        // Show sample data for demo purposes
         setTherapists([
           {
             id: 'sample-1',
@@ -98,16 +93,24 @@ export const useOptimizedTherapists = () => {
         license_body: therapist.therapist_profiles?.license_body || 'N/A'
       }));
 
-      console.log('Formatted therapists:', formattedTherapists);
       setTherapists(formattedTherapists);
     } catch (error) {
       console.error('Error fetching therapists:', error);
       setError('Failed to load therapists');
-      toast({
-        title: "Error",
-        description: "Failed to load therapists. Please try again.",
-        variant: "destructive",
-      });
+      // Fallback to sample data
+      setTherapists([
+        {
+          id: 'sample-1',
+          first_name: 'Dr. Sarah',
+          last_name: 'Johnson',
+          specializations: ['Anxiety', 'Depression'],
+          languages_spoken: ['English'],
+          years_experience: 8,
+          bio: 'Experienced therapist',
+          license_number: 'LIC-001',
+          license_body: 'Uganda Psychology Board'
+        }
+      ]);
     } finally {
       setLoading(false);
     }
