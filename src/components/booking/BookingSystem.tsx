@@ -20,7 +20,6 @@ export default function BookingSystem() {
       description: `Session with ${therapistName} has been requested. You will receive a confirmation email shortly.`,
     });
     
-    // Reset selection
     setSelectedTherapist(null);
   };
 
@@ -95,35 +94,39 @@ export default function BookingSystem() {
                     </CardTitle>
                     <div className="flex items-center space-x-1">
                       <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <span className="text-sm text-gray-600">4.8 (24 reviews)</span>
+                      <span className="text-sm text-gray-600">New Therapist</span>
                     </div>
                   </div>
                 </div>
               </CardHeader>
               
               <CardContent className="space-y-4">
-                <div>
-                  <h4 className="font-semibold mb-2">Specializations</h4>
-                  <div className="flex flex-wrap gap-1">
-                    {therapist.specializations.slice(0, 3).map((spec, index) => (
-                      <Badge key={index} variant="secondary" className="text-xs">
-                        {spec}
-                      </Badge>
-                    ))}
+                {therapist.specializations.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold mb-2">Specializations</h4>
+                    <div className="flex flex-wrap gap-1">
+                      {therapist.specializations.slice(0, 3).map((spec, index) => (
+                        <Badge key={index} variant="secondary" className="text-xs">
+                          {spec}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div>
                   <h4 className="font-semibold mb-1">Experience</h4>
                   <p className="text-sm text-gray-600">{therapist.years_experience} years</p>
                 </div>
 
-                <div>
-                  <h4 className="font-semibold mb-1">Languages</h4>
-                  <p className="text-sm text-gray-600">
-                    {therapist.languages_spoken.join(', ')}
-                  </p>
-                </div>
+                {therapist.languages_spoken.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold mb-1">Languages</h4>
+                    <p className="text-sm text-gray-600">
+                      {therapist.languages_spoken.join(', ')}
+                    </p>
+                  </div>
+                )}
 
                 {therapist.bio && (
                   <div>

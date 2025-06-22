@@ -39,13 +39,21 @@ export const Navigation: React.FC = () => {
   );
 
   const handleNavigation = (path: string) => {
-    navigate(path);
-    setIsMobileMenuOpen(false);
+    try {
+      navigate(path);
+      setIsMobileMenuOpen(false);
+    } catch (error) {
+      console.error('Navigation error:', error);
+    }
   };
 
   const handleSignOut = async () => {
-    await signOut();
-    navigate('/login');
+    try {
+      await signOut();
+      navigate('/login');
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
   };
 
   return (

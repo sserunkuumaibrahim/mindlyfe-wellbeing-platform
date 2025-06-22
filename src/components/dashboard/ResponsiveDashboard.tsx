@@ -21,21 +21,13 @@ export const ResponsiveDashboard: React.FC = () => {
     );
   }
 
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p>Please log in to access the dashboard.</p>
-      </div>
-    );
-  }
-
   // Use mobile dashboard for mobile devices
   if (isMobile) {
     return <MobileDashboard />;
   }
 
   // Desktop dashboard based on user role
-  switch (user.role) {
+  switch (user?.role) {
     case 'individual':
       return <IndividualDashboard />;
     case 'therapist':
@@ -45,10 +37,6 @@ export const ResponsiveDashboard: React.FC = () => {
     case 'admin':
       return <AdminDashboard />;
     default:
-      return (
-        <div className="flex items-center justify-center min-h-screen">
-          <p>Unknown user role: {user.role}</p>
-        </div>
-      );
+      return <IndividualDashboard />;
   }
 };

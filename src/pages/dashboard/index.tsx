@@ -18,14 +18,6 @@ export default function Dashboard() {
     );
   }
 
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-[#e3f1fa] via-[#f5fafe] to-[#fff]">
-        <p>Authentication required. Please refresh the page.</p>
-      </div>
-    );
-  }
-
   // For mobile, render dashboard without the sidebar layout
   if (isMobile) {
     return <ResponsiveDashboard />;

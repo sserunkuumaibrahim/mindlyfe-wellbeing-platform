@@ -75,23 +75,7 @@ export const useOptimizedSessions = () => {
     } catch (error) {
       console.error('Error fetching sessions:', error);
       setError('Failed to load sessions');
-      // Show sample data for demo purposes
-      setSessions([
-        {
-          id: 'sample-1',
-          client_id: user?.id || '',
-          therapist_id: 'therapist-1',
-          scheduled_at: new Date(Date.now() + 86400000).toISOString(),
-          duration_minutes: 60,
-          session_type: 'virtual',
-          status: 'scheduled',
-          google_meet_url: 'https://meet.google.com/abc-def-ghi',
-          therapist: {
-            first_name: 'Dr. Sarah',
-            last_name: 'Johnson'
-          }
-        }
-      ]);
+      setSessions([]);
     } finally {
       setLoading(false);
     }
