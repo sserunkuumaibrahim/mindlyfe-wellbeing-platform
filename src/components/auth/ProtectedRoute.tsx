@@ -2,6 +2,7 @@
 import { ReactNode, useEffect } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -15,7 +16,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#e3f1fa] via-[#f5fafe] to-[#fff]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto mb-4"></div>
+          <LoadingSpinner className="mb-4" />
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
