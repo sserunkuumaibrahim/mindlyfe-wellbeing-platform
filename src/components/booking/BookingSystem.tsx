@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, User, DollarSign, Video, ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,7 +29,7 @@ interface AvailabilitySlot {
   available: boolean;
 }
 
-export const BookingSystem: React.FC = () => {
+const BookingSystem: React.FC = () => {
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const [therapists, setTherapists] = useState<Therapist[]>([]);
@@ -312,3 +313,5 @@ export const BookingSystem: React.FC = () => {
     </AppPageLayout>
   );
 };
+
+export default BookingSystem;

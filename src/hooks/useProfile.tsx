@@ -6,12 +6,13 @@ import { supabase } from '@/integrations/supabase/client';
 interface Profile {
   id: string;
   auth_uid: string;
-  role: string;
+  role: 'individual' | 'therapist' | 'org_admin';
   first_name: string;
   last_name: string;
   email: string;
   phone_number?: string;
   profile_photo_url?: string;
+  preferred_language?: string;
   created_at: string;
   updated_at: string;
 }
