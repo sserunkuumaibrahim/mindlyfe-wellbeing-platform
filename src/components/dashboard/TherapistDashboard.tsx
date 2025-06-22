@@ -4,102 +4,104 @@ import { Calendar, Users, DollarSign, Clock, MessageSquare, Star, FileText } fro
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
-import { useSessions } from '@/hooks/useSessions';
+import { useOptimizedSessions } from '@/hooks/useOptimizedSessions';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 
 export const TherapistDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { sessions: allSessions, loading } = useSessions();
-  const [activeClientsCount, setActiveClientsCount] = useState(0);
-  const [monthlyEarnings, setMonthlyEarnings] = useState(0);
-  const [averageRating, setAverageRating] = useState(0);
-  const [reviewsCount, setReviewsCount] = useState(0);
-  const [pendingFeedback, setPendingFeedback] = useState(0);
-
-  // Filter today's sessions
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  
-  const todaySessions = allSessions.filter(session => {
-    const sessionDate = new Date(session.scheduled_at);
-    return sessionDate >= today && sessionDate < tomorrow && session.status === 'scheduled';
+  const { sessions: allSessions, loading } = useOptimizedSessions();
+  const [dashboardStats, setDashboardStats] = useState({
+    activeClientsCount: 0,
+    monthlyEarnings: 0,
+    averageRating: 0,
+    reviewsCount: 0,
+    todaySessionsCount: 0
   });
+  const [statsLoading, setStatsLoading] = useState(true);
 
-  const upcomingSessions = allSessions
-    .filter(session => session.status === 'scheduled' && new Date(session.scheduled_at) > new Date())
-    .slice(0, 5);
+  // Filter today's sessions efficiently
+  const todaySessions = React.useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    return allSessions.filter(session => {
+      const sessionDate = new Date(session.scheduled_at);
+      return sessionDate >= today && sessionDate < tomorrow && session.status === 'scheduled';
+    });
+  }, [allSessions]);
+
+  const upcomingSessions = React.useMemo(() => 
+    allSessions
+      .filter(session => session.status === 'scheduled' && new Date(session.scheduled_at) > new Date())
+      .slice(0, 5)
+  , [allSessions]);
 
   useEffect(() => {
     if (!user) return;
 
-    const fetchDashboardData = async () => {
+    const fetchDashboardStats = async () => {
       try {
-        // Fetch active clients count (clients with sessions in last 30 days)
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        setStatsLoading(true);
         
-        const { data: activeClients } = await supabase
-          .from('therapy_sessions')
-          .select('client_id')
-          .eq('therapist_id', user.id)
-          .gte('scheduled_at', thirtyDaysAgo.toISOString());
-        
-        const uniqueClients = new Set(activeClients?.map(session => session.client_id) || []);
-        setActiveClientsCount(uniqueClients.size);
+        // Fetch stats in parallel for better performance
+        const [clientsResponse, earningsResponse, feedbackResponse] = await Promise.all([
+          // Active clients (last 30 days)
+          supabase
+            .from('therapy_sessions')
+            .select('client_id')
+            .eq('therapist_id', user.id)
+            .gte('scheduled_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
+          
+          // Monthly earnings
+          supabase
+            .from('therapy_sessions')
+            .select('*', { count: 'exact', head: true })
+            .eq('therapist_id', user.id)
+            .eq('status', 'completed')
+            .gte('scheduled_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()),
+          
+          // Feedback and ratings
+          supabase
+            .from('session_feedback')
+            .select('rating')
+            .eq('therapist_id', user.id)
+        ]);
 
-        // Fetch completed sessions this month for earnings calculation
-        const startOfMonth = new Date();
-        startOfMonth.setDate(1);
-        startOfMonth.setHours(0, 0, 0, 0);
+        // Process active clients
+        const uniqueClients = new Set(clientsResponse.data?.map(session => session.client_id) || []);
         
-        const { count: completedCount } = await supabase
-          .from('therapy_sessions')
-          .select('*', { count: 'exact', head: true })
-          .eq('therapist_id', user.id)
-          .eq('status', 'completed')
-          .gte('scheduled_at', startOfMonth.toISOString());
+        // Calculate earnings
+        const monthlyEarnings = (earningsResponse.count || 0) * 76000;
         
-        // Estimate earnings (76,000 UGX per session)
-        setMonthlyEarnings((completedCount || 0) * 76000);
+        // Calculate average rating
+        const ratings = feedbackResponse.data?.map(f => f.rating).filter(Boolean) || [];
+        const averageRating = ratings.length > 0 
+          ? Math.round((ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length) * 10) / 10 
+          : 0;
 
-        // Fetch ratings from session feedback
-        const { data: feedbackData } = await supabase
-          .from('session_feedback')
-          .select('rating, session_id')
-          .eq('therapist_id', user.id)
-          .not('rating', 'is', null);
-        
-        if (feedbackData && feedbackData.length > 0) {
-          const ratings = feedbackData.map(f => f.rating).filter(Boolean);
-          const average = ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length;
-          setAverageRating(Math.round(average * 10) / 10);
-          setReviewsCount(ratings.length);
-        }
-
-        // Count sessions without feedback
-        const feedbackSessionIds = feedbackData?.map(f => f.session_id) || [];
-        const { count: noFeedbackCount } = await supabase
-          .from('therapy_sessions')
-          .select('*', { count: 'exact', head: true })
-          .eq('therapist_id', user.id)
-          .eq('status', 'completed')
-          .not('id', 'in', `(${feedbackSessionIds.length > 0 ? feedbackSessionIds.map(id => `'${id}'`).join(',') : "''"})`)
-          .gte('scheduled_at', thirtyDaysAgo.toISOString());
-        
-        setPendingFeedback(noFeedbackCount || 0);
+        setDashboardStats({
+          activeClientsCount: uniqueClients.size,
+          monthlyEarnings,
+          averageRating,
+          reviewsCount: ratings.length,
+          todaySessionsCount: todaySessions.length
+        });
 
       } catch (error) {
-        console.error('Error fetching dashboard data:', error);
+        console.error('Error fetching dashboard stats:', error);
+      } finally {
+        setStatsLoading(false);
       }
     };
 
-    fetchDashboardData();
-  }, [user]);
+    fetchDashboardStats();
+  }, [user, todaySessions.length]);
 
   const formatSessionTime = (scheduledAt: string) => {
     const date = new Date(scheduledAt);
@@ -108,6 +110,35 @@ export const TherapistDashboard: React.FC = () => {
       time: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
   };
+
+  if (loading || statsLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <Skeleton className="h-8 w-64 mb-2" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+          <Skeleton className="h-10 w-40" />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-4" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-16 mb-1" />
+                <Skeleton className="h-3 w-20" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -130,7 +161,7 @@ export const TherapistDashboard: React.FC = () => {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{loading ? '...' : todaySessions.length}</div>
+            <div className="text-2xl font-bold">{dashboardStats.todaySessionsCount}</div>
             <p className="text-xs text-muted-foreground">
               {todaySessions[0] ? `Next at ${formatSessionTime(todaySessions[0].scheduled_at).time}` : 'No sessions today'}
             </p>
@@ -143,7 +174,7 @@ export const TherapistDashboard: React.FC = () => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{loading ? '...' : activeClientsCount}</div>
+            <div className="text-2xl font-bold">{dashboardStats.activeClientsCount}</div>
             <p className="text-xs text-muted-foreground">Last 30 days</p>
           </CardContent>
         </Card>
@@ -154,7 +185,7 @@ export const TherapistDashboard: React.FC = () => {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{loading ? '...' : `UGX ${monthlyEarnings.toLocaleString()}`}</div>
+            <div className="text-2xl font-bold">UGX {dashboardStats.monthlyEarnings.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">This month</p>
           </CardContent>
         </Card>
@@ -165,9 +196,9 @@ export const TherapistDashboard: React.FC = () => {
             <Star className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{loading ? '...' : averageRating || 'N/A'}</div>
+            <div className="text-2xl font-bold">{dashboardStats.averageRating || 'N/A'}</div>
             <p className="text-xs text-muted-foreground">
-              {reviewsCount > 0 ? `${reviewsCount} reviews` : 'No reviews yet'}
+              {dashboardStats.reviewsCount > 0 ? `${dashboardStats.reviewsCount} reviews` : 'No reviews yet'}
             </p>
           </CardContent>
         </Card>
@@ -182,9 +213,7 @@ export const TherapistDashboard: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {loading ? (
-                <div className="text-center text-muted-foreground">Loading sessions...</div>
-              ) : todaySessions.length > 0 ? (
+              {todaySessions.length > 0 ? (
                 todaySessions.map((session) => {
                   const { time } = formatSessionTime(session.scheduled_at);
                   return (
@@ -268,9 +297,7 @@ export const TherapistDashboard: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {loading ? (
-                <div className="text-center py-4">Loading...</div>
-              ) : upcomingSessions.length > 0 ? (
+              {upcomingSessions.length > 0 ? (
                 upcomingSessions.slice(0, 3).map((session) => {
                   const { date, time } = formatSessionTime(session.scheduled_at);
                   return (

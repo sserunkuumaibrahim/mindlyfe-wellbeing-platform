@@ -1,26 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Calendar, Clock, User, DollarSign, Video, ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useOptimizedTherapists } from '@/hooks/useOptimizedTherapists';
 import { toast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import AppPageLayout from '@/components/ui/AppPageLayout';
-
-interface Therapist {
-  id: string;
-  first_name: string;
-  last_name: string;
-  profile_photo_url?: string;
-  specializations: string[];
-  languages_spoken: string[];
-  years_experience: number;
-  bio?: string;
-}
 
 interface AvailabilitySlot {
   therapist_id: string;
@@ -32,127 +22,44 @@ interface AvailabilitySlot {
 const BookingSystem: React.FC = () => {
   const { user } = useAuth();
   const isMobile = useIsMobile();
-  const [therapists, setTherapists] = useState<Therapist[]>([]);
-  const [selectedTherapist, setSelectedTherapist] = useState<Therapist | null>(null);
-  const [availableSlots, setAvailableSlots] = useState<AvailabilitySlot[]>([]);
+  const { therapists, loading, error } = useOptimizedTherapists();
+  const [selectedTherapist, setSelectedTherapist] = useState<any>(null);
   const [selectedSlot, setSelectedSlot] = useState<AvailabilitySlot | null>(null);
-  const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(false);
 
-  useEffect(() => {
-    fetchTherapists();
-  }, []);
-
-  const fetchTherapists = async () => {
-    try {
-      setLoading(true);
-      console.log('Fetching therapists...');
+  // Generate availability slots for selected therapist
+  const availableSlots = useMemo(() => {
+    if (!selectedTherapist) return [];
+    
+    const slots: AvailabilitySlot[] = [];
+    const today = new Date();
+    
+    for (let i = 1; i <= 14; i++) {
+      const date = new Date(today);
+      date.setDate(date.getDate() + i);
+      const dateStr = date.toISOString().split('T')[0];
       
-      const { data, error } = await supabase
-        .from('profiles')
-        .select(`
-          id,
-          first_name,
-          last_name,
-          profile_photo_url,
-          therapist_profiles!inner(
-            specializations,
-            languages_spoken,
-            years_experience,
-            bio
-          )
-        `)
-        .eq('role', 'therapist');
-
-      if (error) {
-        console.error('Error fetching therapists:', error);
-        throw error;
-      }
-
-      console.log('Raw therapists data:', data);
-
-      const formattedTherapists = data?.map(therapist => ({
-        id: therapist.id,
-        first_name: therapist.first_name,
-        last_name: therapist.last_name,
-        profile_photo_url: therapist.profile_photo_url,
-        specializations: therapist.therapist_profiles?.specializations || ['General'],
-        languages_spoken: therapist.therapist_profiles?.languages_spoken || ['English'],
-        years_experience: therapist.therapist_profiles?.years_experience || 0,
-        bio: therapist.therapist_profiles?.bio,
-      })) || [];
-
-      console.log('Formatted therapists:', formattedTherapists);
-      setTherapists(formattedTherapists);
-    } catch (error) {
-      console.error('Error fetching therapists:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load therapists. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchAvailability = async (therapistId: string) => {
-    try {
-      console.log('Fetching availability for therapist:', therapistId);
+      // Skip weekends for simplicity
+      if (date.getDay() === 0 || date.getDay() === 6) continue;
       
-      // Generate mock availability slots for now since the edge function might not be available
-      const mockSlots: AvailabilitySlot[] = [];
-      const today = new Date();
-      
-      for (let i = 1; i <= 7; i++) {
-        const date = new Date(today);
-        date.setDate(date.getDate() + i);
-        const dateStr = date.toISOString().split('T')[0];
-        
-        // Add morning and afternoon slots
-        mockSlots.push(
-          {
-            therapist_id: therapistId,
-            date: dateStr,
-            time: '09:00',
-            available: true
-          },
-          {
-            therapist_id: therapistId,
-            date: dateStr,
-            time: '11:00',
-            available: true
-          },
-          {
-            therapist_id: therapistId,
-            date: dateStr,
-            time: '14:00',
-            available: true
-          },
-          {
-            therapist_id: therapistId,
-            date: dateStr,
-            time: '16:00',
-            available: true
-          }
-        );
-      }
-      
-      setAvailableSlots(mockSlots);
-    } catch (error) {
-      console.error('Error fetching availability:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load availability",
-        variant: "destructive",
+      // Add time slots
+      const timeSlots = ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
+      timeSlots.forEach(time => {
+        slots.push({
+          therapist_id: selectedTherapist.id,
+          date: dateStr,
+          time,
+          available: true
+        });
       });
     }
-  };
+    
+    return slots;
+  }, [selectedTherapist]);
 
-  const handleTherapistSelect = (therapist: Therapist) => {
+  const handleTherapistSelect = (therapist: any) => {
     setSelectedTherapist(therapist);
     setSelectedSlot(null);
-    fetchAvailability(therapist.id);
   };
 
   const handleBooking = async () => {
@@ -162,7 +69,6 @@ const BookingSystem: React.FC = () => {
     try {
       console.log('Booking session...');
       
-      // For now, create the session directly instead of using the edge function
       const scheduledAt = `${selectedSlot.date}T${selectedSlot.time}:00`;
       const meetUrl = `https://meet.google.com/${Math.random().toString(36).substring(2, 15)}`;
       
@@ -192,7 +98,6 @@ const BookingSystem: React.FC = () => {
       // Reset selection
       setSelectedTherapist(null);
       setSelectedSlot(null);
-      setAvailableSlots([]);
     } catch (error) {
       console.error('Error booking session:', error);
       toast({
@@ -208,11 +113,45 @@ const BookingSystem: React.FC = () => {
   if (loading) {
     return (
       <AppPageLayout>
-        <div className="flex justify-center p-8">
-          <div className="text-center">
-            <LoadingSpinner className="mb-4" />
-            <p className="text-gray-600">Loading therapists...</p>
+        <div className={`${isMobile ? 'p-4' : 'container mx-auto p-6'} space-y-6`}>
+          <div className="flex items-center space-x-2">
+            <Skeleton className="h-8 w-8" />
+            <Skeleton className="h-8 w-48" />
           </div>
+          <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'} gap-6`}>
+            {[...Array(6)].map((_, i) => (
+              <Card key={i}>
+                <CardHeader className="text-center">
+                  <Skeleton className="w-16 h-16 rounded-full mx-auto mb-4" />
+                  <Skeleton className="h-6 w-32 mx-auto" />
+                  <Skeleton className="h-4 w-24 mx-auto" />
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-3/4" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </AppPageLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <AppPageLayout>
+        <div className="container mx-auto p-6">
+          <Card>
+            <CardContent className="p-8 text-center">
+              <p className="text-red-600 mb-4">{error}</p>
+              <Button onClick={() => window.location.reload()}>
+                Try Again
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </AppPageLayout>
     );
@@ -322,20 +261,28 @@ const BookingSystem: React.FC = () => {
                 <CardTitle>Available Time Slots</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className={`grid ${isMobile ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'} gap-3`}>
-                  {availableSlots.map((slot, index) => (
-                    <Button
-                      key={index}
-                      variant={selectedSlot === slot ? "default" : "outline"}
-                      className="h-auto p-3 flex flex-col"
-                      onClick={() => setSelectedSlot(slot)}
-                      disabled={!slot.available}
-                      size={isMobile ? 'sm' : 'default'}
-                    >
-                      <div className="text-sm font-medium">{slot.date}</div>
-                      <div className="text-xs">{slot.time}</div>
-                    </Button>
-                  ))}
+                <div className={`grid ${isMobile ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'} gap-3 max-h-96 overflow-y-auto`}>
+                  {availableSlots.map((slot, index) => {
+                    const date = new Date(slot.date);
+                    const formattedDate = date.toLocaleDateString('en-US', { 
+                      month: 'short', 
+                      day: 'numeric' 
+                    });
+                    
+                    return (
+                      <Button
+                        key={index}
+                        variant={selectedSlot === slot ? "default" : "outline"}
+                        className="h-auto p-3 flex flex-col"
+                        onClick={() => setSelectedSlot(slot)}
+                        disabled={!slot.available}
+                        size={isMobile ? 'sm' : 'default'}
+                      >
+                        <div className="text-sm font-medium">{formattedDate}</div>
+                        <div className="text-xs">{slot.time}</div>
+                      </Button>
+                    );
+                  })}
                 </div>
 
                 {selectedSlot && (
