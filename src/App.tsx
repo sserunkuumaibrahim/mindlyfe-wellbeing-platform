@@ -18,6 +18,12 @@ import MfaSetup from "./pages/auth/MfaSetup";
 
 // App Pages
 import Dashboard from "./pages/dashboard/index";
+import Sessions from "./pages/sessions/index";
+import Messages from "./pages/messages/index";
+import Availability from "./pages/availability/index";
+import Settings from "./pages/settings/index";
+import Notifications from "./pages/notifications/index";
+import Billing from "./pages/billing/index";
 import { BookingSystem } from "./components/booking/BookingSystem";
 
 // Custom Redirect component for "/" route
@@ -80,8 +86,16 @@ const App = () => {
               }
             />
 
-            {/* Main dashboard - database-connected */}
+            {/* Main dashboard - database-connected and responsive */}
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            
+            {/* All feature pages */}
+            <Route path="/sessions" element={<ProtectedRoute><Sessions /></ProtectedRoute>} />
+            <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+            <Route path="/availability" element={<ProtectedRoute><Availability /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+            <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
             
             {/* Booking system */}
             <Route path="/book-session" element={<ProtectedRoute><BookingSystem /></ProtectedRoute>} />

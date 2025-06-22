@@ -1,15 +1,14 @@
 
 import React from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { IndividualDashboard } from '@/components/dashboard/IndividualDashboard';
-import { TherapistDashboard } from '@/components/dashboard/TherapistDashboard';
-import { OrganizationDashboard } from '@/components/dashboard/OrganizationDashboard';
-import { AdminDashboard } from '@/components/dashboard/AdminDashboard';
+import { ResponsiveDashboard } from '@/components/dashboard/ResponsiveDashboard';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export default function Dashboard() {
   const { user, loading } = useAuth();
+  const isMobile = useIsMobile();
 
   if (loading) {
     return (
@@ -27,28 +26,15 @@ export default function Dashboard() {
     );
   }
 
-  const renderDashboard = () => {
-    switch (user.role) {
-      case 'individual':
-        return <IndividualDashboard />;
-      case 'therapist':
-        return <TherapistDashboard />;
-      case 'org_admin':
-        return <OrganizationDashboard />;
-      case 'admin':
-        return <AdminDashboard />;
-      default:
-        return (
-          <div className="flex items-center justify-center min-h-screen">
-            <p>Unknown user role: {user.role}</p>
-          </div>
-        );
-    }
-  };
+  // For mobile, render dashboard without the sidebar layout
+  if (isMobile) {
+    return <ResponsiveDashboard />;
+  }
 
+  // For desktop, use the full dashboard layout
   return (
     <DashboardLayout>
-      {renderDashboard()}
+      <ResponsiveDashboard />
     </DashboardLayout>
   );
 }
