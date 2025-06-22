@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { AppPageLayout } from '@/components/ui/AppPageLayout';
+import AppPageLayout from '@/components/ui/AppPageLayout';
 
 interface Therapist {
   id: string;

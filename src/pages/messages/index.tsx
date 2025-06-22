@@ -1,7 +1,6 @@
-
 import React from 'react';
 import { EnhancedMessaging } from '@/components/messaging/EnhancedMessaging';
-import { AppPageLayout } from '@/components/ui/AppPageLayout';
+import AppPageLayout from '@/components/ui/AppPageLayout';
 
 export default function Messages() {
   return (
@@ -16,3 +15,4 @@ export default function Messages() {
     </AppPageLayout>
   );
 }
+

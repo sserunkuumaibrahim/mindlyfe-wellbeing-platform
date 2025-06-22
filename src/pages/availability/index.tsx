@@ -1,7 +1,6 @@
-
 import React from 'react';
 import { AvailabilityManager } from '@/components/availability/AvailabilityManager';
-import { AppPageLayout } from '@/components/ui/AppPageLayout';
+import AppPageLayout from '@/components/ui/AppPageLayout';
 
 export default function Availability() {
   return (
@@ -16,3 +15,4 @@ export default function Availability() {
     </AppPageLayout>
   );
 }
+

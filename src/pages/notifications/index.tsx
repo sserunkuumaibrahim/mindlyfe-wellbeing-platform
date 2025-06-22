@@ -1,11 +1,10 @@
-
 import React from 'react';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Bell, CheckCircle } from 'lucide-react';
-import { AppPageLayout } from '@/components/ui/AppPageLayout';
+import AppPageLayout from '@/components/ui/AppPageLayout';
 
 export default function Notifications() {
   const { notifications, loading, unreadCount, markAsRead, markAllAsRead } = useNotifications();
