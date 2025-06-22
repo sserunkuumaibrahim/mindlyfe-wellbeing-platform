@@ -75,7 +75,7 @@ export const useOptimizedTherapists = () => {
 
   useEffect(() => {
     fetchTherapists();
-  }, [fetchSessions]);
+  }, [fetchTherapists]);
 
   return {
     therapists,
