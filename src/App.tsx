@@ -3,10 +3,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
-import { useAuthStore } from "@/stores/useAuthStore";
-import { useEffect } from "react";
 
 // Auth Pages
 import Login from "./pages/auth/Login";
@@ -24,41 +22,11 @@ import Availability from "./pages/availability/index";
 import Settings from "./pages/settings/index";
 import Notifications from "./pages/notifications/index";
 import Billing from "./pages/billing/index";
-import { BookingSystem } from "./components/booking/BookingSystem";
-
-// Custom Redirect component for "/" route
-function RootRedirect() {
-  const { isAuthenticated, loading } = useAuthStore();
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  useEffect(() => {
-    if (loading) return; // Wait for auth to resolve
-    if (isAuthenticated) {
-      navigate("/dashboard", { replace: true });
-    } else {
-      navigate("/login", { replace: true, state: { from: location } });
-    }
-  }, [isAuthenticated, navigate, location, loading]);
-
-  // Loading spinner until redirect
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-    </div>
-  );
-}
+import BookSession from "./components/booking/BookingSystem";
 
 const queryClient = new QueryClient();
 
 const App = () => {
-  const { checkAuth } = useAuthStore();
-
-  useEffect(() => {
-    // Check authentication status on app load
-    checkAuth();
-  }, [checkAuth]);
-
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
@@ -66,10 +34,7 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <Routes>
-            {/* Root route always redirects depending on auth */}
-            <Route path="/" element={<RootRedirect />} />
-            
-            {/* Auth routes */}
+            {/* Public routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -86,23 +51,21 @@ const App = () => {
               }
             />
 
-            {/* Main dashboard - database-connected and responsive */}
+            {/* Protected routes */}
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            
-            {/* All feature pages */}
             <Route path="/sessions" element={<ProtectedRoute><Sessions /></ProtectedRoute>} />
+            <Route path="/book-session" element={<ProtectedRoute><BookSession /></ProtectedRoute>} />
             <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
             <Route path="/availability" element={<ProtectedRoute><Availability /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
             <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
-            
-            {/* Booking system */}
-            <Route path="/book-session" element={<ProtectedRoute><BookingSystem /></ProtectedRoute>} />
-            <Route path="/booking" element={<ProtectedRoute><BookingSystem /></ProtectedRoute>} />
 
-            {/* Catch-all Route - redirect to dashboard or login */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            {/* Root redirect */}
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            
+            {/* Catch all */}
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </BrowserRouter>
       </TooltipProvider>

@@ -1,69 +1,47 @@
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Plus, Edit, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { supabase } from '@/integrations/supabase/client';
+import { Calendar } from '@/components/ui/calendar';
+import { Badge } from '@/components/ui/badge';
+import { Clock, Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 interface AvailabilitySlot {
-  id?: string;
-  day_of_week?: number;
+  id: string;
+  day_of_week: number;
   start_time: string;
   end_time: string;
-  is_recurring: boolean;
-  specific_date?: string;
   is_available: boolean;
 }
 
-const DAYS_OF_WEEK = [
-  { value: 0, label: 'Sunday' },
-  { value: 1, label: 'Monday' },
-  { value: 2, label: 'Tuesday' },
-  { value: 3, label: 'Wednesday' },
-  { value: 4, label: 'Thursday' },
-  { value: 5, label: 'Friday' },
-  { value: 6, label: 'Saturday' },
-];
-
 export const AvailabilityManager: React.FC = () => {
   const { user } = useAuth();
-  const [availabilitySlots, setAvailabilitySlots] = useState<AvailabilitySlot[]>([]);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingSlot, setEditingSlot] = useState<AvailabilitySlot | null>(null);
 
   useEffect(() => {
-    if (user?.role === 'therapist') {
+    if (user) {
       fetchAvailability();
     }
   }, [user]);
 
   const fetchAvailability = async () => {
+    if (!user) return;
+
     try {
       const { data, error } = await supabase
         .from('therapist_availability')
         .select('*')
-        .eq('therapist_id', user?.id)
-        .order('day_of_week', { ascending: true });
+        .eq('therapist_id', user.id)
+        .order('day_of_week')
+        .order('start_time');
 
       if (error) throw error;
-
-      const formattedSlots = data?.map(slot => ({
-        id: slot.id,
-        day_of_week: slot.day_of_week,
-        start_time: slot.start_time,
-        end_time: slot.end_time,
-        is_recurring: slot.is_recurring,
-        specific_date: slot.specific_date,
-        is_available: slot.is_available,
-      })) || [];
-
-      setAvailabilitySlots(formattedSlots);
+      setSlots(data || []);
     } catch (error) {
       console.error('Error fetching availability:', error);
       toast({
@@ -76,53 +54,43 @@ export const AvailabilityManager: React.FC = () => {
     }
   };
 
-  const handleSaveSlot = async (slot: AvailabilitySlot) => {
+  const addTimeSlot = async () => {
+    if (!user || !selectedDate) return;
+
+    const dayOfWeek = selectedDate.getDay();
+    const startTime = '09:00';
+    const endTime = '10:00';
+
     try {
-      const slotData = {
-        therapist_id: user?.id,
-        day_of_week: slot.day_of_week,
-        start_time: slot.start_time,
-        end_time: slot.end_time,
-        is_recurring: slot.is_recurring,
-        specific_date: slot.specific_date,
-        is_available: slot.is_available,
-      };
+      const { error } = await supabase
+        .from('therapist_availability')
+        .insert({
+          therapist_id: user.id,
+          day_of_week: dayOfWeek,
+          start_time: startTime,
+          end_time: endTime,
+          is_available: true
+        });
 
-      if (slot.id) {
-        // Update existing slot
-        const { error } = await supabase
-          .from('therapist_availability')
-          .update(slotData)
-          .eq('id', slot.id);
+      if (error) throw error;
 
-        if (error) throw error;
-      } else {
-        // Create new slot
-        const { error } = await supabase
-          .from('therapist_availability')
-          .insert([slotData]);
-
-        if (error) throw error;
-      }
-
-      await fetchAvailability();
-      setEditingSlot(null);
-      
       toast({
         title: "Success",
-        description: slot.id ? "Availability updated" : "Availability added",
+        description: "Time slot added successfully",
       });
+
+      fetchAvailability();
     } catch (error) {
-      console.error('Error saving availability:', error);
+      console.error('Error adding time slot:', error);
       toast({
         title: "Error",
-        description: "Failed to save availability",
+        description: "Failed to add time slot",
         variant: "destructive",
       });
     }
   };
 
-  const handleDeleteSlot = async (slotId: string) => {
+  const removeTimeSlot = async (slotId: string) => {
     try {
       const { error } = await supabase
         .from('therapist_availability')
@@ -131,200 +99,99 @@ export const AvailabilityManager: React.FC = () => {
 
       if (error) throw error;
 
-      await fetchAvailability();
-      
       toast({
         title: "Success",
-        description: "Availability deleted",
+        description: "Time slot removed successfully",
       });
+
+      fetchAvailability();
     } catch (error) {
-      console.error('Error deleting availability:', error);
+      console.error('Error removing time slot:', error);
       toast({
         title: "Error",
-        description: "Failed to delete availability",
+        description: "Failed to remove time slot",
         variant: "destructive",
       });
     }
   };
 
-  if (user?.role !== 'therapist') {
+  const getDayName = (dayOfWeek: number) => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return days[dayOfWeek];
+  };
+
+  if (loading) {
     return (
-      <div className="text-center p-8">
-        <p>This page is only available for therapists.</p>
+      <div className="flex justify-center p-8">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
   }
 
-  if (loading) {
-    return <div className="flex justify-center p-8">Loading availability...</div>;
-  }
-
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <Calendar className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold">Manage Availability</h1>
-        </div>
-        <Button onClick={() => setEditingSlot({
-          start_time: '09:00',
-          end_time: '17:00',
-          is_recurring: true,
-          is_available: true
-        })}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Availability
-        </Button>
-      </div>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Select Date</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Calendar
+            mode="single"
+            selected={selectedDate}
+            onSelect={setSelectedDate}
+            className="rounded-md border"
+          />
+          <Button 
+            onClick={addTimeSlot}
+            className="w-full mt-4"
+            disabled={!selectedDate}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Time Slot for {selectedDate && getDayName(selectedDate.getDay())}
+          </Button>
+        </CardContent>
+      </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {availabilitySlots.map((slot) => (
-          <Card key={slot.id}>
-            <CardHeader>
-              <CardTitle className="text-lg">
-                {slot.is_recurring && slot.day_of_week !== undefined
-                  ? DAYS_OF_WEEK.find(d => d.value === slot.day_of_week)?.label
-                  : slot.specific_date}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Clock className="h-4 w-4" />
-                  <span>{slot.start_time} - {slot.end_time}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className={`px-2 py-1 rounded text-xs ${
-                    slot.is_available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}>
-                    {slot.is_available ? 'Available' : 'Unavailable'}
-                  </span>
-                  <div className="flex space-x-2">
+      <Card>
+        <CardHeader>
+          <CardTitle>Your Availability</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {slots.length === 0 ? (
+              <p className="text-gray-500 text-center py-8">
+                No availability slots set. Add some to start accepting bookings.
+              </p>
+            ) : (
+              slots.map((slot) => (
+                <div key={slot.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <Clock className="h-4 w-4 text-gray-500" />
+                    <div>
+                      <p className="font-medium">{getDayName(slot.day_of_week)}</p>
+                      <p className="text-sm text-gray-500">
+                        {slot.start_time} - {slot.end_time}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Badge variant={slot.is_available ? "default" : "secondary"}>
+                      {slot.is_available ? "Available" : "Blocked"}
+                    </Badge>
                     <Button
+                      variant="ghost"
                       size="sm"
-                      variant="outline"
-                      onClick={() => setEditingSlot(slot)}
+                      onClick={() => removeTimeSlot(slot.id)}
                     >
-                      <Edit className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => slot.id && handleDeleteSlot(slot.id)}
-                    >
-                      <Trash2 className="h-3 w-3" />
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {editingSlot && (
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {editingSlot.id ? 'Edit Availability' : 'Add Availability'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Type</Label>
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    checked={editingSlot.is_recurring}
-                    onCheckedChange={(checked) =>
-                      setEditingSlot({ ...editingSlot, is_recurring: checked })
-                    }
-                  />
-                  <span>{editingSlot.is_recurring ? 'Recurring' : 'Specific Date'}</span>
-                </div>
-              </div>
-
-              {editingSlot.is_recurring ? (
-                <div className="space-y-2">
-                  <Label>Day of Week</Label>
-                  <Select
-                    value={editingSlot.day_of_week?.toString()}
-                    onValueChange={(value) =>
-                      setEditingSlot({ ...editingSlot, day_of_week: parseInt(value) })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select day" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DAYS_OF_WEEK.map((day) => (
-                        <SelectItem key={day.value} value={day.value.toString()}>
-                          {day.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <Label>Specific Date</Label>
-                  <Input
-                    type="date"
-                    value={editingSlot.specific_date || ''}
-                    onChange={(e) =>
-                      setEditingSlot({ ...editingSlot, specific_date: e.target.value })
-                    }
-                  />
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label>Start Time</Label>
-                <Input
-                  type="time"
-                  value={editingSlot.start_time}
-                  onChange={(e) =>
-                    setEditingSlot({ ...editingSlot, start_time: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>End Time</Label>
-                <Input
-                  type="time"
-                  value={editingSlot.end_time}
-                  onChange={(e) =>
-                    setEditingSlot({ ...editingSlot, end_time: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Availability</Label>
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    checked={editingSlot.is_available}
-                    onCheckedChange={(checked) =>
-                      setEditingSlot({ ...editingSlot, is_available: checked })
-                    }
-                  />
-                  <span>{editingSlot.is_available ? 'Available' : 'Unavailable'}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end space-x-2 mt-4">
-              <Button variant="outline" onClick={() => setEditingSlot(null)}>
-                Cancel
-              </Button>
-              <Button onClick={() => handleSaveSlot(editingSlot)}>
-                {editingSlot.id ? 'Update' : 'Add'}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

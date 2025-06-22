@@ -1,32 +1,39 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Send, Phone, Video, MoreVertical } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Send, MessageSquare } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 interface Message {
   id: string;
-  conversation_id: string;
+  content: string;
   sender_id: string;
   recipient_id: string;
-  content: string;
-  message_type: string;
-  is_read: boolean;
   created_at: string;
-  file_url?: string;
+  is_read: boolean;
+  sender?: {
+    first_name: string;
+    last_name: string;
+    profile_photo_url?: string;
+  };
+  recipient?: {
+    first_name: string;
+    last_name: string;
+    profile_photo_url?: string;
+  };
 }
 
 interface Conversation {
   conversation_id: string;
   other_user_id: string;
   other_user_name: string;
-  other_user_photo: string;
+  other_user_photo?: string;
   last_message: string;
   last_message_time: string;
   unread_count: number;
@@ -43,14 +50,13 @@ export const EnhancedMessaging: React.FC = () => {
 
   useEffect(() => {
     if (user) {
-      loadConversations();
+      fetchConversations();
     }
   }, [user]);
 
   useEffect(() => {
     if (selectedConversation) {
-      loadMessages(selectedConversation);
-      subscribeToMessages(selectedConversation);
+      fetchMessages(selectedConversation);
     }
   }, [selectedConversation]);
 
@@ -58,181 +64,170 @@ export const EnhancedMessaging: React.FC = () => {
     scrollToBottom();
   }, [messages]);
 
-  const loadConversations = async () => {
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const fetchConversations = async () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase.rpc('get_user_conversations', {
-        user_id_param: user.id
+      const { data, error } = await supabase.functions.invoke('get-conversations', {
+        body: { user_id: user.id }
       });
 
       if (error) throw error;
-      setConversations(data || []);
+      setConversations(data.conversations || []);
     } catch (error) {
-      console.error('Error loading conversations:', error);
+      console.error('Error fetching conversations:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load conversations",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const loadMessages = async (conversationId: string) => {
+  const fetchMessages = async (conversationId: string) => {
+    if (!user) return;
+
     try {
       const { data, error } = await supabase
         .from('messages')
-        .select('*')
-        .eq('conversation_id', conversationId)
+        .select(`
+          *,
+          sender:profiles!messages_sender_id_fkey(first_name, last_name, profile_photo_url),
+          recipient:profiles!messages_recipient_id_fkey(first_name, last_name, profile_photo_url)
+        `)
+        .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
       setMessages(data || []);
-
-      // Mark messages as read
-      await supabase
-        .from('messages')
-        .update({ is_read: true })
-        .eq('conversation_id', conversationId)
-        .eq('recipient_id', user?.id);
     } catch (error) {
-      console.error('Error loading messages:', error);
+      console.error('Error fetching messages:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load messages",
+        variant: "destructive",
+      });
     }
-  };
-
-  const subscribeToMessages = (conversationId: string) => {
-    const channel = supabase
-      .channel(`messages:${conversationId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          setMessages(prev => [...prev, payload.new as Message]);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   };
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !selectedConversation || !user) return;
+    if (!user || !selectedConversation || !newMessage.trim()) return;
 
-    const otherUserId = selectedConversation.replace(user.id, '').replace(/[^a-f0-9-]/g, '');
+    const recipientId = selectedConversation;
 
     try {
-      const { error } = await supabase
-        .from('messages')
-        .insert({
-          conversation_id: selectedConversation,
+      const { error } = await supabase.functions.invoke('send-message', {
+        body: {
           sender_id: user.id,
-          recipient_id: otherUserId,
-          content: newMessage.trim(),
-          message_type: 'text',
-        });
+          recipient_id: recipientId,
+          content: newMessage.trim()
+        }
+      });
 
       if (error) throw error;
+
       setNewMessage('');
+      fetchMessages(selectedConversation);
+      fetchConversations();
     } catch (error) {
       console.error('Error sending message:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send message",
+        variant: "destructive",
+      });
     }
   };
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const formatTime = (timestamp: string) => {
-    return new Date(timestamp).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center h-96">Loading conversations...</div>;
+    return (
+      <div className="flex justify-center p-8">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
   return (
-    <div className="h-[600px] flex border rounded-lg overflow-hidden">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]">
       {/* Conversations List */}
-      <div className="w-1/3 border-r">
-        <div className="p-4 border-b">
-          <h3 className="text-lg font-semibold">Messages</h3>
-        </div>
-        <ScrollArea className="h-full">
-          {conversations.map((conversation) => (
-            <div
-              key={conversation.conversation_id}
-              className={`p-4 border-b cursor-pointer hover:bg-gray-50 ${
-                selectedConversation === conversation.conversation_id ? 'bg-blue-50' : ''
-              }`}
-              onClick={() => setSelectedConversation(conversation.conversation_id)}
-            >
-              <div className="flex items-center gap-3">
-                <Avatar>
-                  <AvatarImage src={conversation.other_user_photo} />
-                  <AvatarFallback>
-                    {conversation.other_user_name.split(' ').map(n => n[0]).join('')}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <p className="font-medium truncate">{conversation.other_user_name}</p>
-                    {conversation.unread_count > 0 && (
-                      <Badge variant="default" className="ml-2">
-                        {conversation.unread_count}
-                      </Badge>
-                    )}
+      <Card className="lg:col-span-1">
+        <CardHeader>
+          <CardTitle>Conversations</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-y-auto h-[500px]">
+            {conversations.length === 0 ? (
+              <div className="p-4 text-center">
+                <MessageSquare className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                <p className="text-gray-500">No conversations yet</p>
+              </div>
+            ) : (
+              conversations.map((conversation) => (
+                <div
+                  key={conversation.conversation_id}
+                  className={`p-4 border-b cursor-pointer hover:bg-gray-50 ${
+                    selectedConversation === conversation.other_user_id ? 'bg-blue-50' : ''
+                  }`}
+                  onClick={() => setSelectedConversation(conversation.other_user_id)}
+                >
+                  <div className="flex items-center space-x-3">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={conversation.other_user_photo} />
+                      <AvatarFallback>
+                        {conversation.other_user_name.split(' ').map(n => n[0]).join('')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <p className="font-medium truncate">{conversation.other_user_name}</p>
+                        {conversation.unread_count > 0 && (
+                          <Badge variant="default" className="text-xs">
+                            {conversation.unread_count}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-500 truncate">{conversation.last_message}</p>
+                    </div>
                   </div>
-                  <p className="text-sm text-gray-500 truncate">{conversation.last_message}</p>
-                  <p className="text-xs text-gray-400">
-                    {formatTime(conversation.last_message_time)}
-                  </p>
                 </div>
-              </div>
-            </div>
-          ))}
-        </ScrollArea>
-      </div>
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Chat Area */}
-      <div className="flex-1 flex flex-col">
-        {selectedConversation ? (
-          <>
-            {/* Chat Header */}
-            <div className="p-4 border-b flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Avatar>
-                  <AvatarFallback>U</AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-medium">
-                    {conversations.find(c => c.conversation_id === selectedConversation)?.other_user_name}
-                  </p>
-                  <p className="text-sm text-gray-500">Online</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm">
-                  <Phone className="w-4 h-4" />
-                </Button>
-                <Button variant="ghost" size="sm">
-                  <Video className="w-4 h-4" />
-                </Button>
-                <Button variant="ghost" size="sm">
-                  <MoreVertical className="w-4 h-4" />
-                </Button>
-              </div>
+      {/* Messages */}
+      <Card className="lg:col-span-2">
+        <CardHeader>
+          <CardTitle>
+            {selectedConversation
+              ? conversations.find(c => c.other_user_id === selectedConversation)?.other_user_name
+              : 'Select a conversation'
+            }
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col h-[500px]">
+          {!selectedConversation ? (
+            <div className="flex-1 flex items-center justify-center">
+              <p className="text-gray-500">Select a conversation to start messaging</p>
             </div>
-
-            {/* Messages */}
-            <ScrollArea className="flex-1 p-4">
-              <div className="space-y-4">
+          ) : (
+            <>
+              {/* Messages List */}
+              <div className="flex-1 overflow-y-auto mb-4 space-y-4">
                 {messages.map((message) => (
                   <div
                     key={message.id}
@@ -243,46 +238,39 @@ export const EnhancedMessaging: React.FC = () => {
                     <div
                       className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
                         message.sender_id === user?.id
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-gray-200 text-gray-900'
+                          ? 'bg-primary text-white'
+                          : 'bg-gray-100 text-gray-900'
                       }`}
                     >
                       <p>{message.content}</p>
-                      <p className="text-xs mt-1 opacity-70">
-                        {formatTime(message.created_at)}
+                      <p className={`text-xs mt-1 ${
+                        message.sender_id === user?.id ? 'text-blue-100' : 'text-gray-500'
+                      }`}>
+                        {new Date(message.created_at).toLocaleTimeString()}
                       </p>
                     </div>
                   </div>
                 ))}
                 <div ref={messagesEndRef} />
               </div>
-            </ScrollArea>
 
-            {/* Message Input */}
-            <div className="p-4 border-t">
-              <div className="flex gap-2">
+              {/* Message Input */}
+              <div className="flex space-x-2">
                 <Input
-                  placeholder="Type your message..."
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      sendMessage();
-                    }
-                  }}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Type your message..."
+                  className="flex-1"
                 />
-                <Button onClick={sendMessage}>
-                  <Send className="w-4 h-4" />
+                <Button onClick={sendMessage} disabled={!newMessage.trim()}>
+                  <Send className="h-4 w-4" />
                 </Button>
               </div>
-            </div>
-          </>
-        ) : (
-          <div className="flex-1 flex items-center justify-center">
-            <p className="text-gray-500">Select a conversation to start messaging</p>
-          </div>
-        )}
-      </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

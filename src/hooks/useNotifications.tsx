@@ -1,62 +1,69 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { notificationService } from '@/services/notificationService';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
+
+interface Notification {
+  id: string;
+  profile_id: string;
+  title: string;
+  message: string;
+  type: string;
+  is_read: boolean;
+  created_at: string;
+  data?: any;
+}
 
 export const useNotifications = () => {
   const { user } = useAuth();
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
+    if (user) {
+      fetchNotifications();
+    }
+  }, [user]);
+
+  const fetchNotifications = async () => {
     if (!user) return;
 
-    const fetchNotifications = async () => {
-      try {
-        const data = await notificationService.getUserNotifications(user.id);
-        setNotifications(data || []);
-        setUnreadCount(data?.filter(n => !n.is_read).length || 0);
-      } catch (error) {
-        console.error('Error fetching notifications:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('profile_id', user.id)
+        .order('created_at', { ascending: false });
 
-    fetchNotifications();
+      if (error) throw error;
 
-    // Subscribe to real-time notifications
-    const channel = supabase
-      .channel('notifications')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `profile_id=eq.${user.id}`,
-        },
-        (payload) => {
-          setNotifications(prev => [payload.new, ...prev]);
-          setUnreadCount(prev => prev + 1);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user]);
+      setNotifications(data || []);
+      setUnreadCount(data?.filter(n => !n.is_read).length || 0);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load notifications",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const markAsRead = async (notificationId: string) => {
     try {
-      await notificationService.markAsRead(notificationId);
+      const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('id', notificationId);
+
+      if (error) throw error;
+
       setNotifications(prev =>
-        prev.map(n =>
-          n.id === notificationId ? { ...n, is_read: true } : n
-        )
+        prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
@@ -66,15 +73,32 @@ export const useNotifications = () => {
 
   const markAllAsRead = async () => {
     if (!user) return;
-    
+
     try {
-      await notificationService.markAllAsRead(user.id);
+      const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('profile_id', user.id)
+        .eq('is_read', false);
+
+      if (error) throw error;
+
       setNotifications(prev =>
         prev.map(n => ({ ...n, is_read: true }))
       );
       setUnreadCount(0);
+
+      toast({
+        title: "Success",
+        description: "All notifications marked as read",
+      });
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
+      toast({
+        title: "Error",
+        description: "Failed to mark notifications as read",
+        variant: "destructive",
+      });
     }
   };
 
@@ -84,5 +108,6 @@ export const useNotifications = () => {
     unreadCount,
     markAsRead,
     markAllAsRead,
+    refetch: fetchNotifications,
   };
 };
