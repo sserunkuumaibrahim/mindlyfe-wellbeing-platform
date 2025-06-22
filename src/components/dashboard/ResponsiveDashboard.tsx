@@ -1,17 +1,13 @@
 
 import React from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { MobileDashboard } from './MobileDashboard';
-import { IndividualDashboard } from './IndividualDashboard';
-import { TherapistDashboard } from './TherapistDashboard';
+import { UnifiedDashboard } from './UnifiedDashboard';
 import { OrganizationDashboard } from './OrganizationDashboard';
 import { AdminDashboard } from './AdminDashboard';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 export const ResponsiveDashboard: React.FC = () => {
   const { user, loading } = useAuth();
-  const isMobile = useIsMobile();
 
   if (loading) {
     return (
@@ -21,22 +17,16 @@ export const ResponsiveDashboard: React.FC = () => {
     );
   }
 
-  // Use mobile dashboard for mobile devices
-  if (isMobile) {
-    return <MobileDashboard />;
-  }
-
-  // Desktop dashboard based on user role
+  // Use unified responsive dashboard for individuals and therapists
   switch (user?.role) {
     case 'individual':
-      return <IndividualDashboard />;
     case 'therapist':
-      return <TherapistDashboard />;
+      return <UnifiedDashboard />;
     case 'org_admin':
       return <OrganizationDashboard />;
     case 'admin':
       return <AdminDashboard />;
     default:
-      return <IndividualDashboard />;
+      return <UnifiedDashboard />;
   }
 };

@@ -61,7 +61,11 @@ export const Navigation: React.FC = () => {
       {/* Mobile Navigation */}
       <div className="md:hidden fixed top-0 left-0 right-0 bg-white border-b z-50">
         <div className="flex items-center justify-between p-4">
-          <h1 className="text-xl font-bold text-primary">Mindlyfe</h1>
+          <img 
+            src="/src/assets/mindlyfe-logo.svg" 
+            alt="Mindlyfe Logo" 
+            className="h-8 w-auto"
+          />
           <Button
             variant="ghost"
             size="sm"
@@ -107,7 +111,11 @@ export const Navigation: React.FC = () => {
       <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0">
         <div className="flex flex-col flex-grow pt-5 bg-white border-r overflow-y-auto">
           <div className="flex items-center flex-shrink-0 px-4">
-            <h1 className="text-2xl font-bold text-primary">Mindlyfe</h1>
+            <img 
+              src="/src/assets/mindlyfe-logo.svg" 
+              alt="Mindlyfe Logo" 
+              className="h-10 w-auto"
+            />
           </div>
           
           <div className="mt-8 flex-grow flex flex-col">

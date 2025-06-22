@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { Bell, Search } from 'lucide-react';
@@ -14,6 +15,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 export const TopBar: React.FC = () => {
+  const navigate = useNavigate();
   const { signOut } = useAuth();
   const { profile } = useProfile();
 
@@ -51,12 +53,12 @@ export const TopBar: React.FC = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end">
-              <DropdownMenuItem onClick={() => window.location.href = '/dashboard/profile'}>
-                Profile
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => window.location.href = '/dashboard/settings'}>
-                Settings
-              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/dashboard/profile')}>
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/dashboard/settings')}>
+                  Settings
+                </DropdownMenuItem>
               <DropdownMenuItem onClick={signOut}>
                 Sign Out
               </DropdownMenuItem>
