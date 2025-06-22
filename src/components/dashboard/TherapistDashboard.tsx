@@ -192,7 +192,7 @@ export const TherapistDashboard: React.FC = () => {
                       <div className="flex items-center space-x-4">
                         <div>
                           <p className="font-medium">
-                            {session.individual_profile?.first_name} {session.individual_profile?.last_name}
+                            {session.client?.first_name} {session.client?.last_name}
                           </p>
                           <p className="text-sm text-muted-foreground">{time}</p>
                         </div>
@@ -277,7 +277,7 @@ export const TherapistDashboard: React.FC = () => {
                     <div key={session.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div>
                         <p className="font-medium text-sm">
-                          {session.individual_profile?.first_name} {session.individual_profile?.last_name}
+                          {session.client?.first_name} {session.client?.last_name}
                         </p>
                         <p className="text-xs text-muted-foreground">{date} at {time}</p>
                       </div>
