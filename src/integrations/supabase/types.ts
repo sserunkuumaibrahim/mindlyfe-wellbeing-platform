@@ -1421,7 +1421,7 @@ export type Database = {
         | "no_show"
       session_type: "virtual" | "in_person"
       two_fa_method: "totp" | "sms" | "email"
-      user_role: "individual" | "therapist" | "org_admin"
+      user_role: "individual" | "therapist" | "org_admin" | "admin"
       verification_purpose:
         | "email_verification"
         | "phone_verification"
@@ -1562,7 +1562,7 @@ export const Constants = {
       ],
       session_type: ["virtual", "in_person"],
       two_fa_method: ["totp", "sms", "email"],
-      user_role: ["individual", "therapist", "org_admin"],
+      user_role: ["individual", "therapist", "org_admin", "admin"],
       verification_purpose: [
         "email_verification",
         "phone_verification",
