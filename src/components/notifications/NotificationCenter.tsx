@@ -8,7 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNotifications } from '@/hooks/useNotifications';
 import { formatDistanceToNow } from 'date-fns';
 
-export const NotificationCenter: React.FC = () => {
+const NotificationCenter: React.FC = () => {
   const { notifications, loading, unreadCount, markAsRead, markAllAsRead } = useNotifications();
 
   if (loading) {
@@ -104,3 +104,5 @@ export const NotificationCenter: React.FC = () => {
     </Card>
   );
 };
+
+export { NotificationCenter };

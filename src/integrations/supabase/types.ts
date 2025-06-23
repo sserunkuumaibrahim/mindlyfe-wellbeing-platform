@@ -9,6 +9,53 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      billing_history: {
+        Row: {
+          id: string
+          subscription_id: string
+          cycle_start: string
+          cycle_end: string
+          amount_due: number
+          amount_paid: number
+          status: string
+          invoice_generated: boolean
+          payment_due_date: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          subscription_id: string
+          cycle_start: string
+          cycle_end: string
+          amount_due: number
+          amount_paid?: number
+          status?: string
+          invoice_generated?: boolean
+          payment_due_date?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          subscription_id?: string
+          cycle_start?: string
+          cycle_end?: string
+          amount_due?: number
+          amount_paid?: number
+          status?: string
+          invoice_generated?: boolean
+          payment_due_date?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_cycles_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -936,6 +983,168 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_methods: {
+        Row: {
+          id: string
+          profile_id: string
+          method_type: string
+          provider: string
+          masked_details: string | null
+          dpo_token: string | null
+          is_default: boolean
+          is_active: boolean
+          expires_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          profile_id: string
+          method_type: string
+          provider: string
+          masked_details?: string | null
+          dpo_token?: string | null
+          is_default?: boolean
+          is_active?: boolean
+          expires_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          profile_id?: string
+          method_type?: string
+          provider?: string
+          masked_details?: string | null
+          dpo_token?: string | null
+          is_default?: boolean
+          is_active?: boolean
+          expires_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_methods_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_plans: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          price: number
+          billing_interval: string
+          sessions_included: number
+          features: string[] | null
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          price: number
+          billing_interval: string
+          sessions_included: number
+          features?: string[] | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          price?: number
+          billing_interval?: string
+          sessions_included?: number
+          features?: string[] | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      subscription_changes: {
+        Row: {
+          id: string
+          subscription_id: string
+          change_type: string
+          old_plan_id: string | null
+          new_plan_id: string | null
+          effective_date: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          subscription_id: string
+          change_type: string
+          old_plan_id?: string | null
+          new_plan_id?: string | null
+          effective_date: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          subscription_id?: string
+          change_type?: string
+          old_plan_id?: string | null
+          new_plan_id?: string | null
+          effective_date?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_changes_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_payment_retries: {
+        Row: {
+          id: string
+          subscription_id: string
+          attempt_number: number
+          retry_date: string
+          status: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          subscription_id: string
+          attempt_number: number
+          retry_date: string
+          status?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          subscription_id?: string
+          attempt_number?: number
+          retry_date?: string
+          status?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_payment_retries_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscriptions: {
         Row: {
           amount_ugx: number
@@ -945,8 +1154,10 @@ export type Database = {
           id: string
           num_users: number | null
           organization_id: string | null
+          plan_id: string | null
           plan_type: string
           profile_id: string | null
+          user_id: string | null
           sessions_included: number
           sessions_used: number
           start_date: string
@@ -962,8 +1173,10 @@ export type Database = {
           id?: string
           num_users?: number | null
           organization_id?: string | null
+          plan_id?: string | null
           plan_type: string
           profile_id?: string | null
+          user_id?: string | null
           sessions_included?: number
           sessions_used?: number
           start_date?: string
@@ -979,8 +1192,10 @@ export type Database = {
           id?: string
           num_users?: number | null
           organization_id?: string | null
+          plan_id?: string | null
           plan_type?: string
           profile_id?: string | null
+          user_id?: string | null
           sessions_included?: number
           sessions_used?: number
           start_date?: string
@@ -1074,6 +1289,9 @@ export type Database = {
           specializations: string[]
           updated_at: string
           years_experience: number
+          google_access_token: string | null
+          google_refresh_token: string | null
+          google_token_expires_at: string | null
         }
         Insert: {
           bio?: string | null
@@ -1096,6 +1314,12 @@ export type Database = {
           specializations?: string[]
           updated_at?: string
           years_experience?: number
+          google_access_token?: string | null
+          google_refresh_token?: string | null
+          google_token_expires_at?: string | null
+          google_access_token?: string | null
+          google_refresh_token?: string | null
+          google_token_expires_at?: string | null
         }
         Update: {
           bio?: string | null
@@ -1118,6 +1342,9 @@ export type Database = {
           specializations?: string[]
           updated_at?: string
           years_experience?: number
+          google_access_token?: string | null
+          google_refresh_token?: string | null
+          google_token_expires_at?: string | null
         }
         Relationships: [
           {
@@ -1374,6 +1601,92 @@ export type Database = {
             referencedRelation: "organization_profiles"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      video_call_sessions: {
+        Row: {
+          id: string
+          therapy_session_id: string
+          google_meet_url: string
+          google_meet_id: string
+          status: string
+          recording_url: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          therapy_session_id: string
+          google_meet_url: string
+          google_meet_id: string
+          status?: string
+          recording_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          therapy_session_id?: string
+          google_meet_url?: string
+          google_meet_id?: string
+          status?: string
+          recording_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_call_sessions_therapy_session_id_fkey"
+            columns: ["therapy_session_id"]
+            isOneToOne: true
+            referencedRelation: "therapy_sessions"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      session_participants: {
+        Row: {
+          id: string
+          session_id: string
+          profile_id: string
+          joined_at: string
+          left_at: string | null
+          role: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          session_id: string
+          profile_id: string
+          joined_at?: string
+          left_at?: string | null
+          role?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          session_id?: string
+          profile_id?: string
+          joined_at?: string
+          left_at?: string | null
+          role?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_participants_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "video_call_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_participants_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
         ]
       }
     }

@@ -1,73 +1,117 @@
-# Welcome to your Lovable project
+# MindLyfe - Mental Health Therapy Platform
 
-## Project info
+## Overview
 
-**URL**: https://lovable.dev/projects/92b9ca77-131b-4a17-b64c-30775c70a34d
+MindLyfe is a comprehensive mental health therapy platform that connects individuals and organizations with qualified therapists. The platform facilitates therapy sessions, progress tracking, educational content, and secure communication between clients and mental health professionals.
 
-## How can I edit this code?
+## Key Features
 
-There are several ways of editing your application.
+### User Management
 
-**Use Lovable**
+- **Multi-role Support**: Individual clients, therapists, organization admins, and system administrators
+- **Profile Management**: Detailed profiles for individuals, therapists, and organizations
+- **Authentication**: Secure login, registration, and password management
+- **Authorization**: Role-based access control with Row Level Security (RLS) policies
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/92b9ca77-131b-4a17-b64c-30775c70a34d) and start prompting.
+### Session Management
 
-Changes made via Lovable will be committed automatically to this repo.
+- **Booking System**: Schedule individual, couple, and group therapy sessions
+- **Calendar Integration**: Manage therapist availability and client appointments
+- **Video Calls**: Integrated video call interface for remote therapy sessions
+- **Session Types**: Support for individual, couple, and group therapy formats
 
-**Use your preferred IDE**
+### Communication
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+- **Messaging System**: Secure chat between clients and therapists
+- **Notification Center**: Real-time alerts for appointments, messages, and system updates
+- **Unread Message Tracking**: Dashboard indicators for unread communications
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Billing and Payments
 
-Follow these steps:
+- **Subscription Management**: Various pricing plans with different features
+- **Invoice Generation**: Automated billing for sessions and subscriptions
+- **Payment Processing**: Secure payment handling and verification
+
+### Analytics and Progress Tracking
+
+- **Therapist Dashboard**: Session statistics, client metrics, and earnings tracking
+- **Client Progress**: Goal achievement tracking and wellbeing assessments
+- **Administrative Reports**: User statistics, revenue tracking, and system usage metrics
+
+### Educational Content
+
+- **Workshops**: Educational sessions and group therapy workshops
+- **Resource Library**: Mental health resources and educational materials
+- **Skills Training**: Specialized workshops for developing coping mechanisms
+
+### Organization Features
+
+- **Member Management**: Add and manage organization members
+- **Group Sessions**: Organize therapy sessions for organization members
+- **Billing Management**: Centralized billing for organizational accounts
+
+### Mobile Responsiveness
+
+- **Adaptive UI**: Responsive design that works across devices
+- **Mobile Dashboard**: Optimized interface for smartphone and tablet users
+- **Breakpoint Detection**: Automatic layout adjustment based on screen size
+
+## Technical Implementation
+
+- **Frontend**: React, TypeScript, Tailwind CSS, shadcn-ui components
+- **Backend**: Supabase for database, authentication, and serverless functions
+- **Security**: Row Level Security (RLS) policies, audit logging, and secure data access
+- **API Services**: RESTful API endpoints for all platform functionalities
+- **State Management**: Custom React hooks for optimized data handling
+
+## Getting Started
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
+# Clone the repository
 git clone <YOUR_GIT_URL>
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# Navigate to the project directory
+cd mindlyfe
 
-# Step 3: Install the necessary dependencies.
+# Install dependencies
 npm i
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start the development server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Development Guidelines
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+- Follow the established component structure and naming conventions
+- Use the UI component library for consistent styling
+- Implement proper error handling and loading states
+- Ensure mobile responsiveness for all new features
+- Write comprehensive tests for critical functionality
 
-**Use GitHub Codespaces**
+## Deployment
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+The application can be deployed to any modern hosting platform that supports React applications:
 
-## What technologies are used for this project?
+1. Build the production version:
+   ```sh
+   npm run build
+   ```
 
-This project is built with:
+2. Deploy the contents of the `dist` directory to your hosting provider
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+3. Ensure all environment variables are properly configured in your hosting environment
 
-## How can I deploy this project?
+## CI/CD Integration
 
-Simply open [Lovable](https://lovable.dev/projects/92b9ca77-131b-4a17-b64c-30775c70a34d) and click on Share -> Publish.
+The project supports continuous integration and deployment through:
 
-## Can I connect a custom domain to my Lovable project?
+- Automated testing before deployment
+- Environment-specific configuration management
+- Database migration handling during deployment
 
-Yes, you can!
+## Security Considerations
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+- All API keys and secrets should be stored as environment variables
+- Regular security audits are recommended
+- User data is protected through Row Level Security policies
+- Audit logging tracks all sensitive operations

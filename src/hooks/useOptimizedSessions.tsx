@@ -1,30 +1,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
-
-interface OptimizedSession {
-  id: string;
-  client_id: string;
-  therapist_id: string;
-  scheduled_at: string;
-  duration_minutes: number;
-  session_type: string;
-  status: string;
-  google_meet_url?: string;
-  notes?: string;
-  client?: {
-    first_name: string;
-    last_name: string;
-    profile_photo_url?: string;
-  };
-  therapist?: {
-    first_name: string;
-    last_name: string;
-    profile_photo_url?: string;
-  };
-}
+import { getSessions } from '@/services/api/sessionService';
+import { useAuth } from './useAuth';
+import { TherapySession } from '@/types/session';
 
 export const useOptimizedSessions = () => {
   const { user } = useAuth();
@@ -32,54 +10,24 @@ export const useOptimizedSessions = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchSessions = useCallback(async () => {
-    if (!user?.id) {
-      setLoading(false);
-      return;
-    }
+  useEffect(() => {
+    const fetchUserSessions = async () => {
+      if (!user) return;
 
-    try {
       setLoading(true);
-      setError(null);
+      try {
+        const { data, error } = await getSessions(user.id);
+        if (error) throw error;
+        setSessions(data || []);
+      } catch (err) {
+        setError(err as Error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      const { data, error } = await supabase
-        .from('therapy_sessions')
-        .select(`
-          id,
-          client_id,
-          therapist_id,
-          scheduled_at,
-          duration_minutes,
-          session_type,
-          status,
-          google_meet_url,
-          notes,
-          client:profiles!therapy_sessions_client_id_fkey(
-            first_name,
-            last_name,
-            profile_photo_url
-          ),
-          therapist:profiles!therapy_sessions_therapist_id_fkey(
-            first_name,
-            last_name,
-            profile_photo_url
-          )
-        `)
-        .or(`client_id.eq.${user.id},therapist_id.eq.${user.id}`)
-        .order('scheduled_at', { ascending: false })
-        .limit(20);
-
-      if (error) throw error;
-
-      setSessions(data || []);
-    } catch (error) {
-      console.error('Error fetching sessions:', error);
-      setError('Failed to load sessions');
-      setSessions([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.id]);
+    fetchUserSessions();
+  }, [user]);
 
   const cancelSession = useCallback(async (sessionId: string) => {
     try {
