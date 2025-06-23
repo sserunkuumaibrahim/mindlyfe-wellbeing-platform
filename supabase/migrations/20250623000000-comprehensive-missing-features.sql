@@ -887,39 +887,37 @@ BEGIN
     ELSIF user_role_value = 'therapist'::public.user_role THEN
         -- Create therapist profile
         INSERT INTO public.therapist_profiles (
-            profile_id,
+            id,
             license_number,
+            license_body,
+            national_id_number,
             specializations,
-            years_of_experience,
+            years_experience,
             education_background,
-            languages,
-            hourly_rate_ugx,
+            languages_spoken,
             bio,
-            availability_schedule,
-            is_verified,
-            verification_status,
+            status,
             created_at,
             updated_at
         ) VALUES (
             NEW.id,
-            NEW.raw_user_meta_data ->> 'license_number',
+            COALESCE(NEW.raw_user_meta_data ->> 'license_number', 'PENDING'),
+            COALESCE(NEW.raw_user_meta_data ->> 'license_body', 'Uganda Medical and Dental Practitioners Council'),
+            COALESCE(NEW.raw_user_meta_data ->> 'national_id_number', 'PENDING'),
             CASE 
                 WHEN NEW.raw_user_meta_data ->> 'specializations' IS NOT NULL 
                 THEN (NEW.raw_user_meta_data ->> 'specializations')::TEXT[]
-                ELSE ARRAY[]::TEXT[]
+                ELSE ARRAY['General Therapy']::TEXT[]
             END,
-            COALESCE((NEW.raw_user_meta_data ->> 'years_of_experience')::INTEGER, 0),
+            COALESCE((NEW.raw_user_meta_data ->> 'years_experience')::INTEGER, 0),
             NEW.raw_user_meta_data ->> 'education_background',
             CASE 
-                WHEN NEW.raw_user_meta_data ->> 'languages' IS NOT NULL 
-                THEN (NEW.raw_user_meta_data ->> 'languages')::TEXT[]
+                WHEN NEW.raw_user_meta_data ->> 'languages_spoken' IS NOT NULL 
+                THEN (NEW.raw_user_meta_data ->> 'languages_spoken')::TEXT[]
                 ELSE ARRAY['English']::TEXT[]
             END,
-            COALESCE((NEW.raw_user_meta_data ->> 'hourly_rate_ugx')::INTEGER, 50000),
             NEW.raw_user_meta_data ->> 'bio',
-            COALESCE(NEW.raw_user_meta_data ->> 'availability_schedule', '{}'),
-            FALSE,
-            'pending_review',
+            'pending_review'::profile_status,
             NOW(),
             NOW()
         );

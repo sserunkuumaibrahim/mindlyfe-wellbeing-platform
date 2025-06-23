@@ -34,10 +34,21 @@ async function createUserWithProfile(userData) {
       password: userData.password,
       email_confirm: true,
       user_metadata: {
-        first_name: userData.first_name,
-        last_name: userData.last_name,
-        role: userData.role
-      }
+          first_name: userData.first_name,
+          last_name: userData.last_name,
+          role: userData.role,
+          phone_number: userData.phone,
+          date_of_birth: userData.date_of_birth,
+          gender: userData.gender,
+          license_number: userData.license_number,
+          license_body: userData.license_body,
+          national_id_number: userData.national_id_number,
+          specializations: userData.specializations,
+          years_experience: userData.years_experience,
+          education_background: userData.education_background,
+          languages_spoken: userData.languages_spoken,
+          bio: userData.bio
+        }
     });
 
     if (authError) {
@@ -48,32 +59,29 @@ async function createUserWithProfile(userData) {
     const userId = authData.user.id;
     console.log(`Created auth user: ${userId}`);
 
-    // Create base profile
-    const { error: profileError } = await supabase
+    // Wait a moment for the trigger to create the profile
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Verify profile was created by trigger
+    const { data: profile, error: profileCheckError } = await supabase
       .from('profiles')
-      .insert({
-        id: userId,
-        first_name: userData.first_name,
-        last_name: userData.last_name,
-        email: userData.email,
-        role: userData.role,
-        phone: userData.phone || null,
-        date_of_birth: userData.date_of_birth || null,
-        gender: userData.gender || null,
-        is_active: true
-      });
+      .select('*')
+      .eq('auth_uid', userId)
+      .single();
 
-    if (profileError) {
-      console.error(`Profile error for ${userData.email}:`, profileError);
+    if (profileCheckError || !profile) {
+      console.error(`Profile not created by trigger for ${userData.email}:`, profileCheckError);
       return null;
     }
+    
+    console.log(`Profile created by trigger for: ${userData.email}`);
 
     // Create role-specific profile
     if (userData.role === 'individual') {
       const { error: individualError } = await supabase
         .from('individual_profiles')
         .insert({
-          id: userId,
+          profile_id: userId,
           emergency_contact_name: userData.emergency_contact_name || 'Emergency Contact',
           emergency_contact_phone: userData.emergency_contact_phone || '+256700000000',
           medical_history: userData.medical_history || 'No significant medical history',
@@ -90,15 +98,15 @@ async function createUserWithProfile(userData) {
       const { error: therapistError } = await supabase
         .from('therapist_profiles')
         .insert({
-          id: userId,
+          profile_id: userId,
           license_number: userData.license_number || `LIC${Math.floor(Math.random() * 100000)}`,
+          license_body: 'Uganda Medical and Dental Practitioners Council',
+          national_id_number: `NID${Math.floor(Math.random() * 1000000)}`,
           specializations: userData.specializations || ['General Therapy', 'Anxiety', 'Depression'],
-          years_of_experience: userData.years_of_experience || Math.floor(Math.random() * 15) + 2,
-          education: userData.education || 'Masters in Clinical Psychology',
+          years_experience: userData.years_of_experience || Math.floor(Math.random() * 15) + 2,
+          education_background: userData.education || 'Masters in Clinical Psychology',
           bio: userData.bio || 'Experienced therapist dedicated to helping clients achieve their mental health goals.',
-          // hourly_rate removed - using standard platform rates
-          is_verified: true,
-          is_available: true
+          languages_spoken: ['English', 'Luganda']
         });
 
       if (therapistError) {
@@ -106,17 +114,18 @@ async function createUserWithProfile(userData) {
       }
     }
 
-    if (userData.role === 'organization') {
+    if (userData.role === 'org_admin') {
       const { error: orgError } = await supabase
         .from('organization_profiles')
         .insert({
-          id: userId,
+          profile_id: userId,
           organization_name: userData.organization_name || 'Demo Organization',
-          organization_type: userData.organization_type || 'healthcare',
+          organization_type: userData.organization_type || 'private_company',
           registration_number: userData.registration_number || `REG${Math.floor(Math.random() * 100000)}`,
-          address: userData.address || 'Kampala, Uganda',
-          website: userData.website || 'https://demo-org.com',
-          description: userData.description || 'Demo organization for testing purposes'
+          tax_id_number: userData.tax_id_number || `TAX${Math.floor(Math.random() * 1000000)}`,
+          representative_job_title: userData.representative_job_title || 'Administrator',
+          representative_national_id: userData.representative_national_id || `NID${Math.floor(Math.random() * 1000000)}`,
+          num_employees: userData.num_employees || 50
         });
 
       if (orgError) {
@@ -180,14 +189,15 @@ async function createTestAccounts() {
     password: passwordConfig.useRandomPasswords ? generatePassword() : passwordConfig.defaultPassword,
     first_name: accountConfig.demoOrganization.firstName,
     last_name: accountConfig.demoOrganization.lastName,
-    role: 'organization',
+    role: 'org_admin',
     phone: accountConfig.demoOrganization.phone,
     organization_name: accountConfig.demoOrganization.organizationName,
     organization_type: accountConfig.demoOrganization.organizationType,
     registration_number: accountConfig.demoOrganization.registrationNumber,
-    address: accountConfig.demoOrganization.address,
-    website: accountConfig.demoOrganization.website,
-    description: accountConfig.demoOrganization.description
+    tax_id_number: `TAX${Math.floor(Math.random() * 1000000)}`,
+    representative_job_title: 'CEO',
+    representative_national_id: `NID${Math.floor(Math.random() * 1000000)}`,
+    num_employees: 100
   });
   if (demoOrg) accounts.push(demoOrg);
 
