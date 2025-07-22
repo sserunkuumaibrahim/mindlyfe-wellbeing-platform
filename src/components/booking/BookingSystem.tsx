@@ -3,48 +3,47 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Calendar, Clock, Video, Star } from 'lucide-react';
+import { Calendar, Clock, Video, Star, MapPin, Phone, MessageSquare } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import AppPageLayout from '@/components/ui/AppPageLayout';
 import { useOptimizedTherapists } from '@/hooks/useOptimizedTherapists';
 import { toast } from '@/lib/toast';
 import { apiRequest } from '@/services/apiClient';
+import EnhancedBookingForm, { BookingFormData } from './EnhancedBookingForm';
 
 export default function BookingSystem() {
   const { therapists, loading, error } = useOptimizedTherapists();
-  const [selectedTherapist, setSelectedTherapist] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedTherapist, setSelectedTherapist] = useState<any | null>(null);
+  const [showBookingForm, setShowBookingForm] = useState(false);
 
-  const handleBookSession = async (therapistId: string, therapistName: string) => {
-    if (!selectedDate) {
-      toast({
-        title: "Error",
-        description: "Please select a date and time for the session.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const handleBookSession = async (bookingData: BookingFormData) => {
     try {
-      await apiRequest('/sessions/book', 'POST', {
-        therapistId,
-        scheduledAt: selectedDate.toISOString(),
-      });
+      const response = await apiRequest('/sessions/book', 'POST', bookingData);
 
       toast({
-        title: "Session Booking",
-        description: `Session with ${therapistName} has been requested. You will receive a confirmation email shortly.`,
+        title: "Session Booking Confirmed",
+        description: `Your session has been scheduled successfully. You will receive a confirmation email shortly.`,
       });
       
       setSelectedTherapist(null);
-      setSelectedDate(null);
-    } catch (error) {
+      setShowBookingForm(false);
+    } catch (error: any) {
       toast({
-        title: "Error",
-        description: "Failed to book session. Please try again.",
+        title: "Booking Failed",
+        description: error.message || "Failed to book session. Please try again.",
         variant: "destructive",
       });
     }
+  };
+
+  const handleBookingCancel = () => {
+    setSelectedTherapist(null);
+    setShowBookingForm(false);
+  };
+
+  const handleSelectTherapist = (therapist: any) => {
+    setSelectedTherapist(therapist);
+    setShowBookingForm(true);
   };
 
   if (loading) {
@@ -88,6 +87,21 @@ export default function BookingSystem() {
               </Button>
             </CardContent>
           </Card>
+        </div>
+      </AppPageLayout>
+    );
+  }
+
+  // Show booking form if therapist is selected
+  if (showBookingForm && selectedTherapist) {
+    return (
+      <AppPageLayout>
+        <div className="container mx-auto p-6">
+          <EnhancedBookingForm
+            therapist={selectedTherapist}
+            onSubmit={handleBookSession}
+            onCancel={handleBookingCancel}
+          />
         </div>
       </AppPageLayout>
     );
@@ -167,28 +181,29 @@ export default function BookingSystem() {
                     <span className="text-lg font-bold">UGX 76,000</span>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-2 mb-4">
                     <div className="flex items-center space-x-2 text-sm text-gray-600">
                       <Video className="h-4 w-4" />
-                      <span>Virtual session available</span>
+                      <span>Virtual & In-person available</span>
                     </div>
                     <div className="flex items-center space-x-2 text-sm text-gray-600">
                       <Clock className="h-4 w-4" />
-                      <span>60 minutes</span>
+                      <span>30-90 minutes</span>
                     </div>
                     <div className="flex items-center space-x-2 text-sm text-gray-600">
-                      <Calendar className="h-4 w-4" />
-                      <input type="datetime-local" onChange={(e) => setSelectedDate(new Date(e.target.value))} />
+                      <MapPin className="h-4 w-4" />
+                      <span>Flexible location options</span>
+                    </div>
+                    <div className="flex items-center space-x-2 text-sm text-gray-600">
+                      <MessageSquare className="h-4 w-4" />
+                      <span>Multiple contact options</span>
                     </div>
                   </div>
                 </div>
 
                 <Button 
                   className="w-full" 
-                  onClick={() => handleBookSession(
-                    therapist.id, 
-                    `${therapist.first_name} ${therapist.last_name}`
-                  )}
+                  onClick={() => handleSelectTherapist(therapist)}
                 >
                   Book Session
                 </Button>
