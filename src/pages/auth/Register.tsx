@@ -25,8 +25,10 @@ export default function Register() {
   const navigate = useNavigate();
 
   const handleRoleSelect = (role: UserRole) => {
+    console.log('Role selected:', role); // Debug log
     setSelectedRole(role);
     setStep('register');
+    console.log('Step changed to register'); // Debug log
   };
 
   const handleIndividualRegistration = async (data: IndividualRegisterDTO) => {
@@ -144,7 +146,7 @@ export default function Register() {
   const renderStep = () => {
     switch (step) {
       case 'role':
-        return <RoleSelector onSelectRole={(role: UserRole) => setSelectedRole(role)} />;
+        return <RoleSelector onSelectRole={handleRoleSelect} />;
       
       case 'register':
         return renderRegistrationForm();

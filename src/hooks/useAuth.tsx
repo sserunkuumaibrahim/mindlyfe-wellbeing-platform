@@ -75,9 +75,6 @@ export const useAuth = () => {
       case 'org_admin':
         navigate('/organization/dashboard');
         break;
-      case 'admin':
-        navigate('/admin/dashboard');
-        break;
       default:
         // If role is invalid, redirect to login
         toast({

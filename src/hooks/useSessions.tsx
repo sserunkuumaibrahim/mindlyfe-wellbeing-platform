@@ -28,26 +28,53 @@ export const useSessions = () => {
   const { user } = useAuth();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [dataFetched, setDataFetched] = useState(false); // Flag to prevent re-fetching
 
   const fetchSessions = useCallback(async () => {
-    if (!user) return;
+    if (!user?.id || dataFetched) {
+      setLoading(false);
+      return;
+    }
+
+    console.log('Fetching sessions for user:', user.id);
 
     try {
+      setError(null);
       const sessions = await apiClient.sessions.list();
       setSessions(sessions);
+      setDataFetched(true); // Mark as fetched
+      console.log('Sessions fetched successfully:', sessions.length);
     } catch (error) {
       console.error('Error fetching sessions:', error);
-      toast({ title: 'Error', description: 'Could not fetch sessions.' });
+      setError(error instanceof Error ? error.message : 'Could not fetch sessions');
+      
+      // Only show toast on non-network errors to avoid spam
+      if (!(error instanceof Error && (error.message.includes('Network error') || error.message.includes('Rate limit')))) {
+        toast({ 
+          title: 'Error', 
+          description: 'Could not fetch sessions. Please try again later.',
+          variant: 'destructive'
+        });
+      }
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user?.id, dataFetched]); // Include dataFetched in dependencies
 
   useEffect(() => {
-    if (user) {
+    let isMounted = true;
+    
+    if (user?.id && isMounted && !dataFetched) {
       fetchSessions();
+    } else if (!user?.id) {
+      setLoading(false);
     }
-  }, [user, fetchSessions]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id, dataFetched]); // Only re-run when user.id changes or dataFetched changes
 
   const bookSession = async (sessionDetails: Omit<Session, 'id' | 'client_id' | 'status'>) => {
     if (!user) return null;
@@ -85,5 +112,5 @@ export const useSessions = () => {
     }
   };
 
-  return { sessions, loading, fetchSessions, bookSession, cancelSession };
+  return { sessions, loading, error, fetchSessions, bookSession, cancelSession };
 };

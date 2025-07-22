@@ -288,7 +288,7 @@ export const TherapistRegistrationForm: React.FC<TherapistRegistrationFormProps>
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Gender</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select gender" />
@@ -303,25 +303,34 @@ export const TherapistRegistrationForm: React.FC<TherapistRegistrationFormProps>
                 </FormItem>
               )}
             />
-            <div>
-              <Label htmlFor="country">Country</Label>
-              <Input
-                id="country"
-                {...register('country')}
-                placeholder="Enter your country"
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="preferred_language">Preferred Language</Label>
-            <Input
-              id="preferred_language"
-              {...register('preferred_language')}
-              placeholder="e.g., English"
-              defaultValue="English"
+            <FormField
+              control={form.control}
+              name="country"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Country</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter your country" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
           </div>
+
+          <FormField
+            control={form.control}
+            name="preferred_language"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Preferred Language</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g., English" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </CardContent>
       </Card>
 
@@ -439,7 +448,7 @@ export const TherapistRegistrationForm: React.FC<TherapistRegistrationFormProps>
               <FormItem>
                 <FormLabel>Years of Experience *</FormLabel>
                 <FormControl>
-                  <Input type="number" min="0" placeholder="0" {...field} onChange={e => field.onChange(parseInt(e.target.value))}/>
+                  <Input type="number" min="0" placeholder="0" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10))}/>
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -610,7 +619,7 @@ export const TherapistRegistrationForm: React.FC<TherapistRegistrationFormProps>
               required
             />
             {licenseDocument && (
-              <p className="text-sm text-green-600 mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 Selected: {licenseDocument.name}
               </p>
             )}
@@ -624,7 +633,7 @@ export const TherapistRegistrationForm: React.FC<TherapistRegistrationFormProps>
               maxSize={5 * 1024 * 1024}
             />
             {insuranceDocument && (
-              <p className="text-sm text-green-600 mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 Selected: {insuranceDocument.name}
               </p>
             )}
@@ -639,7 +648,7 @@ export const TherapistRegistrationForm: React.FC<TherapistRegistrationFormProps>
               required
             />
             {idDocument && (
-              <p className="text-sm text-green-600 mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 Selected: {idDocument.name}
               </p>
             )}
@@ -657,7 +666,7 @@ export const TherapistRegistrationForm: React.FC<TherapistRegistrationFormProps>
               <div className="mt-2 space-y-1">
                 {otherDocuments.map((doc, index) => (
                   <div key={index} className="flex items-center justify-between text-sm">
-                    <span className="text-green-600">{doc.name}</span>
+                    <span className="text-muted-foreground">{doc.name}</span>
                     <Button
                       type="button"
                       variant="ghost"

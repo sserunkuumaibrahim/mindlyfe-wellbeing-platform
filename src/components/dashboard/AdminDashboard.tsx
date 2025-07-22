@@ -10,9 +10,11 @@ import { useNavigate } from 'react-router-dom';
 import { apiRequest } from '@/services/apiClient';
 import { toast } from '@/lib/toast';
 import { AdminDashboardData, AdminUser } from '@/types/dashboard';
+import { useAuth } from '@/hooks/useAuth';
 
 export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [dashboardData, setDashboardData] = useState<AdminDashboardData | null>(null);
   const [filteredUsers, setFilteredUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,7 +26,7 @@ export const AdminDashboard: React.FC = () => {
     const fetchDashboardData = async () => {
       setLoading(true);
       try {
-        const data = await apiRequest<AdminDashboardData>('/api/admin/dashboard');
+        const data = await apiRequest<AdminDashboardData>(`/api/users/${user.id}/dashboard`);
         setDashboardData(data);
         setFilteredUsers(data.users);
       } catch (error) {
@@ -36,7 +38,7 @@ export const AdminDashboard: React.FC = () => {
     };
     
     fetchDashboardData();
-  }, []);
+  }, [user]);
 
   const filterUsers = useCallback(() => {
     if (!dashboardData) return;

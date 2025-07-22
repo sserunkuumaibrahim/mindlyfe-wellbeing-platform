@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -64,7 +63,7 @@ export const EnhancedMessaging: React.FC = () => {
     if (!user) return;
     setLoading(true);
     try {
-      const data = await apiRequest<Conversation[]>('/api/messaging/conversations');
+      const data = await apiRequest<Conversation[]>('/messaging/conversations');
       setConversations(data || []);
     } catch (error) {
       toast({ title: 'Error', description: 'Could not fetch conversations.' });
@@ -76,7 +75,7 @@ export const EnhancedMessaging: React.FC = () => {
   const fetchMessages = async (conversationId: string) => {
     setLoading(true);
     try {
-      const data = await apiRequest<Message[]>(`/api/messaging/conversations/${conversationId}/messages`);
+      const data = await apiRequest<Message[]>(`/messaging/conversations/${conversationId}/messages`);
       setMessages(data || []);
     } catch (error) {
       toast({ title: 'Error', description: 'Could not fetch messages.' });
@@ -92,7 +91,7 @@ export const EnhancedMessaging: React.FC = () => {
       const recipientId = conversations.find(c => c.conversation_id === selectedConversation)?.other_user_id;
       if (!recipientId) return;
 
-      const sentMessage = await apiRequest<Message>('/api/messaging/messages', 'POST', {
+      const sentMessage = await apiRequest<Message>('/messaging/messages', 'POST', {
         recipient_id: recipientId,
         content: newMessage,
       });

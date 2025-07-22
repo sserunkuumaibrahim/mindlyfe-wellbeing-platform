@@ -1,25 +1,10 @@
 // Authentication Middleware for PostgreSQL Backend
-import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import { Response, NextFunction } from 'express';
+import * as jwt from 'jsonwebtoken';
 import { pool } from '../database';
-
-interface JWTPayload {
-  userId: string;
-  email: string;
-  type: string;
-  iat?: number;
-  exp?: number;
-}
+import { AuthenticatedRequest, JWTPayload, User } from '../types';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-
-interface AuthenticatedRequest extends Request {
-  user?: {
-    userId: string;
-    email: string;
-    role?: string;
-  };
-}
 
 // Middleware to authenticate JWT tokens
 export const authenticateToken = async (
@@ -109,7 +94,10 @@ export const requireAdmin = requireRole(['admin']);
 export const requireTherapist = requireRole(['therapist', 'admin']);
 
 // Middleware to check if user is organization or admin
-export const requireOrganization = requireRole(['organization', 'admin']);
+export const requireOrganization = requireRole(['org_admin', 'admin']);
+
+// Middleware to check if user is organization admin
+export const requireOrgAdmin = requireRole(['org_admin']);
 
 // Optional authentication - doesn't fail if no token provided
 export const optionalAuth = async (
@@ -195,8 +183,8 @@ export const requireOwnership = (userIdField: string = 'user_id') => {
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
 
 export const rateLimit = (maxRequests: number, windowMs: number) => {
-  return (req: Request, res: Response, next: NextFunction) => {
-    const key = req.ip || 'unknown';
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    const key = req.socket.remoteAddress || 'unknown';
     const now = Date.now();
     
     const record = rateLimitStore.get(key);
@@ -229,3 +217,6 @@ setInterval(() => {
 }, 60000); // Clean up every minute
 
 export type { AuthenticatedRequest };
+
+// Alias for compatibility with existing code
+export const authMiddleware = authenticateToken;

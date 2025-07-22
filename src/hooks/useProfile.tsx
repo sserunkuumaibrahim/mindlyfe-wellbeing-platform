@@ -11,9 +11,10 @@ export const useProfile = () => {
   const [error, setError] = useState<string | null>(null);
 
   const fetchProfile = useCallback(async () => {
-    if (!user) return;
+    if (!user?.id) return;
 
     try {
+      setLoading(true);
       console.log('Fetching profile for user:', user.id);
       
       const data = await apiClient.user.profile();
@@ -27,16 +28,16 @@ export const useProfile = () => {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
-    if (user) {
+    if (user?.id) {
       fetchProfile();
     } else {
       setProfile(null);
       setLoading(false);
     }
-  }, [user, fetchProfile]);
+  }, [user?.id, fetchProfile]);
 
   const updateProfile = async (updatedFields: Partial<User>) => {
     if (!profile) return;

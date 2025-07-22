@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,12 +26,9 @@ export default function BookingSystem() {
     }
 
     try {
-      await apiRequest('/api/sessions/book', {
-        method: 'POST',
-        body: JSON.stringify({
-          therapistId,
-          scheduledAt: selectedDate.toISOString(),
-        }),
+      await apiRequest('/sessions/book', 'POST', {
+        therapistId,
+        scheduledAt: selectedDate.toISOString(),
       });
 
       toast({
@@ -201,14 +197,26 @@ export default function BookingSystem() {
           ))}
         </div>
 
-        {therapists.length === 0 && (
+        {therapists.length === 0 && !loading && (
           <Card>
             <CardContent className="p-8 text-center">
-              <h3 className="text-lg font-semibold mb-2">No therapists available</h3>
-              <p className="text-gray-600 mb-4">
-                Please check back later or contact support for assistance.
+              <div className="mb-4">
+                <Calendar className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">No Therapists Available</h3>
+              <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                We're currently working on adding more qualified therapists to our platform. 
+                In the meantime, please contact our support team for assistance with scheduling 
+                or to learn about upcoming therapist availability.
               </p>
-              <Button variant="outline">Contact Support</Button>
+              <div className="space-x-4">
+                <Button variant="default" onClick={() => window.open('mailto:support@mindlyfe.com', '_blank')}>
+                  Email Support
+                </Button>
+                <Button variant="outline" onClick={() => window.open('tel:+256000000000', '_blank')}>
+                  Call Support
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}

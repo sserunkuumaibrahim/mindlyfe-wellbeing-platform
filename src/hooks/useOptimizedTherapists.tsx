@@ -1,6 +1,5 @@
-
 import { useState, useEffect, useCallback } from 'react';
-import { postgresqlClient } from '@/integrations/postgresql/client';
+import { apiRequest } from '@/services/apiClient';
 
 interface OptimizedTherapist {
   id: string;
@@ -25,48 +24,9 @@ export const useOptimizedTherapists = () => {
       setLoading(true);
       setError(null);
 
-      const result = await postgresqlClient
-        .from('profiles')
-        .select(`
-          id,
-          first_name,
-          last_name,
-          profile_photo_url,
-          therapist_profiles!inner(
-            specializations,
-            languages_spoken,
-            years_experience,
-            bio,
-            license_number,
-            license_body
-          )
-        `)
-        .eq('role', 'therapist')
-        .eq('is_active', true)
-        .limit(10)
-        .execute();
-
-      if (result.error) {
-        console.error('PostgreSQL error:', result.error);
-        throw new Error(result.error);
-      }
-      
-      const data = result.data;
-
-      const formattedTherapists = (data || []).map(therapist => ({
-        id: therapist.id,
-        first_name: therapist.first_name,
-        last_name: therapist.last_name,
-        profile_photo_url: therapist.profile_photo_url,
-        specializations: therapist.therapist_profiles?.specializations || [],
-        languages_spoken: therapist.therapist_profiles?.languages_spoken || [],
-        years_experience: therapist.therapist_profiles?.years_experience || 0,
-        bio: therapist.therapist_profiles?.bio,
-        license_number: therapist.therapist_profiles?.license_number || '',
-        license_body: therapist.therapist_profiles?.license_body || ''
-      }));
-
-      setTherapists(formattedTherapists);
+      // Use the API client to fetch therapists
+      const data = await apiRequest<OptimizedTherapist[]>('/therapists');
+      setTherapists(data || []);
     } catch (error) {
       console.error('Error fetching therapists:', error);
       setError('Failed to load therapists');

@@ -1,5 +1,5 @@
 import { Pool, PoolClient } from 'pg';
-import dotenv from 'dotenv';
+import * as dotenv from 'dotenv';
 
 dotenv.config();
 
@@ -16,7 +16,6 @@ const pool = new Pool({
   min: parseInt(process.env.DB_POOL_MIN || '2'),  // Minimum number of clients in the pool
   idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '30000'), // Close idle clients after 30 seconds
   connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT || '10000'), // Return error after 10 seconds if connection could not be established
-  acquireTimeoutMillis: parseInt(process.env.DB_ACQUIRE_TIMEOUT || '60000'), // Return error after 60 seconds if a client could not be checked out
   
   // SSL configuration for production
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
@@ -146,3 +145,6 @@ export async function executeTransaction<T>(
 }
 
 export { pool };
+
+// Alias for compatibility with existing code
+export const db = pool;

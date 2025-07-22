@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useProfile } from '@/hooks/useProfile';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
@@ -12,10 +11,9 @@ interface DashboardLayoutProps {
 }
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
-  const { user, loading: authLoading } = useAuth();
-  const { profile, loading: profileLoading, error } = useProfile();
+  const { user, loading: authLoading, error } = useAuth();
 
-  if (authLoading || profileLoading) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <LoadingSpinner />
@@ -23,7 +21,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
     );
   }
 
-  if (!user || !profile) {
+  if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Alert>

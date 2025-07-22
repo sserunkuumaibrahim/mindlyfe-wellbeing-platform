@@ -31,15 +31,13 @@ const organizationSchema = z.object({
   organization_name: z.string().min(1, "Organization name is required"),
   organization_type: z.enum(['private_company', 'school', 'ngo', 'government', 'healthcare', 'other']),
   registration_number: z.string().min(1, "Registration number is required"),
-  date_of_establishment: z.date({
-    required_error: "Date of establishment is required",
-    invalid_type_error: "Please enter a valid date"
+  date_of_establishment: z.string().refine((val) => !isNaN(Date.parse(val)), {
+    message: "Please enter a valid date",
   }),
   tax_id_number: z.string().min(1, "Tax ID number is required"),
-  num_employees: z.number({
-    required_error: "Number of employees is required",
-    invalid_type_error: "Please enter a valid number"
-  }).min(1, "Number of employees must be at least 1"),
+  num_employees: z.string().refine((val) => !isNaN(parseInt(val, 10)) && parseInt(val, 10) > 0, {
+    message: "Please enter a valid number",
+  }),
   official_website: z.string().url("Invalid URL").optional().or(z.literal("")),
   address: z.string().optional(),
   city: z.string().optional(),
@@ -284,7 +282,7 @@ export function OrganizationRegistrationForm({ onSubmit, loading, error, onBack 
                 <FormItem>
                   <FormLabel>Date of Birth</FormLabel>
                   <FormControl>
-                    <Input type="date" {...field} />
+                    <Input type="date" {...field} value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -387,7 +385,7 @@ export function OrganizationRegistrationForm({ onSubmit, loading, error, onBack 
                 <FormItem>
                   <FormLabel>Date of Establishment *</FormLabel>
                   <FormControl>
-                    <Input type="date" {...field} />
+                    <Input type="date" {...field} value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

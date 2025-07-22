@@ -89,23 +89,8 @@ export function IndividualRegistrationForm({ onSubmit, loading, error, onBack }:
         confirmPassword,
         therapy_goals,
         date_of_birth,
-        terms_accepted,
-        privacy_accepted,
         ...rest
       } = data;
-
-      // Validate terms acceptance
-      if (!terms_accepted || !privacy_accepted) {
-        form.setError("terms_accepted", {
-          type: "manual",
-          message: "You must accept the terms and conditions"
-        });
-        form.setError("privacy_accepted", {
-          type: "manual", 
-          message: "You must accept the privacy policy"
-        });
-        return;
-      }
 
       const registrationData: IndividualRegisterDTO = {
         ...rest,
@@ -238,7 +223,7 @@ export function IndividualRegistrationForm({ onSubmit, loading, error, onBack }:
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Gender</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select gender" />
@@ -402,7 +387,7 @@ export function IndividualRegistrationForm({ onSubmit, loading, error, onBack }:
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Preferred Therapist Gender</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select preference" />

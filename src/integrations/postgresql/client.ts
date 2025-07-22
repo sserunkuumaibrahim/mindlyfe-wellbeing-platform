@@ -40,6 +40,7 @@ class PostgreSQLClient {
   private tokenExpiresAt: number = 0;
   private refreshInProgress: boolean = false;
   private refreshPromise: Promise<ApiResponse<AuthSession>> | null = null;
+  private lastRefreshAttempt: number = 0; // Add rate limiting
 
   constructor() {
     // Load tokens from localStorage on initialization
@@ -77,14 +78,26 @@ class PostgreSQLClient {
   }
 
   private saveTokensToStorage(session: AuthSession) {
+    if (!session) {
+      console.warn('No session data provided to saveTokensToStorage');
+      return;
+    }
+
     localStorage.setItem("access_token", session.access_token);
     localStorage.setItem("refresh_token", session.refresh_token);
-    localStorage.setItem("expires_at", session.expires_at.toString());
-    localStorage.setItem("user", JSON.stringify(session.user));
+    
+    // Handle expires_at safely - it might be a number or undefined
+    const expiresAt = session.expires_at || (Date.now() + 15 * 60 * 1000); // Default to 15 minutes
+    localStorage.setItem("expires_at", expiresAt.toString());
+    
+    if (session.user) {
+      localStorage.setItem("user", JSON.stringify(session.user));
+      this.user = session.user;
+    }
+    
     this.accessToken = session.access_token;
     this.refreshToken = session.refresh_token;
-    this.tokenExpiresAt = session.expires_at;
-    this.user = session.user;
+    this.tokenExpiresAt = expiresAt;
   }
 
   private clearTokensFromStorage() {
@@ -96,6 +109,7 @@ class PostgreSQLClient {
     this.refreshToken = null;
     this.tokenExpiresAt = 0;
     this.user = null;
+    this.lastRefreshAttempt = 0; // Reset rate limiting
   }
 
   private async makeRequest<T>(
@@ -108,13 +122,22 @@ class PostgreSQLClient {
       ...(options.headers as Record<string, string>),
     };
 
-    // Check if token is about to expire (within 30 seconds) and refresh if needed
+    // Check if token is about to expire (within 2 minutes) and refresh if needed
+    const now = Date.now();
     if (
       this.accessToken &&
       this.tokenExpiresAt &&
-      this.tokenExpiresAt - Date.now() < 30000
+      this.tokenExpiresAt - now < 120000 && // 2 minutes instead of 30 seconds
+      !this.refreshInProgress && // Don't trigger if refresh is already in progress
+      now - this.lastRefreshAttempt > 30000 // Rate limit: don't refresh more than once every 30 seconds
     ) {
-      console.log("Token about to expire, refreshing...");
+      console.log("Token about to expire, refreshing...", {
+        expiresAt: new Date(this.tokenExpiresAt),
+        currentTime: new Date(),
+        timeDiff: this.tokenExpiresAt - now,
+        lastRefreshAttempt: this.lastRefreshAttempt ? new Date(this.lastRefreshAttempt) : "never"
+      });
+      this.lastRefreshAttempt = now;
       await this.refreshAccessToken();
     }
 
@@ -389,14 +412,25 @@ class PostgreSQLClient {
 
     this.refreshPromise = (async () => {
       try {
+        console.log("Starting token refresh...", {
+          currentToken: this.accessToken?.substring(0, 10) + "...",
+          refreshToken: this.refreshToken?.substring(0, 10) + "...",
+          expiresAt: new Date(this.tokenExpiresAt)
+        });
+        
         const result = await this.makeRequest<AuthSession>("/auth/refresh", {
           method: "POST",
           body: JSON.stringify({ refresh_token: this.refreshToken }),
         });
 
         if (result.data) {
+          console.log("Token refresh successful", {
+            newExpiresAt: new Date(result.data.expires_at),
+            currentTime: new Date()
+          });
           this.saveTokensToStorage(result.data);
         } else {
+          console.log("Token refresh failed:", result.error);
           this.clearTokensFromStorage();
         }
 

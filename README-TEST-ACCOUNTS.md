@@ -55,6 +55,32 @@ node create-test-accounts.js
 - Or random passwords if configured differently
 - Save these credentials securely for testing
 
+## Current Working Test Accounts (as of 2025-07-22)
+
+The following accounts are currently active and can be used for testing:
+
+### Individual Users
+- **Email**: `demo@mindlyfe.org` | **Password**: `MindLyfe2024!` | **Role**: `individual`
+- **Email**: `client@mindlyfe.org` | **Password**: `MindLyfe2024!` | **Role**: `individual` 
+
+### Therapists  
+- **Email**: `dr.smith@mindlyfe.org` | **Password**: `MindLyfe2024!` | **Role**: `therapist`
+- **Email**: `dr.brown@mindlyfe.org` | **Password**: `MindLyfe2024!` | **Role**: `therapist`
+- **Email**: `dr.garcia@mindlyfe.org` | **Password**: `MindLyfe2024!` | **Role**: `therapist`
+- **Email**: `dr.davis@mindlyfe.org` | **Password**: `MindLyfe2024!` | **Role**: `therapist`
+
+### Organization Admin
+- **Email**: `demo@techcorp.org` | **Password**: `MindLyfe2024!` | **Role**: `org_admin`
+
+### System Admin
+- **Email**: `michael.chen@mindlyfe.org` | **Password**: `MindLyfe2024!` | **Role**: `admin`
+
+## Development Quick Login
+
+When running in development mode (`NODE_ENV=development`), the login page displays test credentials for easy access:
+- **Email**: demo@mindlyfe.org  
+- **Password**: MindLyfe2024!
+
 ## Security Notes
 
 ⚠️ **IMPORTANT**:
@@ -67,6 +93,34 @@ node create-test-accounts.js
 
 ### 401 Authentication Errors
 - Make sure you've replaced `YOUR_SERVICE_ROLE_KEY_HERE` with the actual service role key
+- Verify you're using the correct password: `MindLyfe2024!` (case-sensitive)
+- Check that the backend Docker container is running and healthy
+- Verify the database connection is working
+
+### Dashboard Loading Issues
+- If dashboard gets stuck on loading, check the browser console for API errors
+- Ensure the frontend API client is calling the correct endpoints (`/api/profiles` not `/api/user/profile`)
+- Verify that authentication tokens are being stored correctly in localStorage as `access_token`
+- Make sure all containers are restarted after code changes: `docker-compose restart`
+
+### Common Solutions
+1. **Backend API endpoints fixed**: Changed frontend to use `/api/profiles` instead of `/api/user/profile`
+2. **Token storage corrected**: Frontend now uses `access_token` instead of `token` from localStorage  
+3. **Infinite loop resolved**: Components use AuthContext user data instead of separate useProfile API calls
+4. **Type errors fixed**: Updated component props to match available user data fields
+
+### Quick Reset
+If you encounter persistent issues:
+```bash
+# Clear browser localStorage
+localStorage.clear()
+
+# Restart all containers
+docker-compose restart
+
+# Check container status
+docker ps
+```
 - Verify the service role key is correct and hasn't expired
 - Check that your Supabase project URL is correct
 

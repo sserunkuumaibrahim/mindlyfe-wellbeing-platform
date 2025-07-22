@@ -1,4 +1,4 @@
-import React, { createContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { toast } from '@/lib/toast';
 import { postgresClient as postgresqlClient, type AuthUser, type AuthSession, type ApiResponse } from '@/integrations/postgresql/client';
 import { UserRole } from '@/types/user';
@@ -41,9 +41,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<AuthSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isInitialized, setIsInitialized] = useState(false);
 
   // Fetch user profile with additional role-specific data
+  // This should only be used when explicitly updating profile data
   const fetchUserProfile = useCallback(async () => {
     try {
       const profileResult = await postgresqlClient.getProfile();
@@ -101,19 +101,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
         
-        // Try to get additional profile data
-        const userProfile = await fetchUserProfile();
+        // Use session user data directly without additional API call
+        const userWithRole: ExtendedAuthUser = {
+          ...currentSession.user,
+          role: currentSession.user.role as UserRole
+        };
         
-        if (userProfile) {
-          setUser(userProfile);
-        } else {
-          // Fall back to session user if profile fetch fails
-          setUser({
-            ...currentSession.user,
-            role: currentSession.user.role as UserRole
-          });
-        }
-        
+        setUser(userWithRole);
         setSession(currentSession);
       } else {
         // No valid session found
@@ -134,17 +128,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 return;
               }
               
-              const userProfile = await fetchUserProfile();
+              const userWithRole: ExtendedAuthUser = {
+                ...refreshResult.data.user,
+                role: refreshResult.data.user.role as UserRole
+              };
               
-              if (userProfile) {
-                setUser(userProfile);
-              } else {
-                setUser({
-                  ...refreshResult.data.user,
-                  role: refreshResult.data.user.role as UserRole
-                });
-              }
-              
+              setUser(userWithRole);
               setSession(refreshResult.data);
             }
           } catch (refreshError) {
@@ -161,65 +150,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       postgresqlClient.signOut();
     } finally {
       setLoading(false);
-      setIsInitialized(true);
     }
-  }, [fetchUserProfile]);
+  }, []);
 
-  // Initialize auth on component mount
+  // Initialize auth on component mount, and handle session expiry
   useEffect(() => {
     initializeAuth();
-    
-    // Set up a timer to check token expiration periodically
-    const tokenCheckInterval = setInterval(() => {
+
+    const sessionCheckInterval = setInterval(() => {
       const currentSession = postgresqlClient.getCurrentSession();
       
-      // If session is about to expire (within 5 minutes), try to refresh it
-      if (currentSession && currentSession.expires_at) {
-        const expiresInMs = currentSession.expires_at - Date.now();
-        if (expiresInMs < 300000) { // 5 minutes in milliseconds
-          console.log('Token about to expire, refreshing...');
-          // Use the client directly to avoid circular dependency
-          postgresqlClient.refreshAccessToken().then(async (result) => {
-            if (result.data) {
-              // Get additional profile data
-              const userProfile = await fetchUserProfile();
-              
-              if (userProfile) {
-                setUser(userProfile);
-              } else {
-                setUser({
-                  id: result.data.user.id,
-                  email: result.data.user.email,
-                  email_confirmed: result.data.user.email_confirmed,
-                  first_name: result.data.user.first_name,
-                  last_name: result.data.user.last_name,
-                  created_at: result.data.user.created_at,
-                  updated_at: result.data.user.updated_at,
-                  role: result.data.user.role as UserRole,
-                  last_login_at: result.data.user.last_login_at
-                });
-              }
-              
-              setSession(result.data);
-            }
-          }).catch(err => {
-            console.error('Failed to refresh token:', err);
-          });
-        }
-      }
-      
-      // If session is expired and we have a user, update state
-      if (!currentSession && user) {
-        console.log('Session expired, updating state');
-        setUser(null);
-        setSession(null);
+      if (!currentSession) {
+        setUser(currentUser => {
+          if (currentUser) {
+            console.log('Session expired, updating state');
+            setSession(null);
+            return null;
+          }
+          return currentUser;
+        });
       }
     }, 60000); // Check every minute
     
     return () => {
-      clearInterval(tokenCheckInterval);
+      clearInterval(sessionCheckInterval);
     };
-  }, [initializeAuth, user, fetchUserProfile]);
+  }, [initializeAuth]);
 
   // Handle API errors with standardized approach
   const handleApiError = (result: ApiResponse<unknown>, defaultMessage: string): string => {
@@ -237,7 +193,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return defaultMessage;
   };
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = useCallback(async (email: string, password: string) => {
     try {
       setLoading(true);
       setError(null);
@@ -258,25 +214,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           throw new Error(errorMessage);
         }
         
-        // Get additional profile data
-        const userProfile = await fetchUserProfile();
+        // Use the user data from the sign-in response directly
+        const userWithRole: ExtendedAuthUser = {
+          ...result.data.user,
+          role: result.data.user.role as UserRole
+        };
         
-        if (userProfile) {
-          setUser(userProfile);
-        } else {
-          setUser({
-            id: result.data.user.id,
-            email: result.data.user.email,
-            email_confirmed: result.data.user.email_confirmed,
-            first_name: result.data.user.first_name,
-            last_name: result.data.user.last_name,
-            created_at: result.data.user.created_at,
-            updated_at: result.data.user.updated_at,
-            role: result.data.user.role as UserRole,
-            last_login_at: result.data.user.last_login_at
-          });
-        }
-        
+        setUser(userWithRole);
         setSession(result.data);
         toast({
           title: "Login successful",
@@ -314,9 +258,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const signUp = async (email: string, password: string, role: UserRole, userData?: Record<string, unknown>) => {
+  const signUp = useCallback(async (email: string, password: string, role: UserRole, userData?: Record<string, unknown>) => {
     try {
       setLoading(true);
       setError(null);
@@ -333,13 +277,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error(errorMessage);
       }
       
-      // Combine role with user data
-      const metadata = {
-        role,
-        ...userData
-      };
       
-      const result = await postgresqlClient.signUp(email, password, metadata);
+      const result = await postgresqlClient.signUp(email, password, role, userData);
       
       if (result.data && result.data.user) {
         // Validate that the user has a role in the response
@@ -403,9 +342,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -429,9 +368,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const resetPassword = async (email: string) => {
+  const resetPassword = useCallback(async (email: string) => {
     try {
       setLoading(true);
       setError(null);
@@ -460,9 +399,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const resetPasswordComplete = async (token: string, newPassword: string) => {
+  const resetPasswordComplete = useCallback(async (token: string, newPassword: string) => {
     try {
       setLoading(true);
       setError(null);
@@ -491,9 +430,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const confirmEmail = async (token: string) => {
+  const confirmEmail = useCallback(async (token: string) => {
     try {
       setLoading(true);
       setError(null);
@@ -530,9 +469,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
-  const refreshSession = async () => {
+  const refreshSession = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -599,9 +538,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetchUserProfile]);
 
-  const updateUserProfile = async (profileData: Record<string, unknown>) => {
+  const updateUserProfile = useCallback(async (profileData: Record<string, unknown>) => {
     try {
       setLoading(true);
       setError(null);
@@ -637,9 +576,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetchUserProfile]);
 
-  const value: AuthContextType = {
+  const value = useMemo(() => ({
     user,
     session,
     loading,
@@ -652,7 +591,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     confirmEmail,
     refreshSession,
     updateUserProfile,
-  };
+  }), [user, session, loading, error, signIn, signUp, signOut, resetPassword, resetPasswordComplete, confirmEmail, refreshSession, updateUserProfile]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

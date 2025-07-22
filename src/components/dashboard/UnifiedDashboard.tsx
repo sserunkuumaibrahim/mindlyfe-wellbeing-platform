@@ -52,6 +52,7 @@ export const UnifiedDashboard: React.FC = () => {
   const { user } = useAuth();
   const { sessions: allSessions, loading: sessionsLoading } = useSessions();
   const [loading, setLoading] = useState(true);
+  const [dataFetched, setDataFetched] = useState(false); // Flag to prevent re-fetching
   const [stats, setStats] = useState<DashboardStats>({
     upcomingSessions: 0,
     unreadMessages: 0,
@@ -59,6 +60,64 @@ export const UnifiedDashboard: React.FC = () => {
   });
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [upcomingSessions, setUpcomingSessions] = useState<TherapySession[]>([]);
+
+  // Quick actions for different user roles
+  const quickActions = [
+    {
+      icon: Calendar,
+      label: 'Schedule Session',
+      color: 'bg-blue-500',
+      path: '/booking'
+    },
+    {
+      icon: MessageSquare,
+      label: 'Messages',
+      color: 'bg-green-500',
+      path: '/messages'
+    },
+    {
+      icon: CreditCard,
+      label: 'Billing',
+      color: 'bg-purple-500',
+      path: '/billing'
+    },
+    {
+      icon: BookOpen,
+      label: 'Resources',
+      color: 'bg-orange-500',
+      path: '/resources'
+    },
+    {
+      icon: Users,
+      label: 'Clients',
+      color: 'bg-teal-500',
+      path: user?.role === 'therapist' ? '/clients' : '/therapists'
+    },
+    {
+      icon: Star,
+      label: 'Reviews',
+      color: 'bg-yellow-500',
+      path: '/reviews'
+    }
+  ];
+
+  const handleQuickAction = (path: string) => {
+    navigate(path);
+  };
+
+  const renderSkeleton = () => (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* Loading skeleton content */}
+      <div className="mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+          Loading...
+        </h1>
+        <p className="text-gray-600 mt-1">
+          Please wait while we load your dashboard
+        </p>
+      </div>
+    </div>
+  );
 
   // Format date and time
   const formatDateTime = (dateString: string) => {
@@ -96,35 +155,93 @@ export const UnifiedDashboard: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!user || sessionsLoading) return;
+    let isMounted = true;
 
     const fetchDashboardData = async () => {
+      // Prevent multiple calls and only fetch if user is available and we haven't fetched yet
+      if (!user?.id || !isMounted || dataFetched || sessionsLoading) {
+        return;
+      }
+      
+      console.log('Fetching dashboard data for user:', user.id);
+      
       try {
         setLoading(true);
 
-        const { data } = await apiRequest(`/users/${user.id}/dashboard`, 'GET');
+        const response: any = await apiRequest(`/users/${user.id}/dashboard`, 'GET');
+        
+        if (!isMounted) return; // Check if component is still mounted
+        
+        // The API returns { sessions, profile, notifications }
+        // Map this to the expected dashboard data structure
+        const dashboardData = {
+          stats: {
+            upcomingSessions: response.sessions?.filter((s: any) => s.status === 'scheduled').length || 0,
+            completedSessions: response.sessions?.filter((s: any) => s.status === 'completed').length || 0,
+            unreadMessages: 0, // Default value since not provided by API
+            earnings: 0, // Default value for therapists
+            clients: response.sessions?.length || 0, // Total unique clients/sessions
+            workshops: 0 // Default value
+          },
+          recentActivity: response.sessions?.slice(0, 5) || [],
+          upcomingSessions: response.sessions?.filter((s: any) => s.status === 'scheduled').slice(0, 3) || []
+        };
 
-        setStats(data.stats);
-        setRecentActivity(data.recentActivity);
-        setUpcomingSessions(data.upcomingSessions);
+        setStats(dashboardData.stats);
+        setRecentActivity(dashboardData.recentActivity);
+        setUpcomingSessions(dashboardData.upcomingSessions);
+        setDataFetched(true); // Mark as fetched to prevent re-fetching
+
+        console.log('Dashboard data fetched successfully');
 
       } catch (error) {
+        if (!isMounted) return;
+        
         console.error('Error fetching dashboard data:', error);
-        // Handle error appropriately, e.g., show a toast notification
+        
+        // Only set error state if it's not a network error (to prevent spam)
+        if (!(error instanceof Error && (error.message.includes('Network error') || error.message.includes('Rate limit')))) {
+          setStats({ 
+            upcomingSessions: 0, 
+            completedSessions: 0, 
+            unreadMessages: 0,
+            earnings: 0,
+            clients: 0,
+            workshops: 0
+          });
+          setRecentActivity([]);
+          setUpcomingSessions([]);
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
-    fetchDashboardData();
-  }, [user, sessionsLoading]);
+    // Only fetch if user is available, sessions are not loading, and we haven't fetched yet
+    if (user?.id && !sessionsLoading && !dataFetched) {
+      fetchDashboardData();
+    } else if (!user?.id) {
+      setLoading(false);
+    }
 
-  const renderSkeleton = () => (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id, sessionsLoading, dataFetched]); // Include dataFetched in dependencies
+
+  // Show loading state while user or sessions are loading
+  if (!user || sessionsLoading || loading) {
+    return renderSkeleton();
+  }
+
+  return (
+    <div className="p-6 space-y-6">
       {/* Welcome Section */}
       <div className="mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-          Welcome back, {user?.user_metadata?.first_name || 'User'}!
+          Welcome back, {user?.first_name || 'User'}!
         </h1>
         <p className="text-gray-600 mt-1">
           {user?.role === 'therapist' 

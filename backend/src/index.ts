@@ -9,6 +9,10 @@ import profilesRoutes from './routes/profiles';
 import dashboardRoutes from './routes/dashboard';
 import therapistRoutes from './routes/therapists';
 import sessionRoutes from './routes/sessions';
+import messagingRoutes from './routes/messaging';
+import userRoutes from './routes/user';
+import searchRoutes from './routes/search';
+import bookingRoutes from './routes/booking';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -27,6 +31,10 @@ app.use('/api/profiles', profilesRoutes);
 app.use('/api/users', dashboardRoutes);
 app.use('/api/therapists', therapistRoutes);
 app.use('/api/sessions', sessionRoutes);
+app.use('/api/messaging', messagingRoutes);
+app.use('/api', userRoutes);
+app.use('/api', searchRoutes);
+app.use('/api', bookingRoutes);
 
 // Health check endpoint with comprehensive database health check
 app.get('/health', async (req, res) => {
@@ -89,13 +97,12 @@ app.get('/api/test-db', async (req, res) => {
   }
 });
 
+import { sendError } from './utils/error';
+
 // Error handling middleware
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('Unhandled error:', err);
-  res.status(500).json({ 
-    message: 'Internal server error',
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined
-  });
+  sendError(res, 'Internal server error', 'INTERNAL_ERROR', 500, process.env.NODE_ENV === 'development' ? { details: err.message } : undefined);
 });
 
 // 404 handler

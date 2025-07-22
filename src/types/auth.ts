@@ -89,8 +89,9 @@ export interface ResetPasswordDTO {
 
 export interface AuthResponse {
   user: User;
-  token: string;
-  refreshToken: string;
+  access_token: string;
+  refresh_token: string;
+  expires_at: number;
   mfaRequired?: boolean;
 }
 

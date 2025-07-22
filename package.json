@@ -4,7 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host 0.0.0.0",
+    "dev:detached": "docker-compose up --build -d",
+    "dev:frontend": "vite --host 0.0.0.0",
+    "dev:backend": "cd backend && npm run dev",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "build:prod": "vite build --mode production",
@@ -13,7 +16,14 @@
     "start:prod": "node start-production.js",
     "serve": "serve -s dist -l 8080",
     "build:all": "npm run build:prod && cd backend && npm run build",
-    "install:all": "npm install && cd backend && npm install"
+    "install:all": "npm install && cd backend && npm install",
+    "start": "docker-compose up --build",
+    "docker:up": "docker-compose up --build",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:clean": "docker-compose down -v --remove-orphans",
+    "setup": "echo 'Use npm run dev to start with Docker' && npm run dev",
+    "setup:db": "echo 'Database setup is handled by Docker'"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
@@ -53,6 +63,7 @@
     "input-otp": "^1.2.4",
     "lucide-react": "^0.462.0",
     "next-themes": "^0.3.0",
+    "node-fetch": "^3.3.2",
     "react": "^18.3.1",
     "react-day-picker": "^8.10.1",
     "react-dom": "^18.3.1",

@@ -910,7 +910,7 @@ CREATE TABLE public.compliance_checks (
 -- Therapist search filters
 CREATE TABLE public.therapist_search_filters (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  therapist_id UUID REFERENCES public.therapist_profiles(id) ON DELETE CASCADE,
+  therapist_id UUID UNIQUE NOT NULL REFERENCES public.therapist_profiles(id) ON DELETE CASCADE,
   specializations TEXT[] NOT NULL,
   languages TEXT[] NOT NULL,
   session_types TEXT[] NOT NULL,

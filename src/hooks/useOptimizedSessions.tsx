@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { getSessions } from '@/services/api/sessionService';
 import { useAuth } from './useAuth';
@@ -26,11 +25,13 @@ export const useOptimizedSessions = () => {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
-    fetchSessions();
-  }, [fetchSessions]);
+    if (user?.id) {
+      fetchSessions();
+    }
+  }, [user?.id, fetchSessions]);
 
   const cancelSession = useCallback(async (sessionId: string) => {
     try {

@@ -45,16 +45,14 @@ export default function Login() {
     setError(null);
     
     try {
-      const result = await signIn(data.email, data.password);
-      
-      if (result.error) {
-        setError(result.error);
-      } else {
-        const from = location.state?.from?.pathname || "/dashboard";
-        navigate(from, { replace: true });
-      }
+      await signIn(data.email, data.password);
+      // If we get here, sign in was successful
+      const from = location.state?.from?.pathname || "/dashboard";
+      navigate(from, { replace: true });
     } catch (err) {
-      setError("An unexpected error occurred");
+      // Handle the error thrown by signIn
+      const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -151,6 +149,14 @@ export default function Login() {
             {error && (
               <div className="bg-red-50 text-red-600 text-sm p-3 rounded-xl border border-red-100">
                 {error}
+              </div>
+            )}
+
+            {process.env.NODE_ENV === 'development' && (
+              <div className="bg-blue-50 text-blue-700 text-xs p-3 rounded-xl border border-blue-100">
+                <p className="font-semibold mb-1">Development Test Credentials:</p>
+                <p><strong>Email:</strong> demo@mindlyfe.org</p>
+                <p><strong>Password:</strong> MindLyfe2024!</p>
               </div>
             )}
 

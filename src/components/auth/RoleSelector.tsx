@@ -2,7 +2,7 @@ import React from 'react';
 import { UserRole } from '@/types/user';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, UserCheck, Building2, Shield } from 'lucide-react';
+import { Users, UserCheck, Building2 } from 'lucide-react';
 
 interface RoleSelectorProps {
   onSelectRole: (role: UserRole) => void;
@@ -30,13 +30,6 @@ const roleOptions = [
     icon: Building2,
     color: 'text-purple-600',
   },
-  {
-    role: 'admin' as UserRole,
-    title: 'Administrator',
-    description: 'Platform administration',
-    icon: Shield,
-    color: 'text-red-600',
-  },
 ];
 
 export function RoleSelector({ onSelectRole }: RoleSelectorProps) {
@@ -54,7 +47,10 @@ export function RoleSelector({ onSelectRole }: RoleSelectorProps) {
             <Card
               key={option.role}
               className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-primary"
-              onClick={() => onSelectRole(option.role)}
+              onClick={() => {
+                console.log('Card clicked for role:', option.role); // Debug log
+                onSelectRole(option.role);
+              }}
             >
               <CardHeader className="text-center pb-2">
                 <div className="flex justify-center mb-2">
@@ -71,6 +67,7 @@ export function RoleSelector({ onSelectRole }: RoleSelectorProps) {
                   className="w-full"
                   onClick={(e) => {
                     e.stopPropagation();
+                    console.log('Button clicked for role:', option.role); // Debug log
                     onSelectRole(option.role);
                   }}
                 >

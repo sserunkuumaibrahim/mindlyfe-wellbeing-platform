@@ -2,24 +2,16 @@
 import express from 'express';
 import { pool, executeQuery, executeTransaction } from '../database';
 import { authenticateToken, requireAdmin, optionalAuth } from '../middleware/auth';
-import { AuthenticatedRequest } from '../middleware/auth';
+import { AuthenticatedRequest, ApiError, User, QueryValue, WhereCondition, OrderByClause } from '../types';
 
 const router = express.Router();
-
-// Standardized error response interface
-interface ApiError {
-  message: string;
-  code: string;
-  details?: Record<string, any>;
-  timestamp: string;
-}
 
 // Helper function to create standardized error responses
 function createErrorResponse(message: string, code: string, details?: Record<string, any>): ApiError {
   return {
     message,
     code,
-    details,
+    details: details || {},
     timestamp: new Date().toISOString()
   };
 }
@@ -65,20 +57,14 @@ function handleDatabaseError(error: any): ApiError {
   return createErrorResponse('Internal database error', 'INTERNAL_ERROR');
 }
 
-interface WhereCondition {
-  column: string;
-  operator: 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'like' | 'in';
-  value: string | number | boolean | (string | number)[];
-}
-
 // Helper function to build WHERE clause
-function buildWhereClause(whereConditions: WhereCondition[]): { clause: string; values: (string | number | boolean)[] } {
+function buildWhereClause(whereConditions: WhereCondition[]): { clause: string; values: QueryValue[] } {
   if (!whereConditions || whereConditions.length === 0) {
     return { clause: '', values: [] };
   }
 
   const conditions: string[] = [];
-  const values: (string | number | boolean)[] = [];
+  const values: QueryValue[] = [];
   let paramIndex = 1;
 
   whereConditions.forEach((condition) => {
@@ -87,37 +73,37 @@ function buildWhereClause(whereConditions: WhereCondition[]): { clause: string; 
     switch (operator) {
       case 'eq':
         conditions.push(`${column} = $${paramIndex}`);
-        values.push(value);
+        if (!Array.isArray(value)) values.push(value);
         paramIndex++;
         break;
       case 'neq':
         conditions.push(`${column} != $${paramIndex}`);
-        values.push(value);
+        if (!Array.isArray(value)) values.push(value);
         paramIndex++;
         break;
       case 'gt':
         conditions.push(`${column} > $${paramIndex}`);
-        values.push(value);
+        if (!Array.isArray(value)) values.push(value);
         paramIndex++;
         break;
       case 'gte':
         conditions.push(`${column} >= $${paramIndex}`);
-        values.push(value);
+        if (!Array.isArray(value)) values.push(value);
         paramIndex++;
         break;
       case 'lt':
         conditions.push(`${column} < $${paramIndex}`);
-        values.push(value);
+        if (!Array.isArray(value)) values.push(value);
         paramIndex++;
         break;
       case 'lte':
         conditions.push(`${column} <= $${paramIndex}`);
-        values.push(value);
+        if (!Array.isArray(value)) values.push(value);
         paramIndex++;
         break;
       case 'like':
         conditions.push(`${column} ILIKE $${paramIndex}`);
-        values.push(`%${value}%`);
+        if (!Array.isArray(value)) values.push(`%${value}%`);
         paramIndex++;
         break;
       case 'in':
@@ -148,11 +134,6 @@ function buildOrderClause(orderFields: string[]): string {
   });
 
   return `ORDER BY ${orderClauses.join(', ')}`;
-}
-
-interface User {
-  userId: string;
-  role: string;
 }
 
 // Helper function to check table access permissions
@@ -219,15 +200,26 @@ router.get('/:tableName', optionalAuth, async (req: AuthenticatedRequest, res): 
 
     // Add user filtering for non-admin users
     if (req.user && req.user.role !== 'admin') {
-      // Add user_id filter for user-specific tables
-      const userSpecificTables = [
-        'profiles', 'individual_profiles', 'therapist_profiles', 'organization_profiles',
-        'sessions', 'notifications', 'payments', 'subscriptions', 'billing_history',
-        'documents', 'workshop_participants'
-      ];
+      // Define table-specific user column mappings
+      const tableUserColumnMap: Record<string, string> = {
+        'profiles': 'id',  // profiles table uses 'id' column for user filtering
+        'individual_profiles': 'id', 
+        'therapist_profiles': 'id', 
+        'organization_profiles': 'id',
+        'sessions': 'user_id',
+        'notifications': 'profile_id',
+        'payments': 'user_id',
+        'subscriptions': 'profile_id',
+        'billing_history': 'user_id',
+        'documents': 'profile_id',
+        'workshop_participants': 'profile_id',
+        'therapy_sessions': 'client_id',
+        'user_sessions': 'profile_id'
+      };
       
-      if (userSpecificTables.includes(tableName)) {
-        whereConditions.push({ column: 'user_id', operator: 'eq', value: req.user.userId });
+      const userColumn = tableUserColumnMap[tableName];
+      if (userColumn) {
+        whereConditions.push({ column: userColumn, operator: 'eq', value: req.user.userId });
       }
     }
 
@@ -336,7 +328,7 @@ router.patch('/:tableName', authenticateToken, async (req: AuthenticatedRequest,
     }
 
     // Parse WHERE conditions
-    const whereConditions: any[] = [];
+    const whereConditions: WhereCondition[] = [];
     Object.keys(req.query).forEach(key => {
       if (key.startsWith('where[')) {
         try {
@@ -412,7 +404,7 @@ router.delete('/:tableName', authenticateToken, async (req: AuthenticatedRequest
     }
 
     // Parse WHERE conditions
-    const whereConditions: unknown[] = [];
+    const whereConditions: WhereCondition[] = [];
     Object.keys(req.query).forEach(key => {
       if (key.startsWith('where[')) {
         try {
