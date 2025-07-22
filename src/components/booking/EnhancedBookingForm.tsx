@@ -25,7 +25,9 @@ export interface BookingFormData {
   durationMinutes: number;
   location?: string;
   notes?: string;
-  preferredContactMethod?: 'email' | 'phone' | 'sms';
+  preferredContactMethod?: 'email' | 'phone' | 'sms' | 'video_call';
+  urgencyLevel?: 'low' | 'normal' | 'high' | 'urgent';
+  sessionPreferences?: string;
 }
 
 export default function EnhancedBookingForm({ therapist, onSubmit, onCancel }: BookingFormProps) {
@@ -36,7 +38,9 @@ export default function EnhancedBookingForm({ therapist, onSubmit, onCancel }: B
     durationMinutes: 60,
     location: '',
     notes: '',
-    preferredContactMethod: 'email'
+    preferredContactMethod: 'email',
+    urgencyLevel: 'normal',
+    sessionPreferences: ''
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -175,8 +179,41 @@ export default function EnhancedBookingForm({ therapist, onSubmit, onCancel }: B
                 <SelectItem value="email">Email</SelectItem>
                 <SelectItem value="phone">Phone Call</SelectItem>
                 <SelectItem value="sms">SMS/Text</SelectItem>
+                <SelectItem value="video_call">Video Call</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Urgency Level */}
+          <div className="space-y-2">
+            <Label htmlFor="urgency">Urgency Level</Label>
+            <Select
+              value={formData.urgencyLevel}
+              onValueChange={(value) => updateFormData('urgencyLevel', value)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="low">Low - Can wait a week or more</SelectItem>
+                <SelectItem value="normal">Normal - Within a few days</SelectItem>
+                <SelectItem value="high">High - Within 24 hours</SelectItem>
+                <SelectItem value="urgent">Urgent - ASAP</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Session Preferences */}
+          <div className="space-y-2">
+            <Label htmlFor="preferences">Session Preferences</Label>
+            <Textarea
+              id="preferences"
+              value={formData.sessionPreferences}
+              onChange={(e) => updateFormData('sessionPreferences', e.target.value)}
+              placeholder="Any preferences for the session (e.g., morning person, specific focus areas, communication style...)"
+              rows={2}
+              className="w-full"
+            />
           </div>
 
           {/* Additional Notes */}

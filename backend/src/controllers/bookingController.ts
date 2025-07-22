@@ -11,7 +11,9 @@ export const bookSession = async (req: AuthenticatedRequest, res: Response) => {
     location,
     notes,
     durationMinutes = 60,
-    preferredMeetingType = 'video_call'
+    preferredContactMethod = 'video_call',
+    urgencyLevel = 'normal',
+    sessionPreferences
   } = req.body;
   
   if (!req.user) {
@@ -36,13 +38,34 @@ export const bookSession = async (req: AuthenticatedRequest, res: Response) => {
       return sendError(res, 'Therapist is not available at this time', 'BOOKING_CONFLICT', 409);
     }
 
+    // Create enhanced notes with additional information
+    const enhancedNotes = [];
+    if (notes) enhancedNotes.push(`Client Notes: ${notes}`);
+    if (location) enhancedNotes.push(`Location: ${location}`);
+    if (preferredContactMethod) enhancedNotes.push(`Preferred Contact: ${preferredContactMethod}`);
+    if (urgencyLevel && urgencyLevel !== 'normal') enhancedNotes.push(`Urgency: ${urgencyLevel}`);
+    if (sessionPreferences) enhancedNotes.push(`Preferences: ${sessionPreferences}`);
+    
+    const finalNotes = enhancedNotes.length > 0 ? enhancedNotes.join(' | ') : null;
+
+    console.log('Booking data received:', {
+      therapistId,
+      scheduledAt,
+      sessionType,
+      durationMinutes,
+      location,
+      preferredContactMethod,
+      urgencyLevel,
+      finalNotes
+    });
+
     // Create the session with enhanced fields
     const result = await db.query(
       `INSERT INTO therapy_sessions 
        (client_id, therapist_id, scheduled_at, session_type, duration_minutes, status, notes) 
        VALUES ($1, $2, $3, $4, $5, $6, $7) 
        RETURNING id`,
-      [userId, therapistId, scheduledAt, sessionType, durationMinutes, 'scheduled', notes]
+      [userId, therapistId, scheduledAt, sessionType, durationMinutes, 'scheduled', finalNotes]
     );
 
     // If location is provided and session type is in-person, we could store it in a separate table or notes
@@ -51,11 +74,14 @@ export const bookSession = async (req: AuthenticatedRequest, res: Response) => {
       sessionId: result.rows[0].id,
       scheduledAt,
       sessionType,
-      durationMinutes
+      durationMinutes,
+      location: location || null,
+      preferredContactMethod,
+      urgencyLevel
     };
 
     if (location && sessionType === 'in_person') {
-      sessionData.location = location;
+      sessionData.locationDetails = location;
     }
 
     res.status(201).json(sessionData);
