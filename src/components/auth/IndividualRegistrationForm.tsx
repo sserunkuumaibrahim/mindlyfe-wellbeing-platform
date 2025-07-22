@@ -84,32 +84,54 @@ export function IndividualRegistrationForm({ onSubmit, loading, error, onBack }:
   });
 
   const handleSubmit = async (data: FormData) => {
-    const {
-      confirmPassword,
-      therapy_goals,
-      date_of_birth,
-      ...rest
-    } = data;
+    try {
+      const {
+        confirmPassword,
+        therapy_goals,
+        date_of_birth,
+        terms_accepted,
+        privacy_accepted,
+        ...rest
+      } = data;
 
-    const registrationData: IndividualRegisterDTO = {
-      ...rest,
-      role: 'individual',
-      phone_number: data.phone_number || undefined,
-      date_of_birth: data.date_of_birth ? new Date(data.date_of_birth) : undefined,
-      gender: data.gender as GenderType,
-      country: data.country || undefined,
-      preferred_language: data.preferred_language || 'en',
-      mental_health_history: data.mental_health_history || undefined,
-      therapy_goals: therapy_goals ? therapy_goals.split(',').map(goal => goal.trim()) : undefined,
-      communication_pref: data.communication_pref as CommunicationPreference,
-      opt_in_newsletter: !!data.opt_in_newsletter,
-      opt_in_sms: !!data.opt_in_sms,
-      emergency_contact_name: data.emergency_contact_name || undefined,
-      emergency_contact_phone: data.emergency_contact_phone || undefined,
-      preferred_therapist_gender: data.preferred_therapist_gender as GenderType,
-    };
+      // Validate terms acceptance
+      if (!terms_accepted || !privacy_accepted) {
+        form.setError("terms_accepted", {
+          type: "manual",
+          message: "You must accept the terms and conditions"
+        });
+        form.setError("privacy_accepted", {
+          type: "manual", 
+          message: "You must accept the privacy policy"
+        });
+        return;
+      }
 
-    await onSubmit(registrationData);
+      const registrationData: IndividualRegisterDTO = {
+        ...rest,
+        role: 'individual',
+        phone_number: data.phone_number || undefined,
+        date_of_birth: data.date_of_birth ? new Date(data.date_of_birth) : undefined,
+        gender: data.gender as GenderType,
+        country: data.country || undefined,
+        preferred_language: data.preferred_language || 'en',
+        mental_health_history: data.mental_health_history || undefined,
+        therapy_goals: therapy_goals ? therapy_goals.split(',').map(goal => goal.trim()).filter(goal => goal.length > 0) : undefined,
+        communication_pref: data.communication_pref as CommunicationPreference,
+        opt_in_newsletter: !!data.opt_in_newsletter,
+        opt_in_sms: !!data.opt_in_sms,
+        emergency_contact_name: data.emergency_contact_name || undefined,
+        emergency_contact_phone: data.emergency_contact_phone || undefined,
+        preferred_therapist_gender: data.preferred_therapist_gender as GenderType,
+        terms_accepted: true,
+        privacy_accepted: true,
+      };
+
+      await onSubmit(registrationData);
+    } catch (error) {
+      console.error('Form submission error:', error);
+      // Let the parent component handle the error display
+    }
   };
 
   return (
