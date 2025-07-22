@@ -1,168 +1,136 @@
 
-import { useEffect, useState } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
-import type { UserRole } from '@/types/user';
-
-interface AuthUser extends User {
-  role?: UserRole;
-}
-
-interface AuthState {
-  user: AuthUser | null;
-  session: Session | null;
-  loading: boolean;
-}
+import { useContext, useCallback, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { AuthContext } from '@/contexts/AuthContext';
+import { UserRole } from '@/types/user';
+import { toast } from '@/lib/toast';
 
 export const useAuth = () => {
-  const [authState, setAuthState] = useState<AuthState>({
-    user: null,
-    session: null,
-    loading: true,
-  });
-
+  const context = useContext(AuthContext);
+  const navigate = useNavigate();
+  const [isAuthReady, setIsAuthReady] = useState(false);
+  
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  
+  // Set auth ready state once loading is complete
   useEffect(() => {
-    let isMounted = true;
-    let timeoutId: NodeJS.Timeout;
-
-    // Set a timeout to prevent infinite loading
-    const setLoadingTimeout = () => {
-      timeoutId = setTimeout(() => {
-        if (isMounted) {
-          console.warn('Auth loading timeout reached, setting loading to false');
-          setAuthState(prev => ({ ...prev, loading: false }));
-        }
-      }, 10000); // 10 second timeout
-    };
-
-    // Get initial session
-    const getInitialSession = async () => {
-      try {
-        setLoadingTimeout();
-        
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (timeoutId) clearTimeout(timeoutId);
-        
-        if (error) {
-          console.error('Error getting session:', error);
-          if (isMounted) {
-            setAuthState({ user: null, session: null, loading: false });
-          }
-          return;
-        }
-
-        if (session?.user && isMounted) {
-          await fetchUserWithRole(session);
-        } else if (isMounted) {
-          setAuthState({ user: null, session: null, loading: false });
-        }
-      } catch (err) {
-        console.error('Error in getInitialSession:', err);
-        if (timeoutId) clearTimeout(timeoutId);
-        if (isMounted) {
-          setAuthState({ user: null, session: null, loading: false });
-        }
-      }
-    };
-
-    // Fetch user profile with role
-    const fetchUserWithRole = async (session: Session) => {
-      try {
-        // Add timeout for profile fetch
-         const profilePromise = supabase
-           .from('profiles')
-           .select('role')
-           .eq('auth_uid', session.user.id)
-           .single();
- 
-         const timeoutPromise = new Promise<never>((_, reject) => {
-           setTimeout(() => reject(new Error('Profile fetch timeout')), 8000);
-         });
- 
-         const result = await Promise.race([
-           profilePromise,
-           timeoutPromise
-         ]);
-         
-         const { data: profile, error } = result;
-
-        if (error) {
-          console.error('Error fetching user profile:', error);
-          if (isMounted) {
-            setAuthState({
-              user: { ...session.user, role: 'individual' },
-              session,
-              loading: false,
-            });
-          }
-          return;
-        }
-
-        const userWithRole = {
-           ...session.user,
-           role: (profile?.role as UserRole) || 'individual'
-         };
-
-        if (isMounted) {
-          setAuthState({
-            user: userWithRole,
-            session,
-            loading: false,
-          });
-        }
-      } catch (err) {
-        console.error('Error in fetchUserWithRole:', err);
-        // Even if profile fetch fails, set user with session to prevent infinite loading
-        if (isMounted) {
-          setAuthState({ 
-            user: { ...session.user, role: 'individual' }, 
-            session, 
-            loading: false 
-          });
-        }
-      }
-    };
-
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.id);
-        
-        if (!isMounted) return;
-
-        if (session?.user) {
-          await fetchUserWithRole(session);
-        } else {
-          setAuthState({
-            user: null,
-            session: null,
-            loading: false,
-          });
-        }
-      }
-    );
-
-    // Get initial session
-    getInitialSession();
-
-    return () => {
-      isMounted = false;
-      if (timeoutId) clearTimeout(timeoutId);
-      subscription?.unsubscribe();
-    };
-  }, []);
-
-  const signOut = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (error) {
-      console.error('Error signing out:', error);
+    if (!context.loading && !isAuthReady) {
+      setIsAuthReady(true);
     }
-  };
-
+  }, [context.loading, isAuthReady]);
+  
+  // Check if session is valid and redirect to login if not
+  const checkAuthAndRedirect = useCallback(async (redirectPath: string = '/login') => {
+    // If still loading, wait for it to complete
+    if (context.loading) {
+      return true;
+    }
+    
+    // If no session, try to refresh
+    if (!context.session) {
+      try {
+        const refreshed = await context.refreshSession();
+        if (!refreshed) {
+          // If refresh failed, redirect to login
+          navigate(redirectPath);
+          return false;
+        }
+      } catch (error) {
+        console.error('Session refresh error:', error);
+        navigate(redirectPath);
+        return false;
+      }
+    }
+    
+    // Verify that user has a valid role
+    if (context.user && !context.user.role) {
+      toast({
+        title: "Authentication Error",
+        description: "User role is missing. Please log in again.",
+        variant: "destructive",
+      });
+      await context.signOut();
+      navigate(redirectPath);
+      return false;
+    }
+    
+    return true;
+  }, [context, navigate]);
+  
+  // Redirect based on user role
+  const redirectBasedOnRole = useCallback(() => {
+    if (!context.user || context.loading) return;
+    
+    const role = context.user.role;
+    
+    switch (role) {
+      case 'individual':
+        navigate('/dashboard');
+        break;
+      case 'therapist':
+        navigate('/therapist/dashboard');
+        break;
+      case 'org_admin':
+        navigate('/organization/dashboard');
+        break;
+      case 'admin':
+        navigate('/admin/dashboard');
+        break;
+      default:
+        // If role is invalid, redirect to login
+        toast({
+          title: "Invalid Role",
+          description: "Your user role is not recognized. Please contact support.",
+          variant: "destructive",
+        });
+        context.signOut().then(() => navigate('/login'));
+    }
+  }, [context, navigate]);
+  
+  // Check if user has required role
+  const hasRole = useCallback((requiredRoles: UserRole | UserRole[]) => {
+    if (!context.user) return false;
+    
+    const userRole = context.user.role;
+    
+    if (Array.isArray(requiredRoles)) {
+      return requiredRoles.includes(userRole);
+    }
+    
+    return userRole === requiredRoles;
+  }, [context.user]);
+  
+  // Check if user is authenticated with valid role
+  const isAuthenticated = !!context.user && !!context.session && !!context.user.role;
+  
+  // Get user role safely
+  const getUserRole = useCallback((): UserRole | null => {
+    return context.user?.role || null;
+  }, [context.user]);
+  
+  // Handle authentication errors
+  const handleAuthError = useCallback((error: unknown): string => {
+    const errorMessage = error instanceof Error ? error.message : 'Authentication error occurred';
+    
+    toast({
+      title: "Authentication Error",
+      description: errorMessage,
+      variant: "destructive",
+    });
+    
+    return errorMessage;
+  }, []);
+  
   return {
-    ...authState,
-    signOut,
+    ...context,
+    checkAuthAndRedirect,
+    redirectBasedOnRole,
+    hasRole,
+    isAuthenticated,
+    getUserRole,
+    handleAuthError,
+    isAuthReady,
   };
 };

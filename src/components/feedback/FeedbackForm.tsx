@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { feedbackService } from '@/services/feedbackService';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/lib/toast';
 
 interface FeedbackFormProps {
   sessionId: string;

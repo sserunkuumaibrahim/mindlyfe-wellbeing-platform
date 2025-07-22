@@ -1,7 +1,13 @@
 
 import { PlayIcon } from "lucide-react";
 
-export default function RecentSessionsWidget({ recentSessions }: { recentSessions: any[] }) {
+interface Session {
+  title: string;
+  therapist: string;
+  duration: string;
+}
+
+export default function RecentSessionsWidget({ recentSessions }: { recentSessions: Session[] }) {
   return (
     <div className="rounded-[32px] bg-white/70 backdrop-blur-lg shadow-xl px-8 py-6 flex flex-col min-h-[260px] border border-[#e5eaf3]">
       <div className="font-bold text-lg mb-1 text-gray-700 font-dashboard">Records of recent sessions</div>

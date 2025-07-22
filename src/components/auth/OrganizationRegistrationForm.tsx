@@ -4,10 +4,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { OrganizationRegisterDTO, OrganizationType } from "@/types/auth";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
@@ -68,12 +68,7 @@ export function OrganizationRegistrationForm({ onSubmit, loading, error, onBack 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    setValue,
-  } = useForm<z.infer<typeof organizationSchema>>({
+  const form = useForm<z.infer<typeof organizationSchema>>({
     resolver: zodResolver(organizationSchema),
     defaultValues: {
       role: 'org_admin',
@@ -83,40 +78,7 @@ export function OrganizationRegistrationForm({ onSubmit, loading, error, onBack 
   });
 
   const onFormSubmit = async (data: z.infer<typeof organizationSchema>) => {
-    console.log('Organization form data:', data);
-    
-    const formData: OrganizationRegisterDTO = {
-      role: 'org_admin',
-      email: data.email,
-      password: data.password,
-      confirmPassword: data.confirmPassword,
-      first_name: data.first_name,
-      last_name: data.last_name,
-      phone_number: data.phone_number,
-      date_of_birth: data.date_of_birth,
-      gender: data.gender,
-      country: data.country,
-      preferred_language: data.preferred_language || 'en',
-      organization_name: data.organization_name,
-      organization_type: data.organization_type,
-      registration_number: data.registration_number,
-      date_of_establishment: data.date_of_establishment,
-      tax_id_number: data.tax_id_number,
-      num_employees: data.num_employees,
-      official_website: data.official_website || undefined,
-      address: data.address,
-      city: data.city,
-      state_province: data.state_province,
-      postal_code: data.postal_code,
-      representative_job_title: data.representative_job_title,
-      representative_national_id: data.representative_national_id,
-      service_requirements: data.service_requirements,
-      billing_contact_email: data.billing_contact_email || undefined,
-      billing_contact_phone: data.billing_contact_phone,
-    };
-    
-    console.log('Final organization data for registration:', formData);
-    await onSubmit(formData);
+    await onSubmit(data);
   };
 
   return (
@@ -144,169 +106,218 @@ export function OrganizationRegistrationForm({ onSubmit, loading, error, onBack 
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onFormSubmit)} className="space-y-6">
         {/* Representative Information */}
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Representative Information</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="first_name">Representative First Name *</Label>
-              <Input
-                id="first_name"
-                {...register("first_name")}
-                placeholder="Enter representative's first name"
-              />
-              {errors.first_name && (
-                <p className="text-sm text-destructive">{errors.first_name.message}</p>
+            <FormField
+              control={form.control}
+              name="first_name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Representative First Name *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter representative's first name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-            </div>
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="last_name">Representative Last Name *</Label>
-              <Input
-                id="last_name"
-                {...register("last_name")}
-                placeholder="Enter representative's last name"
-              />
-              {errors.last_name && (
-                <p className="text-sm text-destructive">{errors.last_name.message}</p>
+            <FormField
+              control={form.control}
+              name="last_name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Representative Last Name *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter representative's last name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-            </div>
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email *</Label>
-              <Input
-                id="email"
-                type="email"
-                {...register("email")}
-                placeholder="Enter your email"
-              />
-              {errors.email && (
-                <p className="text-sm text-destructive">{errors.email.message}</p>
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email *</FormLabel>
+                  <FormControl>
+                    <Input type="email" placeholder="Enter your email" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-            </div>
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="phone_number">Phone Number</Label>
-              <Input
-                id="phone_number"
-                {...register("phone_number")}
-                placeholder="Enter your phone number"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password">Password *</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  {...register("password")}
-                  placeholder="Enter your password"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </Button>
-              </div>
-              {errors.password && (
-                <p className="text-sm text-destructive">{errors.password.message}</p>
+            <FormField
+              control={form.control}
+              name="phone_number"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Phone Number</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter your phone number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-            </div>
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password *</Label>
-              <div className="relative">
-                <Input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
-                  {...register("confirmPassword")}
-                  placeholder="Confirm your password"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
-                  {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </Button>
-              </div>
-              {errors.confirmPassword && (
-                <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password *</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Enter your password"
+                        {...field}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </Button>
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-            </div>
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="gender">Gender</Label>
-              <Select onValueChange={(value: 'male' | 'female') => setValue("gender", value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select gender" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="male">Male</SelectItem>
-                  <SelectItem value="female">Female</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="representative_job_title">Job Title *</Label>
-              <Input
-                id="representative_job_title"
-                {...register("representative_job_title")}
-                placeholder="e.g., CEO, HR Director, Operations Manager"
-              />
-              {errors.representative_job_title && (
-                <p className="text-sm text-destructive">{errors.representative_job_title.message}</p>
+            <FormField
+              control={form.control}
+              name="confirmPassword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Confirm Password *</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Input
+                        type={showConfirmPassword ? "text" : "password"}
+                        placeholder="Confirm your password"
+                        {...field}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      >
+                        {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </Button>
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-            </div>
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="representative_national_id">Representative National ID *</Label>
-              <Input
-                id="representative_national_id"
-                {...register("representative_national_id")}
-                placeholder="Enter national ID number"
-              />
-              {errors.representative_national_id && (
-                <p className="text-sm text-destructive">{errors.representative_national_id.message}</p>
+            <FormField
+              control={form.control}
+              name="gender"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Gender</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
               )}
-            </div>
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="date_of_birth">Date of Birth</Label>
-              <Input
-                id="date_of_birth"
-                type="date"
-                {...register("date_of_birth", { valueAsDate: true })}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="representative_job_title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Job Title *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., CEO, HR Director, Operations Manager" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="country">Country</Label>
-              <Input
-                id="country"
-                {...register("country")}
-                placeholder="Enter country"
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="representative_national_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Representative National ID *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter national ID number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="preferred_language">Preferred Language</Label>
-              <Input
-                id="preferred_language"
-                {...register("preferred_language")}
-                placeholder="e.g., English"
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="date_of_birth"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Date of Birth</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="country"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Country</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter country" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="preferred_language"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Preferred Language</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., English" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
         </div>
 
@@ -315,100 +326,115 @@ export function OrganizationRegistrationForm({ onSubmit, loading, error, onBack 
           <h3 className="text-lg font-semibold">Organization Information</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="organization_name">Organization Name *</Label>
-              <Input
-                id="organization_name"
-                {...register("organization_name")}
-                placeholder="Enter organization name"
-              />
-              {errors.organization_name && (
-                <p className="text-sm text-destructive">{errors.organization_name.message}</p>
+            <FormField
+              control={form.control}
+              name="organization_name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Organization Name *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter organization name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-            </div>
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="organization_type">Organization Type *</Label>
-              <Select onValueChange={(value: OrganizationType) => setValue("organization_type", value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select organization type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="private_company">Private Company</SelectItem>
-                  <SelectItem value="school">School</SelectItem>
-                  <SelectItem value="ngo">NGO</SelectItem>
-                  <SelectItem value="government">Government</SelectItem>
-                  <SelectItem value="healthcare">Healthcare</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-              {errors.organization_type && (
-                <p className="text-sm text-destructive">{errors.organization_type.message}</p>
+            <FormField
+              control={form.control}
+              name="organization_type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Organization Type *</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select organization type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="private_company">Private Company</SelectItem>
+                      <SelectItem value="school">School</SelectItem>
+                      <SelectItem value="ngo">NGO</SelectItem>
+                      <SelectItem value="government">Government</SelectItem>
+                      <SelectItem value="healthcare">Healthcare</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
               )}
-            </div>
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="registration_number">Registration Number *</Label>
-              <Input
-                id="registration_number"
-                {...register("registration_number")}
-                placeholder="Enter registration number"
-              />
-              {errors.registration_number && (
-                <p className="text-sm text-destructive">{errors.registration_number.message}</p>
+            <FormField
+              control={form.control}
+              name="registration_number"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Registration Number *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter registration number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-            </div>
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="date_of_establishment">Date of Establishment *</Label>
-              <Input
-                id="date_of_establishment"
-                type="date"
-                {...register("date_of_establishment", { valueAsDate: true })}
-              />
-              {errors.date_of_establishment && (
-                <p className="text-sm text-destructive">{errors.date_of_establishment.message}</p>
+            <FormField
+              control={form.control}
+              name="date_of_establishment"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Date of Establishment *</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-            </div>
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="tax_id_number">Tax ID Number *</Label>
-              <Input
-                id="tax_id_number"
-                {...register("tax_id_number")}
-                placeholder="Enter tax ID number"
-              />
-              {errors.tax_id_number && (
-                <p className="text-sm text-destructive">{errors.tax_id_number.message}</p>
+            <FormField
+              control={form.control}
+              name="tax_id_number"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tax ID Number *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter tax ID number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-            </div>
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="num_employees">Number of Employees *</Label>
-              <Input
-                id="num_employees"
-                type="number"
-                min="1"
-                {...register("num_employees", { valueAsNumber: true })}
-                placeholder="Enter number of employees"
-              />
-              {errors.num_employees && (
-                <p className="text-sm text-destructive">{errors.num_employees.message}</p>
+            <FormField
+              control={form.control}
+              name="num_employees"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Number of Employees *</FormLabel>
+                  <FormControl>
+                    <Input type="number" min="1" placeholder="Enter number of employees" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-            </div>
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="official_website">Official Website</Label>
-              <Input
-                id="official_website"
-                type="url"
-                {...register("official_website")}
-                placeholder="https://www.example.com"
-              />
-              {errors.official_website && (
-                <p className="text-sm text-destructive">{errors.official_website.message}</p>
+            <FormField
+              control={form.control}
+              name="official_website"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Official Website</FormLabel>
+                  <FormControl>
+                    <Input type="url" placeholder="https://www.example.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-            </div>
+            />
           </div>
         </div>
 
@@ -416,43 +442,62 @@ export function OrganizationRegistrationForm({ onSubmit, loading, error, onBack 
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Address Information (Optional)</h3>
           
-          <div className="space-y-2">
-            <Label htmlFor="address">Street Address</Label>
-            <Textarea
-              id="address"
-              {...register("address")}
-              placeholder="Enter full address"
-              rows={2}
-            />
-          </div>
+          <FormField
+            control={form.control}
+            name="address"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Street Address</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Enter full address" rows={2} {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="city">City</Label>
-              <Input
-                id="city"
-                {...register("city")}
-                placeholder="Enter city"
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="city"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>City</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter city" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="state_province">State/Province</Label>
-              <Input
-                id="state_province"
-                {...register("state_province")}
-                placeholder="Enter state or province"
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="state_province"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>State/Province</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter state or province" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="postal_code">Postal Code</Label>
-              <Input
-                id="postal_code"
-                {...register("postal_code")}
-                placeholder="Enter postal code"
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="postal_code"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Postal Code</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter postal code" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
         </div>
 
@@ -461,73 +506,88 @@ export function OrganizationRegistrationForm({ onSubmit, loading, error, onBack 
           <h3 className="text-lg font-semibold">Billing Information (Optional)</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="billing_contact_email">Billing Contact Email</Label>
-              <Input
-                id="billing_contact_email"
-                type="email"
-                {...register("billing_contact_email")}
-                placeholder="billing@example.com"
-              />
-              {errors.billing_contact_email && (
-                <p className="text-sm text-destructive">{errors.billing_contact_email.message}</p>
+            <FormField
+              control={form.control}
+              name="billing_contact_email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Billing Contact Email</FormLabel>
+                  <FormControl>
+                    <Input type="email" placeholder="billing@example.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-            </div>
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="billing_contact_phone">Billing Contact Phone</Label>
-              <Input
-                id="billing_contact_phone"
-                {...register("billing_contact_phone")}
-                placeholder="Enter billing contact phone"
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="billing_contact_phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Billing Contact Phone</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter billing contact phone" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
         </div>
 
         {/* Terms and Conditions */}
         <div className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="terms_accepted"
-              {...register("terms_accepted")}
-              onCheckedChange={(checked) => setValue("terms_accepted", !!checked)}
-            />
-            <Label htmlFor="terms_accepted" className="text-sm">
-              I accept the{" "}
-              <a href="#" className="text-primary underline">
-                Terms and Conditions
-              </a>{" "}
-              *
-            </Label>
-          </div>
-          {errors.terms_accepted && (
-            <p className="text-sm text-destructive">{errors.terms_accepted.message}</p>
-          )}
+          <FormField
+            control={form.control}
+            name="terms_accepted"
+            render={({ field }) => (
+              <FormItem className="flex items-center space-x-2 space-y-0">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <FormLabel className="text-sm font-normal">
+                  I accept the{" "}
+                  <a href="#" className="text-primary underline">
+                    Terms and Conditions
+                  </a>{" "}
+                  *
+                </FormLabel>
+              </FormItem>
+            )}
+          />
 
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="privacy_accepted"
-              {...register("privacy_accepted")}
-              onCheckedChange={(checked) => setValue("privacy_accepted", !!checked)}
-            />
-            <Label htmlFor="privacy_accepted" className="text-sm">
-              I accept the{" "}
-              <a href="#" className="text-primary underline">
-                Privacy Policy
-              </a>{" "}
-              *
-            </Label>
-          </div>
-          {errors.privacy_accepted && (
-            <p className="text-sm text-destructive">{errors.privacy_accepted.message}</p>
-          )}
+          <FormField
+            control={form.control}
+            name="privacy_accepted"
+            render={({ field }) => (
+              <FormItem className="flex items-center space-x-2 space-y-0">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <FormLabel className="text-sm font-normal">
+                  I accept the{" "}
+                  <a href="#" className="text-primary underline">
+                    Privacy Policy
+                  </a>{" "}
+                  *
+                </FormLabel>
+              </FormItem>
+            )}
+          />
         </div>
 
         <Button type="submit" className="w-full" disabled={loading}>
           {loading ? "Creating Account..." : "Create Organization Account"}
         </Button>
       </form>
+    </Form>
     </div>
   );
 }

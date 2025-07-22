@@ -1,4 +1,60 @@
-# MindLyfe - Mental Health Therapy Platform
+# Mindlyfe - Mental Health Platform
+
+A comprehensive mental health platform built with React Native (Web), TypeScript, and PostgreSQL, designed for deployment on AWS EC2.
+
+## 🚀 Features
+
+- **Multi-role Authentication**: Support for individuals, therapists, and organizations
+- **Secure Authentication**: JWT-based authentication with PostgreSQL backend
+- **Responsive Design**: Modern UI built with Tailwind CSS and shadcn/ui components
+- **Real-time Analytics**: Dashboard with insights and metrics
+- **Cross-platform**: Built with React Native for web, easily extensible to mobile
+- **Production Ready**: Optimized for AWS EC2 deployment
+
+## 🏗️ Architecture
+
+```
+mindlyfe/
+├── src/                    # Frontend React application
+│   ├── components/         # Reusable UI components
+│   ├── pages/             # Application pages
+│   ├── hooks/             # Custom React hooks
+│   ├── integrations/      # External service integrations
+│   └── lib/               # Utility functions
+├── backend/               # Node.js/Express backend
+│   ├── src/
+│   │   ├── routes/        # API routes
+│   │   ├── middleware/    # Express middleware
+│   │   └── database/      # Database configuration
+│   └── migrations/        # SQL migration files
+├── public/                # Static assets
+└── dist/                  # Built frontend (generated)
+```
+
+## 🛠️ Tech Stack
+
+### Frontend
+- **React 18** with TypeScript
+- **Vite** for build tooling
+- **Tailwind CSS** for styling
+- **shadcn/ui** for UI components
+- **React Hook Form** for form handling
+- **Zustand** for state management
+- **React Router** for navigation
+
+### Backend
+- **Node.js** with Express
+- **TypeScript** for type safety
+- **PostgreSQL** for database
+- **JWT** for authentication
+- **bcryptjs** for password hashing
+- **CORS** for cross-origin requests
+
+### Deployment
+- **AWS EC2** for hosting
+- **PM2** for process management
+- **Nginx** for reverse proxy (optional)
+- **Let's Encrypt** for SSL (optional)
 
 ## Overview
 

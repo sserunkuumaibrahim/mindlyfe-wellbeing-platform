@@ -8,19 +8,47 @@ import { Calendar, Clock, Video, Star } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import AppPageLayout from '@/components/ui/AppPageLayout';
 import { useOptimizedTherapists } from '@/hooks/useOptimizedTherapists';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/lib/toast';
+import { apiRequest } from '@/services/apiClient';
 
 export default function BookingSystem() {
   const { therapists, loading, error } = useOptimizedTherapists();
   const [selectedTherapist, setSelectedTherapist] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
-  const handleBookSession = (therapistId: string, therapistName: string) => {
-    toast({
-      title: "Session Booking",
-      description: `Session with ${therapistName} has been requested. You will receive a confirmation email shortly.`,
-    });
-    
-    setSelectedTherapist(null);
+  const handleBookSession = async (therapistId: string, therapistName: string) => {
+    if (!selectedDate) {
+      toast({
+        title: "Error",
+        description: "Please select a date and time for the session.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await apiRequest('/api/sessions/book', {
+        method: 'POST',
+        body: JSON.stringify({
+          therapistId,
+          scheduledAt: selectedDate.toISOString(),
+        }),
+      });
+
+      toast({
+        title: "Session Booking",
+        description: `Session with ${therapistName} has been requested. You will receive a confirmation email shortly.`,
+      });
+      
+      setSelectedTherapist(null);
+      setSelectedDate(null);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to book session. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) {
@@ -142,7 +170,7 @@ export default function BookingSystem() {
                     <span className="font-semibold">Session Fee</span>
                     <span className="text-lg font-bold">UGX 76,000</span>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <div className="flex items-center space-x-2 text-sm text-gray-600">
                       <Video className="h-4 w-4" />
@@ -154,7 +182,7 @@ export default function BookingSystem() {
                     </div>
                     <div className="flex items-center space-x-2 text-sm text-gray-600">
                       <Calendar className="h-4 w-4" />
-                      <span>Available today</span>
+                      <input type="datetime-local" onChange={(e) => setSelectedDate(new Date(e.target.value))} />
                     </div>
                   </div>
                 </div>

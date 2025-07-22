@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -9,7 +9,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useAuth } from "@/hooks/useAuth";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { AuthCard } from "@/components/auth/AuthCard";
 
@@ -32,13 +32,20 @@ type FormData = z.infer<typeof formSchema>;
 export default function ResetPassword() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const { resetPassword, loading, error, clearError } = useAuthStore();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const { resetPassword } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  
-  // Get token from URL query parameters
-  const searchParams = new URLSearchParams(location.search);
+  const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
+
+  const form = useForm<FormData>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      password: "",
+      confirmPassword: "",
+    },
+  });
 
   if (!token) {
     // Handle missing token
@@ -58,26 +65,30 @@ export default function ResetPassword() {
     );
   }
 
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      password: "",
-      confirmPassword: "",
-    },
-  });
-
   const onSubmit = async (data: FormData) => {
-    await resetPassword({
-      token,
-      password: data.password,
-      confirmPassword: data.confirmPassword,
-    });
-    navigate("/login");
+    if (!token) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const result = await resetPassword(data.password);
+      
+      if (result.error) {
+        setError(result.error);
+      } else {
+        navigate("/login");
+      }
+    } catch (err) {
+      setError("An unexpected error occurred");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Clear error when form fields change
   const handleFormChange = () => {
-    if (error) clearError();
+    setError(null);
   };
 
   return (

@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
 import { format, formatDistanceToNow } from 'date-fns';
 
@@ -145,6 +145,7 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ className })
       const { data: sessions, error: sessionsError } = await supabase
         .from('therapy_sessions')
         .select(`
+          id,
           client_id,
           scheduled_at,
           status,
@@ -176,20 +177,20 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ className })
       const clientMap = new Map<string, Client>();
       
       sessions?.forEach(session => {
-        const clientId = (session as any).client_id;
-        const clientData = (session as any).client;
+        const clientId = session.client_id;
+        const clientData = session.client;
         
         if (!clientMap.has(clientId)) {
           const lastSession = sessions
-            .filter(s => (s as any).client_id === clientId && (s as any).status === 'completed')
-            .sort((a, b) => new Date((b as any).scheduled_at).getTime() - new Date((a as any).scheduled_at).getTime())[0];
+            .filter(s => s.client_id === clientId && s.status === 'completed')
+            .sort((a, b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime())[0];
           
-          const totalSessions = sessions.filter(s => (s as any).client_id === clientId).length;
+          const totalSessions = sessions.filter(s => s.client_id === clientId).length;
           
           clientMap.set(clientId, {
             ...clientData,
             total_sessions: totalSessions,
-            last_session_at: (lastSession as any)?.scheduled_at,
+            last_session_at: lastSession?.scheduled_at,
             status: 'active', // Default status
             sessions: [],
             documents: []
@@ -199,13 +200,13 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ className })
         // Add session to client's sessions array
         const client = clientMap.get(clientId)!;
         client.sessions!.push({
-          id: (session as any).id || '',
-          scheduled_at: (session as any).scheduled_at,
-          status: (session as any).status,
-          session_type: (session as any).session_type,
-          duration_minutes: (session as any).actual_duration_minutes,
-          session_notes: (session as any).session_notes,
-          session_fee: (session as any).session_fee
+          id: session.id || '',
+          scheduled_at: session.scheduled_at,
+          status: session.status as TherapySession['status'],
+          session_type: session.session_type,
+          duration_minutes: session.actual_duration_minutes,
+          session_notes: session.session_notes,
+          session_fee: session.session_fee
         });
       });
 

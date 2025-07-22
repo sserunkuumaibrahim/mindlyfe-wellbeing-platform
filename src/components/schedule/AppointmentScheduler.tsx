@@ -30,7 +30,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
 import { format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, parseISO, addWeeks, subWeeks, startOfDay, endOfDay } from 'date-fns';
 
@@ -75,11 +75,23 @@ interface AppointmentFormData {
   client_id: string;
   scheduled_at: string;
   duration_minutes: number;
-  session_type: string;
-  session_format: string;
+  session_type: Appointment['session_type'];
+  session_format: Appointment['session_format'];
   location: string;
   session_notes: string;
   session_fee: number;
+}
+
+interface SessionData {
+  client_id: string;
+  client: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone?: string;
+    profile_photo_url?: string;
+  };
 }
 
 interface AppointmentSchedulerProps {
@@ -93,7 +105,14 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
 }) => {
   const { user } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [clients, setClients] = useState<any[]>([]);
+  const [clients, setClients] = useState<{
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone?: string;
+    profile_photo_url?: string;
+  }[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [currentWeek, setCurrentWeek] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>(initialViewMode);
@@ -172,20 +191,20 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
       if (error) throw error;
 
       const formattedAppointments: Appointment[] = data?.map(appointment => ({
-        id: (appointment as any).id,
-        client_id: (appointment as any).client_id,
-        therapist_id: (appointment as any).therapist_id,
-        scheduled_at: (appointment as any).scheduled_at,
-        duration_minutes: (appointment as any).actual_duration_minutes || 60,
-        session_type: (appointment as any).session_type,
-        session_format: (appointment as any).session_format || 'video_call',
-        status: (appointment as any).status,
-        location: (appointment as any).location,
-        session_notes: (appointment as any).session_notes,
-        session_fee: (appointment as any).session_fee,
-        reminder_sent: (appointment as any).reminder_sent,
-        client: (appointment as any).client,
-        therapist: (appointment as any).therapist
+        id: appointment.id,
+        client_id: appointment.client_id,
+        therapist_id: appointment.therapist_id,
+        scheduled_at: appointment.scheduled_at,
+        duration_minutes: appointment.actual_duration_minutes || 60,
+        session_type: appointment.session_type as Appointment['session_type'],
+        session_format: appointment.session_format as Appointment['session_format'] || 'video_call',
+        status: appointment.status as Appointment['status'],
+        location: appointment.location,
+        session_notes: appointment.session_notes,
+        session_fee: appointment.session_fee,
+        reminder_sent: appointment.reminder_sent,
+        client: appointment.client,
+        therapist: appointment.therapist
       })) || [];
 
       setAppointments(formattedAppointments);
@@ -224,13 +243,13 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
       if (error) throw error;
 
       // Remove duplicates and extract client data
-      const uniqueClients = data?.reduce((acc: any[], session) => {
+      const uniqueClients = data?.reduce((acc: typeof clients, session: SessionData) => {
         const existingClient = acc.find(client => client.id === session.client_id);
         if (!existingClient && session.client) {
           acc.push(session.client);
         }
         return acc;
-      }, []) || [];
+      }, [] as typeof clients) || [];
 
       setClients(uniqueClients);
     } catch (error) {
@@ -256,8 +275,8 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
           therapist_id: user.id,
           scheduled_at: appointmentForm.scheduled_at,
           actual_duration_minutes: appointmentForm.duration_minutes,
-          session_type: appointmentForm.session_type as any,
-          session_format: appointmentForm.session_format as any,
+          session_type: appointmentForm.session_type,
+          session_format: appointmentForm.session_format,
           status: 'scheduled',
           location: appointmentForm.location,
           session_notes: appointmentForm.session_notes,
@@ -293,8 +312,8 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
         .update({
           scheduled_at: appointmentForm.scheduled_at,
           actual_duration_minutes: appointmentForm.duration_minutes,
-          session_type: appointmentForm.session_type as any,
-          session_format: appointmentForm.session_format as any,
+          session_type: appointmentForm.session_type,
+          session_format: appointmentForm.session_format,
           location: appointmentForm.location,
           session_notes: appointmentForm.session_notes,
           session_fee: appointmentForm.session_fee
@@ -742,7 +761,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
           <label className="block text-sm font-medium mb-1">Session Type</label>
           <Select
             value={appointmentForm.session_type}
-            onValueChange={(value) => setAppointmentForm({ ...appointmentForm, session_type: value })}
+            onValueChange={(value) => setAppointmentForm({ ...appointmentForm, session_type: value as Appointment['session_type'] })}
           >
             <SelectTrigger>
               <SelectValue />
@@ -761,7 +780,7 @@ export const AppointmentScheduler: React.FC<AppointmentSchedulerProps> = ({
           <label className="block text-sm font-medium mb-1">Session Format</label>
           <Select
             value={appointmentForm.session_format}
-            onValueChange={(value) => setAppointmentForm({ ...appointmentForm, session_format: value })}
+            onValueChange={(value) => setAppointmentForm({ ...appointmentForm, session_format: value as Appointment['session_format'] })}
           >
             <SelectTrigger>
               <SelectValue />

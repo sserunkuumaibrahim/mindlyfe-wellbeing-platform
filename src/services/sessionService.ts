@@ -1,6 +1,6 @@
 
-import { supabase } from '@/integrations/supabase/client';
-import { Database } from '@/integrations/supabase/types';
+import { postgresqlClient } from '@/integrations/postgresql/client';
+import { Database } from '@/integrations/postgresql/types';
 
 type SessionStatus = Database['public']['Enums']['session_status'];
 type SessionType = Database['public']['Enums']['session_type'];
@@ -20,18 +20,19 @@ export interface RescheduleData {
 
 export const sessionService = {
   async bookSession(data: BookSessionData) {
-    const { data: session, error } = await supabase
+    const result = await postgresqlClient
       .from('therapy_sessions')
       .insert(data)
       .select()
-      .single();
+      .single()
+      .execute();
 
-    if (error) throw error;
-    return session;
+    if (result.error) throw new Error(result.error);
+    return result.data;
   },
 
   async getSessions(userId: string, status?: SessionStatus) {
-    let query = supabase
+    let query = postgresqlClient
       .from('therapy_sessions')
       .select(`
         *,
@@ -45,47 +46,51 @@ export const sessionService = {
       query = query.eq('status', status);
     }
 
-    const { data, error } = await query;
-    if (error) throw error;
-    return data;
+    const result = await query.execute();
+    if (result.error) throw new Error(result.error);
+    return result.data;
   },
 
   async updateSessionStatus(sessionId: string, status: SessionStatus) {
-    const { error } = await supabase
+    const result = await postgresqlClient
       .from('therapy_sessions')
       .update({ status })
-      .eq('id', sessionId);
+      .eq('id', sessionId)
+      .execute();
 
-    if (error) throw error;
+    if (result.error) throw new Error(result.error);
   },
 
   async rescheduleSession(data: RescheduleData) {
-    const { error } = await supabase
+    const result = await postgresqlClient
       .from('therapy_sessions')
       .update({ 
         scheduled_at: data.new_scheduled_at,
         status: 'scheduled' as SessionStatus
       })
-      .eq('id', data.session_id);
+      .eq('id', data.session_id)
+      .execute();
 
-    if (error) throw error;
+    if (result.error) throw new Error(result.error);
   },
 
   async cancelSession(sessionId: string) {
-    const { error } = await supabase
+    const result = await postgresqlClient
       .from('therapy_sessions')
       .update({ status: 'cancelled' as SessionStatus })
-      .eq('id', sessionId);
+      .eq('id', sessionId)
+      .execute();
 
-    if (error) throw error;
+    if (result.error) throw new Error(result.error);
   },
 
   async addSessionNotes(sessionId: string, notes: string) {
-    const { error } = await supabase
+    const result = await postgresqlClient
       .from('therapy_sessions')
       .update({ notes })
-      .eq('id', sessionId);
+      .eq('id', sessionId)
+      .execute();
 
-    if (error) throw error;
+    if (result.error) throw new Error(result.error);
   },
 };

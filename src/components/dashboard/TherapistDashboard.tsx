@@ -8,91 +8,62 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useNavigate } from 'react-router-dom';
-import { useOptimizedSessions } from '@/hooks/useOptimizedSessions';
 import { useAuth } from '@/hooks/useAuth';
-import { getActiveClients, getMonthlyEarnings, getFeedback } from '@/services/api/therapistService';
+import { TherapistDashboardData } from '@/types/dashboard';
 import { cn } from '@/lib/utils';
 import { format, isToday, isTomorrow } from 'date-fns';
 
 // Import our new components
-import VideoCallInterface from '@/components/sessions/VideoCallInterface';
+import { VideoCallInterface } from '@/components/sessions/VideoCallInterface';
 import SessionAnalytics from '@/components/analytics/SessionAnalytics';
 import ClientManagement from '@/components/clients/ClientManagement';
 import AppointmentScheduler from '@/components/schedule/AppointmentScheduler';
 import WorkshopManagement from '@/components/workshops/WorkshopManagement';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
+import { apiRequest } from '@/services/apiClient';
 
 export const TherapistDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { sessions: allSessions, loading } = useOptimizedSessions();
-  const [activeTab, setActiveTab] = useState('overview');
-  const [dashboardStats, setDashboardStats] = useState({
-    activeClientsCount: 0,
-    monthlyEarnings: 0,
-    averageRating: 0,
-    reviewsCount: 0,
-    todaySessionsCount: 0
-  });
-  const [statsLoading, setStatsLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState<TherapistDashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Filter today's sessions efficiently
+  const upcomingSessions = React.useMemo(() => {
+    if (!dashboardData) return [];
+    return dashboardData.sessions
+      .filter(session => session.status === 'scheduled' && new Date(session.scheduled_at) > new Date())
+      .slice(0, 5);
+  }, [dashboardData]);
+
   const todaySessions = React.useMemo(() => {
+    if (!dashboardData) return [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
     
-    return allSessions.filter(session => {
+    return dashboardData.sessions.filter(session => {
       const sessionDate = new Date(session.scheduled_at);
       return sessionDate >= today && sessionDate < tomorrow && session.status === 'scheduled';
     });
-  }, [allSessions]);
-
-  const upcomingSessions = React.useMemo(() => 
-    allSessions
-      .filter(session => session.status === 'scheduled' && new Date(session.scheduled_at) > new Date())
-      .slice(0, 5)
-  , [allSessions]);
+  }, [dashboardData]);
 
   useEffect(() => {
     if (!user) return;
 
-    const fetchDashboardStats = async () => {
-      if (!user) return;
+    const fetchDashboardData = async () => {
       try {
-        setStatsLoading(true);
-
-        const [clientsRes, earningsRes, feedbackRes] = await Promise.all([
-          getActiveClients(user.id),
-          getMonthlyEarnings(user.id),
-          getFeedback(user.id),
-        ]);
-
-        const uniqueClients = new Set(clientsRes.data?.map(session => session.client_id) || []);
-        const monthlyEarnings = (earningsRes.data?.length || 0) * 76000;
-        const ratings = feedbackRes.data?.map(f => f.rating).filter(Boolean) || [];
-        const averageRating = ratings.length > 0
-          ? Math.round((ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length) * 10) / 10
-          : 0;
-
-        setDashboardStats({
-          activeClientsCount: uniqueClients.size,
-          monthlyEarnings,
-          averageRating,
-          reviewsCount: ratings.length,
-          todaySessionsCount: todaySessions.length,
-        });
-
+        const data = await apiRequest<TherapistDashboardData>(`/api/therapists/${user.id}/dashboard`);
+        setDashboardData(data);
       } catch (error) {
-        console.error('Error fetching dashboard stats:', error);
+        console.error('Error fetching dashboard data:', error);
       } finally {
-        setStatsLoading(false);
+        setLoading(false);
       }
     };
 
-    fetchDashboardStats();
-  }, [user, todaySessions.length]);
+    fetchDashboardData();
+  }, [user]);
 
   const formatSessionTime = (scheduledAt: string) => {
     const date = new Date(scheduledAt);
@@ -102,7 +73,7 @@ export const TherapistDashboard: React.FC = () => {
     };
   };
 
-  if (loading || statsLoading) {
+  if (loading) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -155,7 +126,7 @@ export const TherapistDashboard: React.FC = () => {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dashboardStats.todaySessionsCount}</div>
+            <div className="text-2xl font-bold">{dashboardData?.stats.today_sessions_count}</div>
             <p className="text-xs text-muted-foreground">
               {todaySessions[0] ? `Next at ${formatSessionTime(todaySessions[0].scheduled_at).time}` : 'No sessions today'}
             </p>
@@ -168,7 +139,7 @@ export const TherapistDashboard: React.FC = () => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dashboardStats.activeClientsCount}</div>
+            <div className="text-2xl font-bold">{dashboardData?.stats.active_clients}</div>
             <p className="text-xs text-muted-foreground">Last 30 days</p>
           </CardContent>
         </Card>
@@ -179,7 +150,7 @@ export const TherapistDashboard: React.FC = () => {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">UGX {dashboardStats.monthlyEarnings.toLocaleString()}</div>
+            <div className="text-2xl font-bold">UGX {dashboardData?.stats.monthly_earnings.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">This month</p>
           </CardContent>
         </Card>
@@ -190,9 +161,9 @@ export const TherapistDashboard: React.FC = () => {
             <Star className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dashboardStats.averageRating || 'N/A'}</div>
+            <div className="text-2xl font-bold">{dashboardData?.stats.average_rating || 'N/A'}</div>
             <p className="text-xs text-muted-foreground">
-              {dashboardStats.reviewsCount > 0 ? `${dashboardStats.reviewsCount} reviews` : 'No reviews yet'}
+              {dashboardData?.stats.reviews_count > 0 ? `${dashboardData?.stats.reviews_count} reviews` : 'No reviews yet'}
             </p>
           </CardContent>
         </Card>

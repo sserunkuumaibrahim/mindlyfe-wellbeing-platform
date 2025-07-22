@@ -7,9 +7,26 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
 
+interface Person {
+  first_name: string;
+  last_name: string;
+  profile_photo_url?: string;
+}
+
+interface Session {
+  id: string;
+  scheduled_at: string;
+  status: string;
+  session_type: string;
+  duration_minutes: number;
+  notes?: string;
+  therapist?: Person;
+  client?: Person;
+}
+
 interface SessionCardProps {
-  session: any;
-  onJoin?: (session: any) => void;
+  session: Session;
+  onJoin?: (session: Session) => void;
   onCancel?: (sessionId: string) => void;
   onReschedule?: (sessionId: string) => void;
   showActions?: boolean;

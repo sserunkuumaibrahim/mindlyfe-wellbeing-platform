@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { getSessionJoinInfo, joinSession, endVideoCall } from '@/services/api/videoCallService';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
 
 interface VideoCallInterfaceProps {
@@ -69,9 +69,9 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({
         clearInterval(intervalRef.current);
       }
     };
-  }, [sessionId]);
+  }, [sessionId, loadSessionInfo]);
 
-  const loadSessionInfo = async () => {
+  const loadSessionInfo = useCallback(async () => {
     if (!user) return;
     try {
       setLoading(true);
@@ -93,7 +93,7 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [sessionId, user]);
 
   const startCall = async () => {
     if (!sessionInfo?.can_join) {
@@ -379,5 +379,3 @@ export const VideoCallInterface: React.FC<VideoCallInterfaceProps> = ({
     </Card>
   );
 };
-
-export default VideoCallInterface;

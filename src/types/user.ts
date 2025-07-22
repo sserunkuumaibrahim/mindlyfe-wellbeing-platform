@@ -87,8 +87,8 @@ export interface OrganizationProfile {
   billing_contact_email?: string;
   billing_contact_phone?: string;
   status: ProfileStatus;
-  service_requirements?: Record<string, any>;
-  uploaded_documents?: Record<string, any>;
+  service_requirements?: Record<string, unknown>;
+  uploaded_documents?: Record<string, unknown>;
   created_at: Date;
   updated_at: Date;
 }

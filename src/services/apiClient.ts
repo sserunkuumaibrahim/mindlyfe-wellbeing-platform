@@ -1,16 +1,16 @@
 
 import { AuthResponse, LoginDTO, RegisterDTO, ResetPasswordDTO, MfaSetupResponse, MfaStatus } from '@/types/auth';
-import { Session } from '@/types/session';
+import { TherapySession } from '@/types/session';
 import { User } from '@/types/user';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://api.mindlyfe.org';
 
 interface ApiError extends Error {
   statusCode?: number;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
 }
 
-const createApiError = (message: string, statusCode?: number, details?: Record<string, any>): ApiError => {
+const createApiError = (message: string, statusCode?: number, details?: Record<string, unknown>): ApiError => {
   const error = new Error(message) as ApiError;
   if (statusCode) error.statusCode = statusCode;
   if (details) error.details = details;
@@ -47,7 +47,7 @@ const getHeaders = (): HeadersInit => {
 const apiRequest = async <T>(
   endpoint: string, 
   method: string = 'GET', 
-  data?: any
+  data?: unknown
 ): Promise<T> => {
   try {
     const response = await fetch(`${API_URL}${endpoint}`, {
@@ -69,6 +69,8 @@ const storeAuthData = (response: AuthResponse) => {
   localStorage.setItem('token', response.token);
   localStorage.setItem('refreshToken', response.refreshToken);
 };
+
+export { apiRequest };
 
 export const apiClient = {
   // Auth
@@ -137,8 +139,8 @@ export const apiClient = {
   
   // Sessions
   sessions: {
-    list: async (): Promise<Session[]> => {
-      return apiRequest<Session[]>('/sessions', 'GET');
+    list: async (): Promise<TherapySession[]> => {
+      return apiRequest<TherapySession[]>('/sessions', 'GET');
     },
     
     terminate: async (sessionId: string): Promise<void> => {

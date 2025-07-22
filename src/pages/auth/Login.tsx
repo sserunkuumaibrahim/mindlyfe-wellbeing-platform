@@ -5,15 +5,15 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Eye, EyeOff, LogIn } from "lucide-react";
+import { toast } from '@/lib/toast';
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useAuth } from "@/hooks/useAuth";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { AuthCard } from "@/components/auth/AuthCard";
-import { LoginDTO } from "@/types/auth";
 
 const formSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -25,7 +25,9 @@ type FormData = z.infer<typeof formSchema>;
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
-  const { login, loading, error, clearError } = useAuthStore();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { signIn } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -39,19 +41,27 @@ export default function Login() {
   });
 
   const onSubmit = async (data: FormData) => {
-    const loginData: LoginDTO = {
-      email: data.email,
-      password: data.password,
-      rememberMe: data.rememberMe,
-    };
+    setLoading(true);
+    setError(null);
     
-    await login(loginData);
-    const from = location.state?.from?.pathname || "/dashboard";
-    navigate(from, { replace: true });
+    try {
+      const result = await signIn(data.email, data.password);
+      
+      if (result.error) {
+        setError(result.error);
+      } else {
+        const from = location.state?.from?.pathname || "/dashboard";
+        navigate(from, { replace: true });
+      }
+    } catch (err) {
+      setError("An unexpected error occurred");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleFormChange = () => {
-    if (error) clearError();
+    if (error) setError(null);
   };
 
   return (

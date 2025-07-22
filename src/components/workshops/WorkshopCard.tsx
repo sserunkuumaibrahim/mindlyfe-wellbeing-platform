@@ -7,10 +7,28 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Calendar, Clock, Users, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
 
+interface WorkshopFacilitator {
+  first_name: string;
+  last_name: string;
+  profile_photo_url?: string;
+}
+
+interface Workshop {
+  id: string;
+  title: string;
+  description?: string;
+  workshop_type: string;
+  price_ugx: number;
+  scheduled_at: string;
+  duration_minutes: number;
+  max_participants: number;
+  facilitator?: WorkshopFacilitator;
+}
+
 interface WorkshopCardProps {
-  workshop: any;
+  workshop: Workshop;
   onEnroll?: (workshopId: string) => void;
-  onView?: (workshop: any) => void;
+  onView?: (workshop: Workshop) => void;
   showEnrollButton?: boolean;
 }
 

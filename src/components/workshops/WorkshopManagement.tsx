@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/lib/toast';
 import { WorkshopCard } from './WorkshopCard';
 import { cn } from '@/lib/utils';
 
@@ -82,15 +82,26 @@ export const WorkshopManagement: React.FC<WorkshopManagementProps> = ({ classNam
   const [activeTab, setActiveTab] = useState('all');
 
   // Form state for creating/editing workshops
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    title: string;
+    description: string;
+    workshop_type: Workshop['workshop_type'];
+    max_participants: number;
+    price_ugx: number;
+    scheduled_at: string;
+    duration_minutes: number;
+    location_type: Workshop['location_type'];
+    location_details: string;
+    meeting_url: string;
+  }>({
     title: '',
     description: '',
-    workshop_type: 'educational' as const,
+    workshop_type: 'educational',
     max_participants: 10,
     price_ugx: 0,
     scheduled_at: '',
     duration_minutes: 60,
-    location_type: 'online' as const,
+    location_type: 'online',
     location_details: '',
     meeting_url: ''
   });
@@ -101,62 +112,7 @@ export const WorkshopManagement: React.FC<WorkshopManagementProps> = ({ classNam
     }
   }, [user]);
 
-  useEffect(() => {
-    filterWorkshops();
-  }, [workshops, searchTerm, statusFilter, typeFilter, activeTab]);
-
-  const fetchWorkshops = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('workshops')
-        .select(`
-          *,
-          facilitator:profiles!facilitator_id(
-            first_name,
-            last_name,
-            profile_photo_url
-          ),
-          enrollments:workshop_enrollments(
-            id,
-            participant_id,
-            enrolled_at,
-            status,
-            participant:profiles!participant_id(
-              first_name,
-              last_name,
-              profile_photo_url
-            )
-          )
-        `)
-        .order('scheduled_at', { ascending: true });
-
-      if (error) throw error;
-      
-      const workshopsWithCounts = (data || []).map(workshop => ({
-        ...workshop,
-        current_participants: workshop.enrollments?.filter(
-          (e: any) => e.status === 'enrolled'
-        ).length || 0
-      }));
-      
-      setWorkshops(workshopsWithCounts.map((w: any) => ({
-        ...w,
-        location_type: w.location_type || 'online'
-      })));
-    } catch (error) {
-      console.error('Error fetching workshops:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load workshops",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filterWorkshops = () => {
+  const filterWorkshops = useCallback(() => {
     let filtered = workshops;
 
     // Filter by active tab
@@ -187,13 +143,72 @@ export const WorkshopManagement: React.FC<WorkshopManagementProps> = ({ classNam
     }
 
     setFilteredWorkshops(filtered);
+  }, [workshops, searchTerm, statusFilter, typeFilter, activeTab, user]);
+
+  useEffect(() => {
+    filterWorkshops();
+  }, [filterWorkshops]);
+
+  const fetchWorkshops = async () => {
+    try {
+      setLoading(true);
+      const response = await supabase
+        .from('workshops')
+        .select(`
+          *,
+          facilitator:profiles!facilitator_id(
+            first_name,
+            last_name,
+            profile_photo_url
+          ),
+          enrollments:workshop_enrollments(
+            id,
+            participant_id,
+            enrolled_at,
+            status,
+            participant:profiles!participant_id(
+              first_name,
+              last_name,
+              profile_photo_url
+            )
+          )
+        `)
+        .order('scheduled_at', { ascending: true });
+      
+      const { data, error } = response;
+
+      if (error) throw error;
+      
+      const workshopsWithCounts = (data || []).map(workshop => ({
+        ...workshop,
+        current_participants: workshop.enrollments?.filter(
+          (e: WorkshopEnrollment) => e.status === 'enrolled'
+        ).length || 0
+      }));
+      
+      setWorkshops(workshopsWithCounts.map((w: Workshop) => ({
+        ...w,
+        location_type: w.location_type || 'online'
+      })));
+    } catch (error) {
+      console.error('Error fetching workshops:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load workshops",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
+
+
 
   const handleCreateWorkshop = async () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
+      const response = await supabase
         .from('workshops')
         .insert({
           ...formData,
@@ -202,6 +217,8 @@ export const WorkshopManagement: React.FC<WorkshopManagementProps> = ({ classNam
         })
         .select()
         .single();
+      
+      const { data, error } = response;
 
       if (error) throw error;
 
@@ -313,12 +330,12 @@ export const WorkshopManagement: React.FC<WorkshopManagementProps> = ({ classNam
     setFormData({
       title: '',
       description: '',
-      workshop_type: 'educational',
+      workshop_type: 'educational' as Workshop['workshop_type'],
       max_participants: 10,
       price_ugx: 0,
       scheduled_at: '',
       duration_minutes: 60,
-      location_type: 'online',
+      location_type: 'online' as Workshop['location_type'],
       location_details: '',
       meeting_url: ''
     });
@@ -329,12 +346,12 @@ export const WorkshopManagement: React.FC<WorkshopManagementProps> = ({ classNam
     setFormData({
       title: workshop.title,
       description: workshop.description,
-      workshop_type: workshop.workshop_type as any,
+      workshop_type: workshop.workshop_type,
       max_participants: workshop.max_participants,
       price_ugx: workshop.price_ugx,
       scheduled_at: workshop.scheduled_at.slice(0, 16), // Format for datetime-local input
       duration_minutes: workshop.duration_minutes,
-      location_type: workshop.location_type as any,
+      location_type: workshop.location_type,
       location_details: workshop.location_details || '',
       meeting_url: workshop.meeting_url || ''
     });
@@ -373,7 +390,7 @@ export const WorkshopManagement: React.FC<WorkshopManagementProps> = ({ classNam
           <label className="block text-sm font-medium mb-1">Type</label>
           <Select
             value={formData.workshop_type}
-            onValueChange={(value: string) => setFormData({ ...formData, workshop_type: value as any })}
+            onValueChange={(value: Workshop['workshop_type']) => setFormData({ ...formData, workshop_type: value })}
           >
             <SelectTrigger>
               <SelectValue />
@@ -391,7 +408,7 @@ export const WorkshopManagement: React.FC<WorkshopManagementProps> = ({ classNam
           <label className="block text-sm font-medium mb-1">Location Type</label>
           <Select
             value={formData.location_type}
-            onValueChange={(value: string) => setFormData({ ...formData, location_type: value as any })}
+            onValueChange={(value: Workshop['location_type']) => setFormData({ ...formData, location_type: value })}
           >
             <SelectTrigger>
               <SelectValue />

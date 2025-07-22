@@ -9,7 +9,7 @@ import { Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useAuth } from "@/hooks/useAuth";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { AuthCard } from "@/components/auth/AuthCard";
 
@@ -21,7 +21,9 @@ type FormData = z.infer<typeof formSchema>;
 
 export default function ForgotPassword() {
   const [submitted, setSubmitted] = useState(false);
-  const { forgotPassword, loading, error, clearError } = useAuthStore();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { resetPassword } = useAuth();
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -31,13 +33,27 @@ export default function ForgotPassword() {
   });
 
   const onSubmit = async (data: FormData) => {
-    await forgotPassword(data.email);
-    setSubmitted(true);
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const result = await resetPassword(data.email);
+      
+      if (result.error) {
+        setError(result.error);
+      } else {
+        setSubmitted(true);
+      }
+    } catch (err) {
+      setError("An unexpected error occurred");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Clear error when form fields change
   const handleFormChange = () => {
-    if (error) clearError();
+    setError(null);
   };
 
   return (

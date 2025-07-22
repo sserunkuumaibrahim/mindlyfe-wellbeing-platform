@@ -1,7 +1,18 @@
 
 import React from "react";
 
-export default function ProgressWidgets({ progress }: { progress: any }) {
+interface Progress {
+  goalsChange: string;
+  goalsAchieved: number;
+  goalsProgress: number;
+  sourcesChange: string;
+  sources: number;
+  sessionsChange: string;
+  sessions: number;
+  sessionsProgress: number;
+}
+
+export default function ProgressWidgets({ progress }: { progress: Progress }) {
   return (
     <>
       <div className="rounded-[32px] bg-white/70 backdrop-blur-lg shadow-xl px-8 py-7 flex flex-col min-h-[168px] border border-[#e5eaf3]">

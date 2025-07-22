@@ -1,5 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
-import { PostgrestError } from '@supabase/supabase-js';
+import { postgresClient } from '@/integrations/postgresql/client';
 
 /**
  * Generic data fetching function.
@@ -11,16 +10,20 @@ import { PostgrestError } from '@supabase/supabase-js';
 export const fetchData = async <T>(
   from: string,
   select: string = '*',
-  filters: { column: string; operator: any; value: any }[] = []
-): Promise<{ data: T[] | null; error: PostgrestError | null }> => {
-  let query = supabase.from(from).select(select);
+  filters: { column: string; operator: string; value: unknown }[] = []
+): Promise<{ data: T[] | null; error: string | null }> => {
+  try {
+    let query = postgresClient.from(from as keyof import('@/integrations/postgresql/types').Database['public']['Tables']).select(select);
 
-  filters.forEach(filter => {
-    query = query[filter.operator](filter.column, filter.value);
-  });
+    filters.forEach(filter => {
+      query = query[filter.operator](filter.column, filter.value);
+    });
 
-  const { data, error } = await query;
-  return { data: data as T[] | null, error };
+    const result = await query.execute();
+    return { data: result.data as T[] | null, error: result.error };
+  } catch (error) {
+    return { data: null, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
 };
 
 /**
@@ -36,23 +39,42 @@ export const mutateData = async <T>(
   action: 'insert' | 'update' | 'delete',
   payload?: Partial<T> | Partial<T>[],
   match?: Partial<T>
-): Promise<{ data: T[] | null; error: PostgrestError | null }> => {
-  let query;
+): Promise<{ data: T[] | null; error: string | null }> => {
+  try {
+    let query;
+    let result;
 
-  switch (action) {
-    case 'insert':
-      query = supabase.from(from).insert(payload as any);
-      break;
-    case 'update':
-      query = supabase.from(from).update(payload as any).match(match as any);
-      break;
-    case 'delete':
-      query = supabase.from(from).delete().match(match as any);
-      break;
-    default:
-      return Promise.resolve({ data: null, error: { message: 'Invalid action', details: '', hint: '', code: '' } });
+    switch (action) {
+      case 'insert':
+        query = postgresClient.from(from as keyof import('@/integrations/postgresql/types').Database['public']['Tables']).insert(payload);
+        result = await query.execute();
+        break;
+      case 'update':
+        query = postgresClient.from(from as keyof import('@/integrations/postgresql/types').Database['public']['Tables']).update(payload);
+        // Apply match conditions using eq operator
+        if (match) {
+          Object.entries(match).forEach(([key, value]) => {
+            query = query.eq(key, value);
+          });
+        }
+        result = await query.execute();
+        break;
+      case 'delete':
+        query = postgresClient.from(from as keyof import('@/integrations/postgresql/types').Database['public']['Tables']).delete();
+        // Apply match conditions using eq operator
+        if (match) {
+          Object.entries(match).forEach(([key, value]) => {
+            query = query.eq(key, value);
+          });
+        }
+        result = await query.execute();
+        break;
+      default:
+        return { data: null, error: 'Invalid action' };
+    }
+
+    return { data: result.data as T[] | null, error: result.error };
+  } catch (error) {
+    return { data: null, error: error instanceof Error ? error.message : 'Unknown error' };
   }
-
-  const { data, error } = await query.select();
-  return { data: data as T[] | null, error };
 };

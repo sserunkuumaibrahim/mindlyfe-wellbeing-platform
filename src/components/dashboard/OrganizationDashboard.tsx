@@ -5,126 +5,39 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Users, Calendar, DollarSign, Plus, TrendingUp, UserCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { apiRequest } from '@/services/apiClient';
 import { useAuth } from '@/hooks/useAuth';
-import { toast } from '@/hooks/use-toast';
-
-interface OrgStats {
-  totalMembers: number;
-  totalSessions: number;
-  sessionsUsed: number;
-  sessionsRemaining: number;
-  monthlySpend: number;
-}
-
-interface Member {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  sessions_used: number;
-  joined_at: string;
-}
+import { toast } from '@/lib/toast';
+import { OrganizationDashboardData } from '@/types/dashboard';
 
 export const OrganizationDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [stats, setStats] = useState<OrgStats>({
-    totalMembers: 0,
-    totalSessions: 0,
-    sessionsUsed: 0,
-    sessionsRemaining: 0,
-    monthlySpend: 0
-  });
-  const [members, setMembers] = useState<Member[]>([]);
+  const [dashboardData, setDashboardData] = useState<OrganizationDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!user) return;
+
+    const fetchDashboardData = async () => {
+      try {
+        const data = await apiRequest<OrganizationDashboardData>(`/api/organizations/${user.id}/dashboard`);
+        setDashboardData(data);
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        toast({ title: 'Error', description: 'Failed to load dashboard data' });
+      } finally {
+        setLoading(false);
+      }
+    };
+
     if (user?.role === 'org_admin') {
       fetchDashboardData();
     }
   }, [user]);
 
-  const fetchDashboardData = async () => {
-    try {
-      // Get organization profile
-      const { data: orgProfile } = await supabase
-        .from('organization_profiles')
-        .select('id')
-        .eq('id', user?.id)
-        .single();
-
-      if (!orgProfile) {
-        toast({
-          title: "Error",
-          description: "Organization profile not found",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Fetch organization members with their session usage
-      const { data: orgMembers } = await supabase
-        .from('organization_members')
-        .select(`
-          annual_sessions_used,
-          annual_sessions_limit,
-          joined_at,
-          profiles:profile_id (
-            id,
-            first_name,
-            last_name,
-            email
-          )
-        `)
-        .eq('organization_id', orgProfile.id);
-
-      // Calculate totals
-      const totalMembers = orgMembers?.length || 0;
-      const totalSessionsIncluded = orgMembers?.reduce((sum, member) => sum + (member.annual_sessions_limit || 0), 0) || 0;
-      const totalSessionsUsed = orgMembers?.reduce((sum, member) => sum + (member.annual_sessions_used || 0), 0) || 0;
-      const remainingSessions = totalSessionsIncluded - totalSessionsUsed;
-
-      // Calculate monthly spend based on sessions used (76,000 UGX per session)
-      const thisMonth = new Date();
-      thisMonth.setDate(1);
-      
-      const { count: monthlySessionsUsed } = await supabase
-        .from('therapy_sessions')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'completed')
-        .gte('scheduled_at', thisMonth.toISOString())
-        .in('client_id', orgMembers?.map(m => m.profiles.id) || []);
-
-      setStats({
-        totalMembers,
-        totalSessions: totalSessionsIncluded,
-        sessionsUsed: totalSessionsUsed,
-        sessionsRemaining: Math.max(0, remainingSessions),
-        monthlySpend: (monthlySessionsUsed || 0) * 76000
-      });
-
-      // Format members data
-      const formattedMembers = orgMembers?.map(member => ({
-        id: member.profiles.id,
-        first_name: member.profiles.first_name,
-        last_name: member.profiles.last_name,
-        email: member.profiles.email,
-        sessions_used: member.annual_sessions_used,
-        joined_at: member.joined_at
-      })) || [];
-
-      setMembers(formattedMembers);
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load dashboard data",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+  const handleInviteMember = () => {
+    navigate('/team/invite');
   };
 
   if (loading) {
@@ -142,7 +55,7 @@ export const OrganizationDashboard: React.FC = () => {
           <h1 className="text-3xl font-bold">Organization Dashboard</h1>
           <p className="text-muted-foreground">Manage your team's mental health and wellness</p>
         </div>
-        <Button onClick={() => navigate('/team/invite')}>
+        <Button onClick={handleInviteMember}>
           <Plus className="h-4 w-4 mr-2" />
           Add Member
         </Button>
@@ -156,7 +69,7 @@ export const OrganizationDashboard: React.FC = () => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalMembers}</div>
+            <div className="text-2xl font-bold">{dashboardData?.stats.total_members}</div>
             <p className="text-xs text-muted-foreground">Active members</p>
           </CardContent>
         </Card>
@@ -167,9 +80,9 @@ export const OrganizationDashboard: React.FC = () => {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.sessionsRemaining}</div>
+            <div className="text-2xl font-bold">{dashboardData?.stats.sessions_remaining}</div>
             <p className="text-xs text-muted-foreground">
-              of {stats.totalSessions} total
+              of {dashboardData?.stats.total_sessions} total
             </p>
           </CardContent>
         </Card>
@@ -180,7 +93,7 @@ export const OrganizationDashboard: React.FC = () => {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.sessionsUsed}</div>
+            <div className="text-2xl font-bold">{dashboardData?.stats.sessions_used}</div>
             <p className="text-xs text-muted-foreground">By team members</p>
           </CardContent>
         </Card>
@@ -191,7 +104,7 @@ export const OrganizationDashboard: React.FC = () => {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">UGX {stats.monthlySpend.toLocaleString()}</div>
+            <div className="text-2xl font-bold">UGX {dashboardData?.stats.monthly_spend.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">This month</p>
           </CardContent>
         </Card>
@@ -211,7 +124,7 @@ export const OrganizationDashboard: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {members.length === 0 ? (
+              {dashboardData?.members.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <UserCheck className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p className="text-lg mb-2">No team members yet</p>
@@ -222,7 +135,7 @@ export const OrganizationDashboard: React.FC = () => {
                   </Button>
                 </div>
               ) : (
-                members.slice(0, 10).map((member) => (
+                dashboardData?.members.slice(0, 10).map((member) => (
                   <div key={member.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center space-x-3">
                       <div>

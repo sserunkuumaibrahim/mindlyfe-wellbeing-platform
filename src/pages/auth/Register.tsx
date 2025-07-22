@@ -1,52 +1,119 @@
 
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { AuthCard } from "@/components/auth/AuthCard";
-import { RoleSelection } from "@/components/auth/RoleSelection";
+import { RoleSelector } from "@/components/auth/RoleSelector";
 import { IndividualRegistrationForm } from "@/components/auth/IndividualRegistrationForm";
 import { TherapistRegistrationForm } from "@/components/auth/TherapistRegistrationForm";
 import { OrganizationRegistrationForm } from "@/components/auth/OrganizationRegistrationForm";
 import { UserRole } from "@/types/user";
-import { RegisterDTO } from "@/types/auth";
+import { toast } from '@/lib/toast';
+import { IndividualRegisterDTO, TherapistRegisterDTO, OrganizationRegisterDTO } from '@/types/auth';
 
-type RegistrationStep = 'role-selection' | 'registration' | 'verification';
+
+
+type RegisterData = IndividualRegisterDTO | TherapistRegisterDTO | OrganizationRegisterDTO;
 
 export default function Register() {
-  const [step, setStep] = useState<RegistrationStep>('role-selection');
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
-  const [email, setEmail] = useState<string>('');
-  const { register, loading, error, clearError } = useAuthStore();
+  const [step, setStep] = useState<'role' | 'register' | 'verify'>('role');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const { signUp } = useAuth();
+  const navigate = useNavigate();
 
   const handleRoleSelect = (role: UserRole) => {
     setSelectedRole(role);
-    setStep('registration');
+    setStep('register');
   };
 
-  const handleRegistration = async (data: RegisterDTO) => {
-    setEmail(data.email);
+  const handleIndividualRegistration = async (data: IndividualRegisterDTO) => {
+    setLoading(true);
+    setError('');
+    
     try {
-      await register(data);
-      setStep('verification');
-    } catch (error) {
-      // Error is handled in the store
+      // Extract email, password, and role
+      const { email, password, role } = data;
+      
+      // Remove these fields from the metadata
+      const { confirmPassword, ...userData } = data;
+      
+      // Send registration data to backend
+      await signUp(email, password, role, userData);
+      setStep('verify');
+      toast.success('Registration successful! Please check your email for verification.');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Registration failed';
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTherapistRegistration = async (data: TherapistRegisterDTO) => {
+    setLoading(true);
+    setError('');
+    
+    try {
+      // Extract email, password, and role
+      const { email, password, role } = data;
+      
+      // Remove these fields from the metadata
+      const { confirmPassword, ...userData } = data;
+      
+      // Send registration data to backend
+      await signUp(email, password, role, userData);
+      setStep('verify');
+      toast.success('Registration successful! Please check your email for verification.');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Registration failed';
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOrganizationRegistration = async (data: OrganizationRegisterDTO) => {
+    setLoading(true);
+    setError('');
+    
+    try {
+      // Extract email, password, and role
+      const { email, password, role } = data;
+      
+      // Remove these fields from the metadata
+      const { confirmPassword, ...userData } = data;
+      
+      // Send registration data to backend
+      await signUp(email, password, role, userData);
+      setStep('verify');
+      toast.success('Registration successful! Please check your email for verification.');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Registration failed';
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleBackToRoleSelection = () => {
-    setStep('role-selection');
+    setStep('role');
     setSelectedRole(null);
-    if (error) clearError();
+    setError('');
   };
 
   const getCardTitle = () => {
     switch (step) {
-      case 'role-selection':
+      case 'role':
         return 'Choose Account Type';
-      case 'registration':
+      case 'register':
         return 'Create Account';
-      case 'verification':
+      case 'verify':
         return 'Verify Email';
       default:
         return 'Register';
@@ -54,20 +121,21 @@ export default function Register() {
   };
 
   const renderRegistrationForm = () => {
+    if (!selectedRole) return null;
+
     const commonProps = {
-      onSubmit: handleRegistration,
       loading,
       error,
-      onBack: handleBackToRoleSelection,
+      onBack: () => setStep('role'),
     };
 
     switch (selectedRole) {
       case 'individual':
-        return <IndividualRegistrationForm {...commonProps} />;
+        return <IndividualRegistrationForm {...commonProps} onSubmit={handleIndividualRegistration} />;
       case 'therapist':
-        return <TherapistRegistrationForm {...commonProps} />;
+        return <TherapistRegistrationForm {...commonProps} onSubmit={handleTherapistRegistration} />;
       case 'org_admin':
-        return <OrganizationRegistrationForm {...commonProps} />;
+        return <OrganizationRegistrationForm {...commonProps} onSubmit={handleOrganizationRegistration} />;
       default:
         return null;
     }
@@ -75,18 +143,18 @@ export default function Register() {
 
   const renderStep = () => {
     switch (step) {
-      case 'role-selection':
-        return <RoleSelection onRoleSelect={handleRoleSelect} />;
+      case 'role':
+        return <RoleSelector onSelectRole={(role: UserRole) => setSelectedRole(role)} />;
       
-      case 'registration':
+      case 'register':
         return renderRegistrationForm();
       
-      case 'verification':
+      case 'verify':
         return (
           <div className="text-center space-y-4">
             <h2 className="text-2xl font-bold">Check Your Email</h2>
             <p className="text-muted-foreground">
-              We've sent a verification email to <strong>{email}</strong>.
+              We've sent a verification email to your address.
               Please check your email and click the verification link to activate your account.
             </p>
             <div className="space-y-2">
@@ -116,7 +184,7 @@ export default function Register() {
       <AuthCard title={getCardTitle()}>
         {renderStep()}
         
-        {step === 'role-selection' && (
+        {step === 'role' && (
           <div className="text-center text-sm mt-6">
             Already have an account?{" "}
             <Link to="/login" className="font-medium text-primary hover:underline">

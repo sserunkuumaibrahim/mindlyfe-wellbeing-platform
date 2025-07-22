@@ -1,27 +1,33 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
-
-interface Profile {
-  id: string;
-  auth_uid: string;
-  role: 'individual' | 'therapist' | 'org_admin';
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone_number?: string;
-  profile_photo_url?: string;
-  preferred_language?: string;
-  created_at: string;
-  updated_at: string;
-}
+import { apiClient } from '@/services/apiClient';
+import { User } from '@/types/user';
 
 export const useProfile = () => {
   const { user } = useAuth();
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const fetchProfile = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      console.log('Fetching profile for user:', user.id);
+      
+      const data = await apiClient.user.profile();
+
+      setProfile(data);
+      setError(null);
+    } catch (err: unknown) {
+      console.error('Error fetching profile:', err);
+      setError('Failed to fetch profile. Please try again.');
+      setProfile(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (user) {
@@ -30,59 +36,21 @@ export const useProfile = () => {
       setProfile(null);
       setLoading(false);
     }
-  }, [user]);
+  }, [user, fetchProfile]);
 
-  const fetchProfile = async () => {
-    if (!user) return;
+  const updateProfile = async (updatedFields: Partial<User>) => {
+    if (!profile) return;
 
     try {
-      console.log('Fetching profile for user:', user.id);
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('auth_uid', user.id)
-        .single();
-
-      if (error) throw error;
-
-      setProfile(data);
-      setError(null);
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-      setError(error instanceof Error ? error.message : 'Failed to load profile');
-    } finally {
-      setLoading(false);
+      const updatedProfile = await apiClient.user.updateProfile(updatedFields);
+      setProfile(updatedProfile);
+      return updatedProfile;
+    } catch (err: unknown) {
+      console.error('Error updating profile:', err);
+      setError('Failed to update profile. Please try again.');
+      return null;
     }
   };
 
-  const updateProfile = async (updates: Partial<Profile>) => {
-    if (!user || !profile) return;
-
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('id', profile.id);
-
-      if (error) throw error;
-
-      setProfile(prev => prev ? { ...prev, ...updates } : null);
-      return { success: true };
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to update profile' 
-      };
-    }
-  };
-
-  return {
-    profile,
-    loading,
-    error,
-    updateProfile,
-    refetch: fetchProfile,
-  };
+  return { profile, loading, error, fetchProfile, updateProfile };
 };

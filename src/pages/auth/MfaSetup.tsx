@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,7 +8,6 @@ import { Shield, Check } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useAuthStore } from "@/stores/useAuthStore";
 import { apiClient } from "@/services/apiClient";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { AuthCard } from "@/components/auth/AuthCard";
@@ -52,9 +51,9 @@ export default function MfaSetup() {
   };
 
   // Load setup data when component mounts
-  useState(() => {
+  useEffect(() => {
     initSetup();
-  });
+  }, []);
 
   const onSubmit = async (data: FormData) => {
     try {

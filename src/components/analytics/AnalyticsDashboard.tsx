@@ -160,7 +160,7 @@ export function AnalyticsDashboard() {
     };
   };
 
-  const calculateSessionDurations = (events: any[]): number[] => {
+  const calculateSessionDurations = (events: AnalyticsEvent[]): number[] => {
     const sessionEvents = events.reduce((acc, event) => {
       const sessionId = event.session_id;
       if (!acc[sessionId]) {
@@ -179,7 +179,7 @@ export function AnalyticsDashboard() {
       .filter(duration => duration > 0);
   };
 
-  const generateDailyStats = (events: any[]) => {
+  const generateDailyStats = (events: AnalyticsEvent[]) => {
     const dailyData = events.reduce((acc, event) => {
       const date = new Date(event.timestamp).toISOString().split('T')[0];
       if (!acc[date]) {

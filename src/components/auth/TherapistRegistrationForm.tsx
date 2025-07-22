@@ -4,13 +4,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { X, Plus } from 'lucide-react';
 import { FileUpload } from '@/components/ui/FileUpload';
 import { TherapistRegisterDTO } from '@/types/auth';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 const therapistSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -41,13 +41,17 @@ const therapistSchema = z.object({
 type TherapistFormData = z.infer<typeof therapistSchema>;
 
 interface TherapistRegistrationFormProps {
-  onSubmit: (data: TherapistRegisterDTO) => void;
-  loading?: boolean;
+  onSubmit: (data: TherapistRegisterDTO) => Promise<void>;
+  loading: boolean;
+  error: string | null;
+  onBack: () => void;
 }
 
 export const TherapistRegistrationForm: React.FC<TherapistRegistrationFormProps> = ({
   onSubmit,
-  loading = false,
+  loading,
+  error,
+  onBack,
 }) => {
   const [specializations, setSpecializations] = useState<string[]>(['']);
   const [languages, setLanguages] =  useState<string[]>(['']);
@@ -59,13 +63,7 @@ export const TherapistRegistrationForm: React.FC<TherapistRegistrationFormProps>
   const [idDocument, setIdDocument] = useState<File | null>(null);
   const [otherDocuments, setOtherDocuments] = useState<File[]>([]);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    setValue,
-    watch,
-  } = useForm<TherapistFormData>({
+  const form = useForm<TherapistFormData>({
     resolver: zodResolver(therapistSchema),
     defaultValues: {
       years_experience: 0,
@@ -118,58 +116,54 @@ export const TherapistRegistrationForm: React.FC<TherapistRegistrationFormProps>
     setCertifications(updated);
   };
 
-  const handleFormSubmit = (data: TherapistFormData) => {
-    // Ensure required fields are present
-    if (!data.national_id_number) {
-      throw new Error('National ID number is required');
-    }
-    if (!data.license_body) {
-      throw new Error('License body is required');
-    }
-    if (!data.license_number) {
-      throw new Error('License number is required');
+  const handleFormSubmit = async (data: z.infer<typeof therapistSchema>) => {
+
+    if (!licenseDocument || !idDocument) {
+      return;
     }
 
-    const therapistData: TherapistRegisterDTO = {
-      email: data.email,
-      password: data.password,
-      confirmPassword: data.confirmPassword,
-      first_name: data.first_name,
-      last_name: data.last_name,
-      phone_number: data.phone_number,
-      date_of_birth: data.date_of_birth ? new Date(data.date_of_birth) : undefined,
-      gender: data.gender,
-      country: data.country,
-      preferred_language: data.preferred_language,
-      role: 'therapist',
-      national_id_number: data.national_id_number,
-      license_body: data.license_body,
-      license_number: data.license_number,
-      license_expiry_date: data.license_expiry_date ? new Date(data.license_expiry_date) : undefined,
-      insurance_provider: data.insurance_provider,
-      insurance_policy_number: data.insurance_policy_number,
-      insurance_expiry_date: data.insurance_expiry_date ? new Date(data.insurance_expiry_date) : undefined,
-      years_experience: data.years_experience,
-      specializations: specializations.filter(s => s.trim() !== ''),
-      languages_spoken: languages.filter(l => l.trim() !== ''),
-      education_background: data.education_background,
-      certifications: certifications.filter(c => c.trim() !== '').length > 0 
-        ? certifications.filter(c => c.trim() !== '') 
-        : undefined,
-      bio: data.bio,
-      
-      // Add file uploads
-      licenseDocument,
-      insuranceDocument,
-      idDocument,
-      otherDocuments: otherDocuments.length > 0 ? otherDocuments : undefined,
-    };
+    const fileToBase64 = (file: File): Promise<string> =>
+      new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = (error) => reject(error);
+      });
 
-    onSubmit(therapistData);
+    try {
+      const [license_document, id_document, insurance_document, ...other_documents_base64] = await Promise.all([
+        fileToBase64(licenseDocument),
+        fileToBase64(idDocument),
+        insuranceDocument ? fileToBase64(insuranceDocument) : Promise.resolve(undefined),
+        ...otherDocuments.map(fileToBase64),
+      ]);
+
+      const therapistData: TherapistRegisterDTO = {
+        ...data,
+        role: 'therapist',
+        date_of_birth: data.date_of_birth ? new Date(data.date_of_birth) : undefined,
+        license_expiry_date: data.license_expiry_date ? new Date(data.license_expiry_date) : undefined,
+        insurance_expiry_date: data.insurance_expiry_date ? new Date(data.insurance_expiry_date) : undefined,
+        specializations: specializations.filter(s => s.trim() !== ''),
+        languages_spoken: languages.filter(l => l.trim() !== ''),
+        certifications: certifications.filter(c => c.trim() !== ''),
+        documents: {
+          license_document,
+          id_document,
+          insurance_document,
+          other_documents: other_documents_base64,
+        },
+      };
+
+      await onSubmit(therapistData);
+    } catch (error) {
+      console.error("Error preparing therapist registration data:", error);
+    }
   };
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
       {/* Personal Information */}
       <Card>
         <CardHeader>
@@ -178,92 +172,128 @@ export const TherapistRegistrationForm: React.FC<TherapistRegistrationFormProps>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="first_name">First Name *</Label>
-              <Input
-                id="first_name"
-                {...register('first_name')}
-                placeholder="Enter your first name"
-              />
-              {errors.first_name && <p className="text-sm text-red-600">{errors.first_name.message}</p>}
-            </div>
-            <div>
-              <Label htmlFor="last_name">Last Name *</Label>
-              <Input
-                id="last_name"
-                {...register('last_name')}
-                placeholder="Enter your last name"
-              />
-              {errors.last_name && <p className="text-sm text-red-600">{errors.last_name.message}</p>}
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="email">Email Address *</Label>
-            <Input
-              id="email"
-              type="email"
-              {...register('email')}
-              placeholder="Enter your email address"
+            <FormField
+              control={form.control}
+              name="first_name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>First Name *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter your first name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-            {errors.email && <p className="text-sm text-red-600">{errors.email.message}</p>}
+            <FormField
+              control={form.control}
+              name="last_name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Last Name *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter your last name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email Address *</FormLabel>
+                <FormControl>
+                  <Input type="email" placeholder="Enter your email address" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password *</FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder="Enter your password" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="confirmPassword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Confirm Password *</FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder="Confirm your password" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="password">Password *</Label>
-              <Input
-                id="password"
-                type="password"
-                {...register('password')}
-                placeholder="Enter your password"
-              />
-              {errors.password && <p className="text-sm text-red-600">{errors.password.message}</p>}
-            </div>
-            <div>
-              <Label htmlFor="confirmPassword">Confirm Password *</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                {...register('confirmPassword')}
-                placeholder="Confirm your password"
-              />
-              {errors.confirmPassword && <p className="text-sm text-red-600">{errors.confirmPassword.message}</p>}
-            </div>
+            <FormField
+              control={form.control}
+              name="phone_number"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Phone Number</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter your phone number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="date_of_birth"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Date of Birth</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="phone_number">Phone Number</Label>
-              <Input
-                id="phone_number"
-                {...register('phone_number')}
-                placeholder="Enter your phone number"
-              />
-            </div>
-            <div>
-              <Label htmlFor="date_of_birth">Date of Birth</Label>
-              <Input
-                id="date_of_birth"
-                type="date"
-                {...register('date_of_birth')}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="gender">Gender</Label>
-              <Select onValueChange={(value) => setValue('gender', value as 'male' | 'female')}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select gender" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="male">Male</SelectItem>
-                  <SelectItem value="female">Female</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <FormField
+              control={form.control}
+              name="gender"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Gender</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <div>
               <Label htmlFor="country">Country</Label>
               <Input
@@ -293,85 +323,119 @@ export const TherapistRegistrationForm: React.FC<TherapistRegistrationFormProps>
           <CardDescription>Your professional credentials and experience</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="national_id_number">National ID Number *</Label>
-            <Input
-              id="national_id_number"
-              {...register('national_id_number')}
-              placeholder="Enter your national ID number"
-            />
-            {errors.national_id_number && <p className="text-sm text-red-600">{errors.national_id_number.message}</p>}
-          </div>
+          <FormField
+            control={form.control}
+            name="national_id_number"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>National ID Number *</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter your national ID number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="license_body">License Body *</Label>
-              <Input
-                id="license_body"
-                {...register('license_body')}
-                placeholder="e.g., State Board of Psychology"
-              />
-              {errors.license_body && <p className="text-sm text-red-600">{errors.license_body.message}</p>}
-            </div>
-            <div>
-              <Label htmlFor="license_number">License Number *</Label>
-              <Input
-                id="license_number"
-                {...register('license_number')}
-                placeholder="Enter your license number"
-              />
-              {errors.license_number && <p className="text-sm text-red-600">{errors.license_number.message}</p>}
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="license_expiry_date">License Expiry Date</Label>
-            <Input
-              id="license_expiry_date"
-              type="date"
-              {...register('license_expiry_date')}
+            <FormField
+              control={form.control}
+              name="license_body"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>License Body *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., State Board of Psychology" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="license_number"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>License Number *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter your license number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
           </div>
+
+          <FormField
+            control={form.control}
+            name="license_expiry_date"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>License Expiry Date</FormLabel>
+                <FormControl>
+                  <Input type="date" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="insurance_provider">Insurance Provider</Label>
-              <Input
-                id="insurance_provider"
-                {...register('insurance_provider')}
-                placeholder="e.g., Professional Insurance Company"
-              />
-            </div>
-            <div>
-              <Label htmlFor="insurance_policy_number">Insurance Policy Number</Label>
-              <Input
-                id="insurance_policy_number"
-                {...register('insurance_policy_number')}
-                placeholder="Enter policy number"
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="insurance_expiry_date">Insurance Expiry Date</Label>
-            <Input
-              id="insurance_expiry_date"
-              type="date"
-              {...register('insurance_expiry_date')}
+            <FormField
+              control={form.control}
+              name="insurance_provider"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Insurance Provider</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., Professional Insurance Company" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="insurance_policy_number"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Insurance Policy Number</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter policy number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
           </div>
 
-          <div>
-            <Label htmlFor="years_experience">Years of Experience *</Label>
-            <Input
-              id="years_experience"
-              type="number"
-              min="0"
-              {...register('years_experience', { valueAsNumber: true })}
-              placeholder="0"
-            />
-            {errors.years_experience && <p className="text-sm text-red-600">{errors.years_experience.message}</p>}
-          </div>
+          <FormField
+            control={form.control}
+            name="insurance_expiry_date"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Insurance Expiry Date</FormLabel>
+                <FormControl>
+                  <Input type="date" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="years_experience"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Years of Experience *</FormLabel>
+                <FormControl>
+                  <Input type="number" min="0" placeholder="0" {...field} onChange={e => field.onChange(parseInt(e.target.value))}/>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </CardContent>
       </Card>
 
@@ -460,15 +524,19 @@ export const TherapistRegistrationForm: React.FC<TherapistRegistrationFormProps>
           <CardDescription>Education, certifications, and bio</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="education_background">Education Background</Label>
-            <Textarea
-              id="education_background"
-              {...register('education_background')}
-              placeholder="Describe your educational background"
-              rows={3}
-            />
-          </div>
+          <FormField
+            control={form.control}
+            name="education_background"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Education Background</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Describe your educational background" rows={3} {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           <div>
             <Label>Professional Certifications</Label>
@@ -501,15 +569,19 @@ export const TherapistRegistrationForm: React.FC<TherapistRegistrationFormProps>
             </Button>
           </div>
 
-          <div>
-            <Label htmlFor="bio">Professional Bio</Label>
-            <Textarea
-              id="bio"
-              {...register('bio')}
-              placeholder="Tell us about yourself and your approach to therapy"
-              rows={4}
-            />
-          </div>
+          <FormField
+            control={form.control}
+            name="bio"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Professional Bio</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Tell us about yourself and your approach to therapy" rows={4} {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </CardContent>
       </Card>
 
@@ -593,9 +665,21 @@ export const TherapistRegistrationForm: React.FC<TherapistRegistrationFormProps>
         </CardContent>
       </Card>
 
-      <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? 'Creating Account...' : 'Create Therapist Account'}
-      </Button>
+      {error && (
+        <div className="bg-destructive/15 text-destructive text-sm p-3 rounded-md text-center">
+          {error}
+        </div>
+      )}
+
+      <div className="flex gap-4">
+        <Button type="button" variant="outline" onClick={onBack} className="flex-1">
+          Back
+        </Button>
+        <Button type="submit" className="flex-1" disabled={loading}>
+          {loading ? 'Creating Account...' : 'Create Therapist Account'}
+        </Button>
+      </div>
     </form>
+  </Form>
   );
 };

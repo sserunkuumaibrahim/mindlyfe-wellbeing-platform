@@ -1,5 +1,5 @@
 
-import { supabase } from '@/integrations/supabase/client';
+import { postgresClient } from '@/integrations/postgresql/client';
 
 export interface CreateWorkshopData {
   title: string;
@@ -16,67 +16,76 @@ export interface CreateWorkshopData {
 
 export const workshopService = {
   async createWorkshop(data: CreateWorkshopData) {
-    const { data: workshop, error } = await supabase
-      .from('workshops')
-      .insert(data)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return workshop;
+    try {
+      const result = await postgresClient
+        .from('workshops')
+        .insert(data)
+        .select()
+        .single();
+      return result.data;
+    } catch (error) {
+      throw new Error(`Failed to create workshop: ${error}`);
+    }
   },
 
   async getWorkshops(organizationId?: string) {
-    let query = supabase
-      .from('workshops')
-      .select(`
-        *,
-        facilitator:profiles!workshops_facilitator_id_fkey(first_name, last_name, profile_photo_url),
-        organization:organization_profiles(organization_name),
-        enrollments:workshop_enrollments(count)
-      `)
-      .order('scheduled_at', { ascending: true });
+    try {
+      let query = postgresClient
+        .from('workshops')
+        .select(`
+          *,
+          facilitator:profiles!workshops_facilitator_id_fkey(first_name, last_name, profile_photo_url),
+          organization:organization_profiles(organization_name),
+          enrollments:workshop_enrollments(count)
+        `)
+        .order('scheduled_at', { ascending: true });
 
-    if (organizationId) {
-      query = query.eq('organization_id', organizationId);
+      if (organizationId) {
+        query = query.eq('organization_id', organizationId);
+      }
+
+      const result = await query;
+      return result.data;
+    } catch (error) {
+      throw new Error(`Failed to get workshops: ${error}`);
     }
-
-    const { data, error } = await query;
-    if (error) throw error;
-    return data;
   },
 
   async enrollInWorkshop(workshopId: string, profileId: string) {
-    const { data, error } = await supabase
-      .from('workshop_enrollments')
-      .insert({
-        workshop_id: workshopId,
-        profile_id: profileId
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
+    try {
+      const result = await postgresClient
+        .from('workshop_enrollments')
+        .insert({
+          workshop_id: workshopId,
+          profile_id: profileId
+        })
+        .select()
+        .single();
+      return result.data;
+    } catch (error) {
+      throw new Error(`Failed to enroll in workshop: ${error}`);
+    }
   },
 
   async getUserEnrollments(profileId: string) {
-    const { data, error } = await supabase
-      .from('workshop_enrollments')
-      .select(`
-        *,
-        workshop:workshops(
-          title,
-          description,
-          scheduled_at,
-          duration_minutes,
-          facilitator:profiles!workshops_facilitator_id_fkey(first_name, last_name)
-        )
-      `)
-      .eq('profile_id', profileId)
-      .order('enrolled_at', { ascending: false });
-
-    if (error) throw error;
-    return data;
+    try {
+      const result = await postgresClient
+        .from('workshop_enrollments')
+        .select(`
+          *,
+          workshop:workshops(
+            title,
+            description,
+            scheduled_at,
+            duration_minutes,
+            facilitator:profiles!workshops_facilitator_id_fkey(first_name, last_name)
+          )
+        `)
+        .eq('profile_id', profileId)
+        .order('enrolled_at', { ascending: false });
+      return result.data;
+    } catch (error) {
+      throw new Error(`Failed to get user enrollments: ${error}`);
+    }
   }
 };

@@ -1,7 +1,8 @@
 
 import { User, UserRole, GenderType, CommunicationPreference, OrganizationType } from './user';
+import { type AuthUser, type AuthSession } from '@/integrations/postgresql/client';
 
-export type { GenderType, CommunicationPreference, OrganizationType } from './user';
+export type { GenderType, CommunicationPreference, OrganizationType, UserRole } from './user';
 
 export interface LoginDTO {
   email: string;
@@ -49,10 +50,12 @@ export interface TherapistRegisterDTO extends BaseRegisterDTO {
   education_background?: string;
   certifications?: string[];
   bio?: string;
-  // Document files
-  licenseDocument?: File | null;
-  insuranceDocument?: File | null;
-  idDocument?: File | null;
+  // Document data
+  documents?: Record<string, string>;
+  // Document file objects
+  licenseDocument?: File;
+  insuranceDocument?: File;
+  idDocument?: File;
   otherDocuments?: File[];
 }
 
@@ -71,7 +74,7 @@ export interface OrganizationRegisterDTO extends BaseRegisterDTO {
   postal_code?: string;
   representative_job_title: string;
   representative_national_id: string;
-  service_requirements?: Record<string, any>;
+  service_requirements?: Record<string, unknown>;
   billing_contact_email?: string;
   billing_contact_phone?: string;
 }
@@ -104,4 +107,18 @@ export interface MfaStatus {
 export interface VerificationCodeResponse {
   success: boolean;
   message: string;
+}
+
+export interface ExtendedAuthUser extends AuthUser {
+  role: UserRole;
+  // Additional profile data that might be returned from the backend
+  role_data?: Record<string, unknown>;
+  documents?: Array<{
+    id: string;
+    file_name: string;
+    file_path: string;
+    mime_type: string;
+    status: string;
+    created_at: string;
+  }>;
 }

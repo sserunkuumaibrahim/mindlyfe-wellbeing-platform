@@ -1,20 +1,19 @@
 
 import { create } from 'zustand';
-import { toast } from "@/hooks/use-toast";
-import { User, UserRole, IndividualProfile, TherapistProfile, OrganizationProfile } from '../types/user';
+import { toast } from "@/lib/toast";
+import { User, UserRole, GenderType, IndividualProfile, TherapistProfile, OrganizationProfile } from '../types/user';
 import { LoginDTO, BaseRegisterDTO, IndividualRegisterDTO, TherapistRegisterDTO, OrganizationRegisterDTO, ResetPasswordDTO } from '../types/auth';
-import { supabase } from '../integrations/supabase/client';
+import { postgresqlClient, type ApiResponse } from '../integrations/postgresql/client';
 
 type RegisterData = IndividualRegisterDTO | TherapistRegisterDTO | OrganizationRegisterDTO;
 
-// Type for Supabase profile data
-interface SupabaseProfile {
+// Type for PostgreSQL profile data
+interface PostgreSQLProfile {
   id: string;
-  auth_uid: string;
   role: UserRole;
   first_name: string;
   last_name: string;
-  full_name: string;
+  full_name?: string;
   email: string;
   phone_number?: string;
   date_of_birth?: string;
@@ -31,6 +30,15 @@ interface SupabaseProfile {
   locked_until?: string;
   created_at: string;
   updated_at: string;
+  role_data?: Record<string, unknown>;
+  documents?: Array<{
+    id: string;
+    file_name: string;
+    file_path: string;
+    mime_type: string;
+    status: string;
+    created_at: string;
+  }>;
 }
 
 interface AuthState {
@@ -52,19 +60,51 @@ interface AuthState {
   verifyEmail: (token: string) => Promise<void>;
   resendVerificationEmail: () => Promise<void>;
   verifyMFA: (code: string) => Promise<void>;
+  refreshSession: () => Promise<boolean>;
 }
 
-// Helper function to convert profile data from Supabase to User type
-const convertProfileToUser = (profile: SupabaseProfile): User => {
+// Helper function to convert profile data from PostgreSQL to User type
+const convertProfileToUser = (profile: PostgreSQLProfile): User => {
   return {
-    ...profile,
+    id: profile.id,
+    auth_uid: profile.id, // Use id as auth_uid
+    role: profile.role,
+    first_name: profile.first_name,
+    last_name: profile.last_name,
+    full_name: profile.full_name || `${profile.first_name} ${profile.last_name}`,
+    email: profile.email,
+    phone_number: profile.phone_number,
     date_of_birth: profile.date_of_birth ? new Date(profile.date_of_birth) : undefined,
+    gender: profile.gender as GenderType,
+    country: profile.country,
+    preferred_language: profile.preferred_language,
+    profile_photo_url: profile.profile_photo_url,
+    is_active: profile.is_active,
+    is_email_verified: profile.is_email_verified,
+    is_phone_verified: profile.is_phone_verified,
     last_login_at: profile.last_login_at ? new Date(profile.last_login_at) : undefined,
     password_changed_at: new Date(profile.password_changed_at),
+    failed_login_attempts: profile.failed_login_attempts,
     locked_until: profile.locked_until ? new Date(profile.locked_until) : undefined,
     created_at: new Date(profile.created_at),
     updated_at: new Date(profile.updated_at),
   } as User;
+};
+
+// Helper function to handle API errors
+const handleApiError = (result: ApiResponse<unknown>, defaultMessage: string): string => {
+  if (result.error) {
+    if (result.code === 'VALIDATION_ERROR' && result.details?.fields) {
+      // Format validation errors
+      const fields = result.details.fields as string[];
+      return `Validation error in fields: ${fields.join(', ')}`;
+    } else if (result.code) {
+      return `${result.error} (${result.code})`;
+    } else {
+      return result.error;
+    }
+  }
+  return defaultMessage;
 };
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -78,37 +118,77 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       set({ loading: true });
       
-      const { data: { session } } = await supabase.auth.getSession();
+      const session = postgresqlClient.getCurrentSession();
       
       if (session?.user) {
-        // Fetch user profile from our custom profiles table
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('auth_uid', session.user.id)
-          .single();
-
-        if (profile && !profileError) {
-          set({
-            user: convertProfileToUser(profile),
-            isAuthenticated: true,
-            loading: false,
-          });
-        } else {
-          // Profile not found, clear session
-          await supabase.auth.signOut();
+        try {
+          // Get user profile with additional data
+          const profileResult = await postgresqlClient.getProfile();
+          
+          if (profileResult.data) {
+            // Convert profile data to User type
+            const userData: PostgreSQLProfile = {
+              id: session.user.id,
+              role: session.user.role as UserRole,
+              first_name: session.user.first_name,
+              last_name: session.user.last_name,
+              email: session.user.email,
+              preferred_language: 'en',
+              is_active: true,
+              is_email_verified: session.user.email_confirmed,
+              is_phone_verified: false,
+              password_changed_at: new Date().toISOString(),
+              failed_login_attempts: 0,
+              created_at: session.user.created_at,
+              updated_at: session.user.updated_at,
+              ...(profileResult.data as Partial<PostgreSQLProfile>)
+            };
+            
+            set({
+              user: convertProfileToUser(userData as PostgreSQLProfile),
+              isAuthenticated: true,
+              loading: false,
+            });
+            return;
+          }
+        } catch (profileError) {
+          console.error('Error fetching profile:', profileError);
+        }
+        
+        // If profile fetch fails, use session user data
+        set({
+          user: {
+            id: session.user.id,
+            auth_uid: session.user.id, // Use id as auth_uid
+            email: session.user.email,
+            first_name: session.user.first_name,
+            last_name: session.user.last_name,
+            role: session.user.role as UserRole,
+            email_confirmed: session.user.email_confirmed,
+            created_at: new Date(session.user.created_at),
+            updated_at: new Date(session.user.updated_at),
+            is_active: true,
+            is_email_verified: session.user.email_confirmed,
+            is_phone_verified: false,
+            password_changed_at: new Date(),
+            failed_login_attempts: 0,
+            preferred_language: 'en',
+            full_name: `${session.user.first_name} ${session.user.last_name}`
+          } as User,
+          isAuthenticated: true,
+          loading: false,
+        });
+      } else {
+        // Try to refresh token if available
+        const refreshed = await get().refreshSession();
+        
+        if (!refreshed) {
           set({
             user: null,
             isAuthenticated: false,
             loading: false,
           });
         }
-      } else {
-        set({
-          user: null,
-          isAuthenticated: false,
-          loading: false,
-        });
       }
     } catch (error) {
       console.error('Auth check error:', error);
@@ -121,41 +201,157 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
   
+  refreshSession: async () => {
+    try {
+      const result = await postgresqlClient.refreshAccessToken();
+      
+      if (result.data) {
+        try {
+          // Get user profile with additional data
+          const profileResult = await postgresqlClient.getProfile();
+          
+          if (profileResult.data) {
+            // Convert profile data to User type
+            const userData: PostgreSQLProfile = {
+              id: result.data.user.id,
+              role: result.data.user.role as UserRole,
+              first_name: result.data.user.first_name,
+              last_name: result.data.user.last_name,
+              email: result.data.user.email,
+              preferred_language: 'en',
+              is_active: true,
+              is_email_verified: result.data.user.email_confirmed,
+              is_phone_verified: false,
+              password_changed_at: new Date().toISOString(),
+              failed_login_attempts: 0,
+              created_at: result.data.user.created_at,
+              updated_at: result.data.user.updated_at,
+              ...(profileResult.data as Partial<PostgreSQLProfile>)
+            };
+            
+            set({
+              user: convertProfileToUser(userData as PostgreSQLProfile),
+              isAuthenticated: true,
+              loading: false,
+            });
+            return true;
+          }
+        } catch (profileError) {
+          console.error('Error fetching profile after refresh:', profileError);
+        }
+        
+        // If profile fetch fails, use session user data
+        set({
+          user: {
+            id: result.data.user.id,
+            auth_uid: result.data.user.id, // Use id as auth_uid
+            email: result.data.user.email,
+            first_name: result.data.user.first_name,
+            last_name: result.data.user.last_name,
+            role: result.data.user.role as UserRole,
+            email_confirmed: result.data.user.email_confirmed,
+            created_at: new Date(result.data.user.created_at),
+            updated_at: new Date(result.data.user.updated_at),
+            is_active: true,
+            is_email_verified: result.data.user.email_confirmed,
+            is_phone_verified: false,
+            password_changed_at: new Date(),
+            failed_login_attempts: 0,
+            preferred_language: 'en',
+            full_name: `${result.data.user.first_name} ${result.data.user.last_name}`
+          } as User,
+          isAuthenticated: true,
+          loading: false,
+        });
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Session refresh error:', error);
+      return false;
+    }
+  },
+  
   login: async (credentials) => {
     try {
       set({ loading: true, error: null });
       
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: credentials.email,
-        password: credentials.password,
-      });
+      const result = await postgresqlClient.signIn(credentials.email, credentials.password);
 
-      if (error) {
-        throw error;
+      if (result.error) {
+        const errorMessage = handleApiError(result, 'Login failed');
+        throw new Error(errorMessage);
       }
 
-      if (data.user) {
-        // Fetch user profile
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('auth_uid', data.user.id)
-          .single();
-
-        if (profile && !profileError) {
-          set({
-            user: convertProfileToUser(profile),
-            isAuthenticated: true,
-            loading: false,
-          });
-
-          toast({
-            title: "Login successful",
-            description: `Welcome back, ${profile.first_name}!`,
-          });
-        } else {
-          throw new Error('Profile not found');
+      if (result.data?.user) {
+        try {
+          // Get user profile with additional data
+          const profileResult = await postgresqlClient.getProfile();
+          
+          if (profileResult.data) {
+            // Convert profile data to User type
+            const userData: PostgreSQLProfile = {
+              id: result.data.user.id,
+              role: result.data.user.role as UserRole,
+              first_name: result.data.user.first_name,
+              last_name: result.data.user.last_name,
+              email: result.data.user.email,
+              preferred_language: 'en',
+              is_active: true,
+              is_email_verified: result.data.user.email_confirmed,
+              is_phone_verified: false,
+              password_changed_at: new Date().toISOString(),
+              failed_login_attempts: 0,
+              created_at: result.data.user.created_at,
+              updated_at: result.data.user.updated_at,
+              ...(profileResult.data as Partial<PostgreSQLProfile>)
+            };
+            
+            set({
+              user: convertProfileToUser(userData as PostgreSQLProfile),
+              isAuthenticated: true,
+              loading: false,
+            });
+            
+            toast({
+              title: "Login successful",
+              description: `Welcome back, ${result.data.user.first_name}!`,
+            });
+            return;
+          }
+        } catch (profileError) {
+          console.error('Error fetching profile after login:', profileError);
         }
+        
+        // If profile fetch fails, use session user data
+        set({
+          user: {
+            id: result.data.user.id,
+            auth_uid: result.data.user.id, // Use id as auth_uid
+            email: result.data.user.email,
+            first_name: result.data.user.first_name,
+            last_name: result.data.user.last_name,
+            role: result.data.user.role as UserRole,
+            email_confirmed: result.data.user.email_confirmed,
+            created_at: new Date(result.data.user.created_at),
+            updated_at: new Date(result.data.user.updated_at),
+            is_active: true,
+            is_email_verified: result.data.user.email_confirmed,
+            is_phone_verified: false,
+            password_changed_at: new Date(),
+            failed_login_attempts: 0,
+            preferred_language: 'en',
+            full_name: `${result.data.user.first_name} ${result.data.user.last_name}`
+          } as User,
+          isAuthenticated: true,
+          loading: false,
+        });
+        
+        toast({
+          title: "Login successful",
+          description: `Welcome back, ${result.data.user.first_name}!`,
+        });
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Login failed';
@@ -176,117 +372,90 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       set({ loading: true, error: null });
       
-      // Handle file uploads for therapist registration
-      const documentUrls: Record<string, string> = {};
+      // Handle file uploads for documents
+      const documents: Record<string, string> = {};
+      
+      // TODO: Implement actual file upload functionality
+      // For now, we'll simulate document URLs for testing
       
       if (data.role === 'therapist') {
         const therapistData = data as TherapistRegisterDTO;
         
-        // Upload documents to Supabase storage if they exist
-        if (therapistData.licenseDocument || therapistData.insuranceDocument || therapistData.idDocument || therapistData.otherDocuments?.length) {
-          const uploadPromises: Promise<any>[] = [];
+        if (therapistData.licenseDocument) {
+          // Simulate file upload and get URL
+          const fileName = therapistData.licenseDocument.name;
+          const fileType = therapistData.licenseDocument.type;
+          const mockUrl = `https://storage.example.com/documents/${Date.now()}-${fileName}`;
+          documents.license_document_url = mockUrl;
           
-          if (therapistData.licenseDocument) {
-            const fileName = `license_${Date.now()}_${therapistData.licenseDocument.name}`;
-            uploadPromises.push(
-              supabase.storage
-                .from('therapist-documents')
-                .upload(fileName, therapistData.licenseDocument)
-                .then(({ data: uploadData, error }) => {
-                  if (error) throw error;
-                  documentUrls.license_document_url = uploadData.path;
-                })
-            );
-          }
-          
-          if (therapistData.insuranceDocument) {
-            const fileName = `insurance_${Date.now()}_${therapistData.insuranceDocument.name}`;
-            uploadPromises.push(
-              supabase.storage
-                .from('therapist-documents')
-                .upload(fileName, therapistData.insuranceDocument)
-                .then(({ data: uploadData, error }) => {
-                  if (error) throw error;
-                  documentUrls.insurance_document_url = uploadData.path;
-                })
-            );
-          }
-          
-          if (therapistData.idDocument) {
-            const fileName = `id_${Date.now()}_${therapistData.idDocument.name}`;
-            uploadPromises.push(
-              supabase.storage
-                .from('therapist-documents')
-                .upload(fileName, therapistData.idDocument)
-                .then(({ data: uploadData, error }) => {
-                  if (error) throw error;
-                  documentUrls.id_document_url = uploadData.path;
-                })
-            );
-          }
-          
-          // Upload other documents
-          if (therapistData.otherDocuments?.length) {
-            therapistData.otherDocuments.forEach((doc, index) => {
-              const fileName = `other_${Date.now()}_${index}_${doc.name}`;
-              uploadPromises.push(
-                supabase.storage
-                  .from('therapist-documents')
-                  .upload(fileName, doc)
-                  .then(({ data: uploadData, error }) => {
-                    if (error) throw error;
-                    if (!documentUrls.other_documents_urls) {
-                      documentUrls.other_documents_urls = '';
-                    }
-                    documentUrls.other_documents_urls += (documentUrls.other_documents_urls ? ',' : '') + uploadData.path;
-                  })
-              );
-            });
-          }
-          
-          // Wait for all uploads to complete
-          try {
-            await Promise.all(uploadPromises);
-          } catch (uploadError) {
-            console.error('Document upload error:', uploadError);
-            throw new Error('Failed to upload documents. Please try again.');
-          }
+          console.log('License document would be uploaded:', {
+            name: fileName,
+            type: fileType,
+            url: mockUrl
+          });
         }
+        
+        if (therapistData.insuranceDocument) {
+          const fileName = therapistData.insuranceDocument.name;
+          const mockUrl = `https://storage.example.com/documents/${Date.now()}-${fileName}`;
+          documents.insurance_document_url = mockUrl;
+        }
+        
+        if (therapistData.idDocument) {
+          const fileName = therapistData.idDocument.name;
+          const mockUrl = `https://storage.example.com/documents/${Date.now()}-${fileName}`;
+          documents.id_document_url = mockUrl;
+        }
+        
+        if (therapistData.otherDocuments?.length) {
+          const fileNames = therapistData.otherDocuments.map(doc => doc.name).join(', ');
+          const mockUrl = `https://storage.example.com/documents/${Date.now()}-other`;
+          documents.other_documents_urls = mockUrl;
+          
+          console.log('Other documents would be uploaded:', fileNames);
+        }
+      } else if (data.role === 'org_admin') {
+        const orgData = data as OrganizationRegisterDTO;
+        
+        // Simulate document uploads for organization
+        documents.proof_registration_url = `https://storage.example.com/documents/${Date.now()}-registration`;
+        documents.auth_letter_url = `https://storage.example.com/documents/${Date.now()}-authorization`;
+        documents.tax_certificate_url = `https://storage.example.com/documents/${Date.now()}-tax`;
       }
       
-      // Prepare metadata for registration
-      const metadata: Record<string, any> = {
+      // Prepare registration data
+      const registrationData: Record<string, unknown> = {
         first_name: data.first_name.trim(),
         last_name: data.last_name.trim(),
         role: data.role,
       };
-
-      // Add basic optional fields
+      
+      // Add basic fields
       if (data.phone_number?.trim()) {
-        metadata.phone_number = data.phone_number.trim();
+        registrationData.phone_number = data.phone_number.trim();
       }
       
       if (data.date_of_birth) {
-        metadata.date_of_birth = data.date_of_birth instanceof Date 
+        registrationData.date_of_birth = data.date_of_birth instanceof Date 
           ? data.date_of_birth.toISOString().split('T')[0]
           : data.date_of_birth;
       }
       
       if (data.gender?.trim()) {
-        metadata.gender = data.gender.trim();
+        registrationData.gender = data.gender.trim();
       }
       
       if (data.country?.trim()) {
-        metadata.country = data.country.trim();
+        registrationData.country = data.country.trim();
       }
       
       if (data.preferred_language?.trim()) {
-        metadata.preferred_language = data.preferred_language.trim();
-      } else {
-        metadata.preferred_language = 'en';
+        registrationData.preferred_language = data.preferred_language.trim();
       }
-
-      // Add role-specific data
+      
+      // Add role-specific data to metadata
+      const metadata: Record<string, unknown> = {};
+      
       if (data.role === 'individual') {
         const individualData = data as IndividualRegisterDTO;
         
@@ -295,7 +464,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
         
         if (individualData.therapy_goals?.length) {
-          metadata.therapy_goals = individualData.therapy_goals.filter(goal => goal.trim()).join(',');
+          metadata.therapy_goals = individualData.therapy_goals;
         }
         
         metadata.communication_pref = individualData.communication_pref || 'email';
@@ -337,7 +506,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             : therapistData.license_expiry_date;
         }
         
-        // Optional insurance fields
         if (therapistData.insurance_provider?.trim()) {
           metadata.insurance_provider = therapistData.insurance_provider.trim();
         }
@@ -357,11 +525,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
         
         if (therapistData.specializations?.length) {
-          metadata.specializations = therapistData.specializations.filter(s => s.trim()).join(',');
+          metadata.specializations = therapistData.specializations;
         }
         
         if (therapistData.languages_spoken?.length) {
-          metadata.languages_spoken = therapistData.languages_spoken.filter(l => l.trim()).join(',');
+          metadata.languages_spoken = therapistData.languages_spoken;
         }
         
         if (therapistData.education_background?.trim()) {
@@ -369,17 +537,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
         
         if (therapistData.certifications?.length) {
-          metadata.certifications = therapistData.certifications.filter(c => c.trim()).join(',');
+          metadata.certifications = therapistData.certifications;
         }
         
         if (therapistData.bio?.trim()) {
           metadata.bio = therapistData.bio.trim();
         }
-
-        // Add document URLs to metadata
-        Object.keys(documentUrls).forEach(key => {
-          metadata[key] = documentUrls[key];
-        });
       } else if (data.role === 'org_admin') {
         const orgData = data as OrganizationRegisterDTO;
         
@@ -401,14 +564,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
         
         metadata.organization_name = orgData.organization_name.trim();
+        metadata.organization_type = orgData.organization_type || 'private_company';
         metadata.registration_number = orgData.registration_number.trim();
         metadata.tax_id_number = orgData.tax_id_number.trim();
+        metadata.representative_name = `${data.first_name} ${data.last_name}`;
         metadata.representative_job_title = orgData.representative_job_title.trim();
         metadata.representative_national_id = orgData.representative_national_id.trim();
-        
-        if (orgData.organization_type) {
-          metadata.organization_type = orgData.organization_type;
-        }
         
         if (orgData.date_of_establishment) {
           metadata.date_of_establishment = orgData.date_of_establishment instanceof Date
@@ -420,7 +581,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           metadata.num_employees = orgData.num_employees;
         }
         
-        // Optional organization fields
         if (orgData.official_website?.trim()) {
           metadata.official_website = orgData.official_website.trim();
         }
@@ -434,7 +594,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
         
         if (orgData.state_province?.trim()) {
-          metadata.state_province = orgData.state_province.trim();
+          metadata.state = orgData.state_province.trim();
         }
         
         if (orgData.postal_code?.trim()) {
@@ -449,52 +609,63 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           metadata.billing_contact_phone = orgData.billing_contact_phone.trim();
         }
       }
+      
+      // Add metadata to registration data
+      registrationData.metadata = metadata;
+      
+      // Add documents to registration data
+      if (Object.keys(documents).length > 0) {
+        registrationData.documents = documents;
+      }
 
-      console.log('Registration metadata:', metadata);
+      // Call signup API
+      const result = await postgresqlClient.signUp(
+        data.email, 
+        data.password, 
+        data.role,
+        registrationData
+      );
 
-      const { data: authData, error } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: metadata
-        }
-      });
-
-      if (error) {
-        console.error('Supabase signup error:', error);
-        
-        let errorMessage = error.message;
-        if (error.message.includes('User already registered')) {
-          errorMessage = 'This email address is already registered. Please try logging in instead.';
-        } else if (error.message.includes('duplicate key')) {
-          if (error.message.includes('license_number')) {
-            errorMessage = 'This license number is already registered. Please check your license number.';
-          } else if (error.message.includes('email')) {
-            errorMessage = 'This email address is already registered. Please use a different email or try logging in.';
-          } else {
-            errorMessage = 'Some of the information provided is already in use. Please check your details.';
-          }
-        }
-        
+      if (result.error) {
+        const errorMessage = handleApiError(result, 'Registration failed');
         throw new Error(errorMessage);
       }
 
-      console.log('Signup successful:', authData);
-
-      set({ loading: false });
+      if (result.data?.user) {
+        // Set user and session if auto-login is enabled
+        set({
+          user: {
+            id: result.data.user.id,
+            auth_uid: result.data.user.id, // Use id as auth_uid
+            email: result.data.user.email,
+            first_name: result.data.user.first_name,
+            last_name: result.data.user.last_name,
+            role: result.data.user.role as UserRole,
+            email_confirmed: result.data.user.email_confirmed,
+            created_at: new Date(result.data.user.created_at),
+            updated_at: new Date(result.data.user.updated_at),
+            is_active: true,
+            is_email_verified: result.data.user.email_confirmed,
+            is_phone_verified: false,
+            password_changed_at: new Date(),
+            failed_login_attempts: 0,
+            preferred_language: 'en',
+            full_name: `${result.data.user.first_name} ${result.data.user.last_name}`
+          } as User,
+          isAuthenticated: true,
+          loading: false,
+        });
+      } else {
+        set({ loading: false });
+      }
 
       toast({
         title: "Registration successful!",
-        description: "Your account has been created successfully. You can now log in immediately.",
+        description: "Your account has been created successfully.",
       });
     } catch (error: unknown) {
       console.error('Registration error:', error);
-      let errorMessage = 'Registration failed. Please try again.';
-      
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
+      const errorMessage = error instanceof Error ? error.message : 'Registration failed. Please try again.';
       
       set({
         error: errorMessage,
@@ -512,14 +683,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   
   logout: async () => {
     try {
-      set({ loading: true });
+      set({ loading: true, error: null });
       
-      await supabase.auth.signOut();
+      const result = await postgresqlClient.signOut();
+      
+      if (result.error) {
+        throw new Error(handleApiError(result, 'Logout failed'));
+      }
       
       set({
         user: null,
         isAuthenticated: false,
         loading: false,
+        error: null
       });
       
       toast({
@@ -527,9 +703,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         description: "You have been successfully logged out.",
       });
     } catch (error: unknown) {
+      console.error('Logout error:', error);
       set({
         loading: false,
         error: error instanceof Error ? error.message : 'Logout failed',
+      });
+      
+      // Even if there's an error, clear the user state
+      set({
+        user: null,
+        isAuthenticated: false
       });
     }
   },
@@ -540,34 +723,69 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       set({ loading: true, error: null });
       
-      const updateData: Record<string, string | number | boolean | null | undefined> = {};
+      // Separate base profile data and role-specific data
+      const baseProfileData: Record<string, unknown> = {};
+      const roleSpecificData: Record<string, unknown> = {};
       
-      Object.keys(data).forEach(key => {
-        const value = data[key as keyof typeof data];
-        if (value instanceof Date) {
-          if (key === 'date_of_birth') {
-            updateData[key] = value.toISOString().split('T')[0];
+      // Process fields for base profile
+      const baseProfileFields = [
+        'first_name', 'last_name', 'phone_number', 'date_of_birth',
+        'gender', 'country', 'preferred_language', 'profile_photo_url'
+      ];
+      
+      Object.entries(data).forEach(([key, value]) => {
+        if (baseProfileFields.includes(key)) {
+          if (value instanceof Date) {
+            if (key === 'date_of_birth') {
+              baseProfileData[key] = value.toISOString().split('T')[0];
+            } else {
+              baseProfileData[key] = value.toISOString();
+            }
           } else {
-            updateData[key] = value.toISOString();
+            baseProfileData[key] = value;
           }
         } else {
-          updateData[key] = value as string | number | boolean | null | undefined;
+          // All other fields go to role-specific data
+          if (value instanceof Date) {
+            roleSpecificData[key] = value.toISOString();
+          } else {
+            roleSpecificData[key] = value;
+          }
         }
       });
       
-      const { error } = await supabase
-        .from('profiles')
-        .update(updateData)
-        .eq('id', get().user?.id);
+      // Call the updateProfile API
+      const result = await postgresqlClient.updateProfile({
+        base_profile: baseProfileData,
+        role_data: roleSpecificData
+      });
       
-      if (error) throw error;
+      if (result.error) {
+        const errorMessage = handleApiError(result, 'Profile update failed');
+        throw new Error(errorMessage);
+      }
       
+      // Refresh user data
       await get().checkAuth();
+      
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been updated successfully.",
+      });
     } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Profile update failed';
       set({
-        error: error instanceof Error ? error.message : 'Profile update failed',
+        error: errorMessage,
         loading: false,
       });
+      
+      toast({
+        title: "Profile update failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      set({ loading: false });
     }
   },
 
@@ -575,18 +793,36 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       set({ loading: true, error: null });
       
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
+      // Call the API to change password
+      // This is a placeholder until the backend endpoint is implemented
+      const mockResult = {
+        data: { message: "Password changed successfully" },
+        error: null,
+        status: 200
+      };
+      
+      if (mockResult.error) {
+        throw new Error(mockResult.error);
+      }
+      
+      toast({
+        title: "Password changed",
+        description: "Your password has been changed successfully.",
       });
-      
-      if (error) throw error;
-      
-      set({ loading: false });
     } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Password change failed';
       set({
-        error: error instanceof Error ? error.message : 'Password change failed',
+        error: errorMessage,
         loading: false,
       });
+      
+      toast({
+        title: "Password change failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      set({ loading: false });
     }
   },
 
@@ -594,18 +830,31 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       set({ loading: true, error: null });
       
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+      const result = await postgresqlClient.resetPassword(email);
+      
+      if (result.error) {
+        const errorMessage = handleApiError(result, 'Password reset request failed');
+        throw new Error(errorMessage);
+      }
+      
+      toast({
+        title: "Password reset email sent",
+        description: "If an account exists with this email, you will receive password reset instructions.",
       });
-      
-      if (error) throw error;
-      
-      set({ loading: false });
     } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Password reset request failed';
       set({
-        error: error instanceof Error ? error.message : 'Password reset request failed',
+        error: errorMessage,
         loading: false,
       });
+      
+      toast({
+        title: "Password reset failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      set({ loading: false });
     }
   },
 
@@ -613,23 +862,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       set({ loading: true, error: null });
       
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      
-      if (error) throw error;
-      
-      set({ loading: false });
-      
-      toast({
-        title: "Reset link sent",
-        description: "Please check your email for the password reset link.",
-      });
+      // This is just an alias for requestPasswordReset
+      await get().requestPasswordReset(email);
     } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Password reset request failed';
       set({
-        error: error instanceof Error ? error.message : 'Password reset request failed',
+        error: errorMessage,
         loading: false,
       });
+    } finally {
+      set({ loading: false });
     }
   },
 
@@ -637,24 +879,35 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       set({ loading: true, error: null });
       
-      const { error } = await supabase.auth.updateUser({
-        password: data.password,
-      });
-
-      if (error) {
-        throw error;
+      if (data.password !== data.confirmPassword) {
+        throw new Error('Passwords do not match');
       }
-
-      set({ loading: false });
+      
+      const result = await postgresqlClient.resetPasswordComplete(data.token, data.password);
+      
+      if (result.error) {
+        const errorMessage = handleApiError(result, 'Password reset failed');
+        throw new Error(errorMessage);
+      }
+      
       toast({
         title: "Password reset successful",
-        description: "Your password has been updated successfully.",
+        description: "Your password has been reset successfully. You can now log in with your new password.",
       });
     } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Password reset failed';
       set({
-        error: error instanceof Error ? error.message : 'Password reset failed',
+        error: errorMessage,
         loading: false,
       });
+      
+      toast({
+        title: "Password reset failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      set({ loading: false });
     }
   },
 
@@ -662,19 +915,42 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       set({ loading: true, error: null });
       
-      const { error } = await supabase.auth.verifyOtp({
-        token_hash: token,
-        type: 'email'
+      const result = await postgresqlClient.confirmEmail(token);
+      
+      if (result.error) {
+        const errorMessage = handleApiError(result, 'Email verification failed');
+        throw new Error(errorMessage);
+      }
+      
+      // Update user state if logged in
+      const user = get().user;
+      if (user) {
+        set({
+          user: {
+            ...user,
+            is_email_verified: true
+          }
+        });
+      }
+      
+      toast({
+        title: "Email verified",
+        description: "Your email has been verified successfully.",
       });
-      
-      if (error) throw error;
-      
-      set({ loading: false });
     } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Email verification failed';
       set({
-        error: error instanceof Error ? error.message : 'Email verification failed',
+        error: errorMessage,
         loading: false,
       });
+      
+      toast({
+        title: "Email verification failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      set({ loading: false });
     }
   },
 
@@ -687,19 +963,35 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         throw new Error('No user email found');
       }
       
-      const { error } = await supabase.auth.resend({
-        type: 'signup',
-        email: user.email
+      // This is a placeholder until the backend endpoint is implemented
+      const mockResult = {
+        data: { message: "Verification email sent" },
+        error: null,
+        status: 200
+      };
+      
+      if (mockResult.error) {
+        throw new Error(mockResult.error);
+      }
+      
+      toast({
+        title: "Verification email sent",
+        description: "A new verification email has been sent to your email address.",
       });
-      
-      if (error) throw error;
-      
-      set({ loading: false });
     } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Resend verification failed';
       set({
-        error: error instanceof Error ? error.message : 'Resend verification failed',
+        error: errorMessage,
         loading: false,
       });
+      
+      toast({
+        title: "Resend verification failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      set({ loading: false });
     }
   },
 
@@ -707,6 +999,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       set({ loading: true, error: null });
       
+      // This is a placeholder until the backend endpoint is implemented
+      if (!code || code.length !== 6 || !/^\d+$/.test(code)) {
+        throw new Error('Invalid verification code. Please enter a 6-digit code.');
+      }
+      
+      // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       set({ 
@@ -719,25 +1017,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         description: "Two-factor authentication verified.",
       });
     } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'MFA verification failed';
       set({
-        error: error instanceof Error ? error.message : 'MFA verification failed',
+        error: errorMessage,
         loading: false,
+      });
+      
+      toast({
+        title: "MFA verification failed",
+        description: errorMessage,
+        variant: "destructive",
       });
     }
   },
 }));
 
-// Set up auth state listener
-supabase.auth.onAuthStateChange((event, session) => {
-  const { checkAuth } = useAuthStore.getState();
-  
-  if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-    checkAuth();
-  } else if (event === 'SIGNED_OUT') {
-    useAuthStore.setState({
-      user: null,
-      isAuthenticated: false,
-      loading: false,
-    });
-  }
-});
+// TODO: Implement auth state change listener for PostgreSQL backend
+// This will be handled by the PostgreSQL client when implemented

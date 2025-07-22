@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { postgresqlClient } from '@/integrations/postgresql/client';
 
 interface OptimizedTherapist {
   id: string;
@@ -25,7 +25,7 @@ export const useOptimizedTherapists = () => {
       setLoading(true);
       setError(null);
 
-      const { data, error } = await supabase
+      const result = await postgresqlClient
         .from('profiles')
         .select(`
           id,
@@ -43,12 +43,15 @@ export const useOptimizedTherapists = () => {
         `)
         .eq('role', 'therapist')
         .eq('is_active', true)
-        .limit(10);
+        .limit(10)
+        .execute();
 
-      if (error) {
-        console.error('Supabase error:', error);
-        throw error;
+      if (result.error) {
+        console.error('PostgreSQL error:', result.error);
+        throw new Error(result.error);
       }
+      
+      const data = result.data;
 
       const formattedTherapists = (data || []).map(therapist => ({
         id: therapist.id,

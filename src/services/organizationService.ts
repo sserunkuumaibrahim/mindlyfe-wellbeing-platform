@@ -1,5 +1,5 @@
 
-import { supabase } from '@/integrations/supabase/client';
+import { postgresqlClient } from '@/integrations/postgresql/client';
 import { notificationService } from './notificationService';
 
 export interface OrganizationInvitationData {
@@ -11,81 +11,90 @@ export interface OrganizationInvitationData {
 
 export const organizationService = {
   async inviteUser(data: OrganizationInvitationData) {
-    const { data: invitation, error } = await supabase
+    const result = await postgresqlClient
       .from('organization_invitations')
       .insert(data)
       .select()
-      .single();
+      .single()
+      .execute();
 
-    if (error) throw error;
+    if (result.error) throw new Error(result.error);
 
     // Send notification to the invited user
-    const { data: profile } = await supabase
+    const profileResult = await postgresqlClient
       .from('profiles')
       .select('id')
       .eq('email', data.email)
-      .single();
+      .single()
+      .execute();
 
-    if (profile) {
-      await notificationService.createNotification(profile.id, {
+    if (profileResult.data) {
+      await notificationService.createNotification(profileResult.data.id, {
         title: 'Organization Invitation',
         message: 'You have been invited to join an organization',
         type: 'info',
-        data: { invitation_id: invitation.id }
+        data: { invitation_id: result.data.id }
       });
     }
 
-    return invitation;
+    return result.data;
   },
 
   async getOrganizationMembers(organizationId: string) {
-    const { data, error } = await supabase
+    const result = await postgresqlClient
       .from('organization_members')
       .select(`
         *,
         profile:profiles(first_name, last_name, email, profile_photo_url, role)
       `)
-      .eq('organization_id', organizationId);
+      .eq('organization_id', organizationId)
+      .execute();
 
-    if (error) throw error;
-    return data;
+    if (result.error) throw new Error(result.error);
+    return result.data;
   },
 
   async acceptInvitation(invitationId: string, profileId: string) {
-    const { data: invitation, error: invitationError } = await supabase
+    const invitationResult = await postgresqlClient
       .from('organization_invitations')
       .select('*')
       .eq('id', invitationId)
-      .single();
+      .single()
+      .execute();
 
-    if (invitationError) throw invitationError;
+    if (invitationResult.error) throw new Error(invitationResult.error);
 
     // Update invitation status
-    await supabase
+    const updateResult = await postgresqlClient
       .from('organization_invitations')
       .update({ status: 'accepted', accepted_at: new Date().toISOString() })
-      .eq('id', invitationId);
+      .eq('id', invitationId)
+      .execute();
+
+    if (updateResult.error) throw new Error(updateResult.error);
 
     // Add to organization members
-    const { data: member, error } = await supabase
+    const memberResult = await postgresqlClient
       .from('organization_members')
       .insert({
-        organization_id: invitation.organization_id,
+        organization_id: invitationResult.data.organization_id,
         profile_id: profileId,
-        role: invitation.role
+        role: invitationResult.data.role
       })
       .select()
-      .single();
+      .single()
+      .execute();
 
-    if (error) throw error;
-    return member;
+    if (memberResult.error) throw new Error(memberResult.error);
+    return memberResult.data;
   },
 
   async getOrganizationStats(organizationId: string) {
-    const { data, error } = await supabase
-      .rpc('get_organization_dashboard_stats', { org_id: organizationId });
+    const result = await postgresqlClient
+      .rpc('get_organization_dashboard_stats', { org_id: organizationId })
+      .execute();
 
-    if (error) throw error;
-    return data;
+    if (result.error) throw new Error(result.error);
+    return result.data;
   }
 };

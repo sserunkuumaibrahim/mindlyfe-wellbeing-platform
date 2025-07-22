@@ -1,5 +1,14 @@
 
-export default function UpcomingWidget({ upcoming }: { upcoming: any[] }) {
+interface UpcomingSession {
+  avatar: string;
+  therapist: string;
+  role: string;
+  time: string;
+  today?: boolean;
+  date?: string;
+}
+
+export default function UpcomingWidget({ upcoming }: { upcoming: UpcomingSession[] }) {
   return (
     <div className="rounded-[32px] bg-white/70 backdrop-blur-lg shadow-xl px-8 py-6 flex flex-col min-h-[360px] border border-[#e5eaf3]">
       <div className="font-bold text-lg mb-1 text-gray-700 font-dashboard">Upcoming</div>

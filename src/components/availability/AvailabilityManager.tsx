@@ -6,8 +6,9 @@ import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { apiRequest } from '@/services/apiClient';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/lib/toast';
 
 interface AvailabilitySlot {
   id: string;
@@ -33,14 +34,7 @@ export const AvailabilityManager: React.FC = () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
-        .from('therapist_availability')
-        .select('*')
-        .eq('therapist_id', user.id)
-        .order('day_of_week')
-        .order('start_time');
-
-      if (error) throw error;
+      const data = await apiRequest<AvailabilitySlot[]>(`/api/availability?therapistId=${user.id}`);
       setSlots(data || []);
     } catch (error) {
       console.error('Error fetching availability:', error);
@@ -51,6 +45,42 @@ export const AvailabilityManager: React.FC = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddSlot = async (day: number, startTime: string, endTime: string) => {
+    if (!user) return;
+
+    try {
+      const newSlot = await apiRequest<AvailabilitySlot>('/api/availability', 'POST', {
+        therapist_id: user.id,
+        day_of_week: day,
+        start_time: startTime,
+        end_time: endTime,
+        is_available: true,
+      });
+      setSlots([...slots, newSlot]);
+    } catch (error) {
+      console.error('Error adding slot:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add availability slot",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteSlot = async (slotId: string) => {
+    try {
+      await apiRequest(`/api/availability/${slotId}`, 'DELETE');
+      setSlots(slots.filter(slot => slot.id !== slotId));
+    } catch (error) {
+      console.error('Error deleting slot:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete availability slot",
+        variant: "destructive",
+      });
     }
   };
 
@@ -142,12 +172,12 @@ export const AvailabilityManager: React.FC = () => {
             className="rounded-md border"
           />
           <Button 
-            onClick={addTimeSlot}
+            onClick={() => selectedDate && handleAddSlot(selectedDate.getDay(), '09:00', '17:00')}
             className="w-full mt-4"
             disabled={!selectedDate}
           >
             <Plus className="h-4 w-4 mr-2" />
-            Add Time Slot for {selectedDate && getDayName(selectedDate.getDay())}
+            Add Default Slot for {selectedDate && getDayName(selectedDate.getDay())}
           </Button>
         </CardContent>
       </Card>
@@ -174,18 +204,9 @@ export const AvailabilityManager: React.FC = () => {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge variant={slot.is_available ? "default" : "secondary"}>
-                      {slot.is_available ? "Available" : "Blocked"}
-                    </Badge>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeTimeSlot(slot.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <Button variant="ghost" size="icon" onClick={() => handleDeleteSlot(slot.id)}>
+                    <Trash2 className="h-4 w-4 text-red-500" />
+                  </Button>
                 </div>
               ))
             )}

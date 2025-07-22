@@ -35,9 +35,33 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
 import { format, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
+
+interface Profile {
+  first_name: string;
+  last_name: string;
+}
+
+interface SessionFeedback {
+  rating: number;
+  feedback_text?: string;
+}
+
+interface TherapySession {
+  id: string;
+  therapist_id: string;
+  client_id: string;
+  scheduled_at: string;
+  status: string;
+  session_type: string;
+  actual_duration_minutes?: number;
+  session_fee?: number;
+  therapist?: Profile;
+  client?: Profile;
+  feedback?: SessionFeedback[];
+}
 
 interface SessionMetrics {
   totalSessions: number;
@@ -157,7 +181,7 @@ export const SessionAnalytics: React.FC<SessionAnalyticsProps> = ({
     }
   };
 
-  const processSessionData = (sessions: any[]): SessionMetrics => {
+  const processSessionData = (sessions: TherapySession[]): SessionMetrics => {
     const totalSessions = sessions.length;
     const completedSessions = sessions.filter(s => s.status === 'completed').length;
     const cancelledSessions = sessions.filter(s => s.status === 'cancelled').length;
@@ -173,7 +197,7 @@ export const SessionAnalytics: React.FC<SessionAnalyticsProps> = ({
     // Calculate total revenue
     const totalRevenue = sessions
       .filter(s => s.status === 'completed')
-      .reduce((sum, s) => sum + ((s as any).session_fee || 0), 0);
+      .reduce((sum, s) => sum + (s.session_fee || 0), 0);
 
     // Count unique clients
     const uniqueClients = new Set(sessions.map(s => s.client_id)).size;
@@ -235,13 +259,13 @@ export const SessionAnalytics: React.FC<SessionAnalyticsProps> = ({
         acc[therapistName].revenue += s.session_fee || 0;
       }
       if (s.feedback && s.feedback.length > 0) {
-        s.feedback.forEach((f: any) => {
+        s.feedback.forEach((f: SessionFeedback) => {
           acc[therapistName].totalRating += f.rating;
           acc[therapistName].ratingCount += 1;
         });
       }
       return acc;
-    }, {} as Record<string, any>);
+    }, {} as Record<string, { sessions: number; totalRating: number; ratingCount: number; revenue: number }>);
     
     const therapistPerformance = Object.entries(therapistData).map(([therapist, data]) => ({
       therapist,

@@ -84,27 +84,28 @@ export function IndividualRegistrationForm({ onSubmit, loading, error, onBack }:
   });
 
   const handleSubmit = async (data: FormData) => {
-    const therapyGoals = data.therapy_goals ? data.therapy_goals.split(',').map(goal => goal.trim()) : [];
-    
+    const {
+      confirmPassword,
+      therapy_goals,
+      date_of_birth,
+      ...rest
+    } = data;
+
     const registrationData: IndividualRegisterDTO = {
+      ...rest,
       role: 'individual',
-      first_name: data.first_name,
-      last_name: data.last_name,
-      email: data.email,
-      password: data.password,
-      confirmPassword: data.confirmPassword,
-      phone_number: data.phone_number,
+      phone_number: data.phone_number || undefined,
       date_of_birth: data.date_of_birth ? new Date(data.date_of_birth) : undefined,
       gender: data.gender as GenderType,
-      country: data.country,
-      preferred_language: data.preferred_language,
-      mental_health_history: data.mental_health_history,
-      therapy_goals: therapyGoals,
+      country: data.country || undefined,
+      preferred_language: data.preferred_language || 'en',
+      mental_health_history: data.mental_health_history || undefined,
+      therapy_goals: therapy_goals ? therapy_goals.split(',').map(goal => goal.trim()) : undefined,
       communication_pref: data.communication_pref as CommunicationPreference,
-      opt_in_newsletter: data.opt_in_newsletter,
-      opt_in_sms: data.opt_in_sms,
-      emergency_contact_name: data.emergency_contact_name,
-      emergency_contact_phone: data.emergency_contact_phone,
+      opt_in_newsletter: !!data.opt_in_newsletter,
+      opt_in_sms: !!data.opt_in_sms,
+      emergency_contact_name: data.emergency_contact_name || undefined,
+      emergency_contact_phone: data.emergency_contact_phone || undefined,
       preferred_therapist_gender: data.preferred_therapist_gender as GenderType,
     };
 
@@ -546,7 +547,8 @@ export function IndividualRegistrationForm({ onSubmit, loading, error, onBack }:
 
           {error && (
             <div className="bg-destructive/15 text-destructive text-sm p-3 rounded-md">
-              {error}
+              <p className="font-medium">Registration Error:</p>
+              <p>{error}</p>
             </div>
           )}
 

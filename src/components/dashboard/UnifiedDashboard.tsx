@@ -7,7 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
 import { useSessions } from '@/hooks/useSessions';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
+import { apiRequest } from '@/services/apiClient';
 
 interface TherapySession {
   id: string;
@@ -101,131 +101,16 @@ export const UnifiedDashboard: React.FC = () => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        
-        // Base queries for all user types
-        const promises = [];
-        
-        // Upcoming sessions
-        promises.push(
-          supabase
-            .from('therapy_sessions')
-            .select('*, therapist:therapist_id(first_name, last_name)')
-            .eq(user.role === 'therapist' ? 'therapist_id' : 'client_id', user.id)
-            .eq('status', 'scheduled')
-            .gte('scheduled_at', new Date().toISOString())
-            .order('scheduled_at', { ascending: true })
-            .limit(5)
-        );
 
-        // Unread messages
-        promises.push(
-          supabase
-            .from('messages')
-            .select('id', { count: 'exact', head: true })
-            .eq('recipient_id', user.id)
-            .eq('read', false)
-        );
+        const { data } = await apiRequest(`/users/${user.id}/dashboard`, 'GET');
 
-        // Completed sessions this month
-        const startOfMonth = new Date();
-        startOfMonth.setDate(1);
-        startOfMonth.setHours(0, 0, 0, 0);
-        
-        promises.push(
-          supabase
-            .from('therapy_sessions')
-            .select('*', { count: 'exact', head: true })
-            .eq(user.role === 'therapist' ? 'therapist_id' : 'client_id', user.id)
-            .eq('status', 'completed')
-            .gte('scheduled_at', startOfMonth.toISOString())
-        );
+        setStats(data.stats);
+        setRecentActivity(data.recentActivity);
+        setUpcomingSessions(data.upcomingSessions);
 
-        // Recent activity (completed sessions)
-        promises.push(
-          supabase
-            .from('therapy_sessions')
-            .select('*, therapist:therapist_id(first_name, last_name), client:client_id(first_name, last_name)')
-            .eq(user.role === 'therapist' ? 'therapist_id' : 'client_id', user.id)
-            .eq('status', 'completed')
-            .order('scheduled_at', { ascending: false })
-            .limit(5)
-        );
-
-        // Role-specific queries
-        if (user.role === 'therapist') {
-          // Earnings this month
-          promises.push(
-            supabase
-              .from('therapy_sessions')
-              .select('session_fee')
-              .eq('therapist_id', user.id)
-              .eq('status', 'completed')
-              .gte('scheduled_at', startOfMonth.toISOString())
-          );
-
-          // Total clients
-          promises.push(
-            supabase
-              .from('therapy_sessions')
-              .select('client_id')
-              .eq('therapist_id', user.id)
-              .eq('status', 'completed')
-          );
-        } else {
-          // Upcoming workshops for individuals
-          promises.push(
-            supabase
-              .from('workshops')
-              .select('*', { count: 'exact', head: true })
-              .gte('start_date', new Date().toISOString())
-          );
-        }
-
-        const results = await Promise.all(promises);
-        
-        const [upcomingRes, unreadRes, completedRes, recentRes, ...roleSpecific] = results;
-
-        // Set upcoming sessions
-        setUpcomingSessions(upcomingRes.data || []);
-
-        // Build stats object
-        const newStats: DashboardStats = {
-          upcomingSessions: upcomingRes.data?.length || 0,
-          unreadMessages: unreadRes.count || 0,
-          completedSessions: completedRes.count || 0
-        };
-
-        // Process role-specific data
-        if (user.role === 'therapist' && roleSpecific.length >= 2) {
-          const earningsData = roleSpecific[0].data || [];
-          const clientsData = roleSpecific[1].data || [];
-          
-          newStats.earnings = earningsData.reduce((sum: number, session: TherapySession) => 
-            sum + (session.session_fee || 75000), 0
-          );
-          newStats.clients = new Set(clientsData.map((s: TherapySession) => s.client?.id)).size;
-        } else if (user.role !== 'therapist' && roleSpecific.length >= 1) {
-          newStats.workshops = roleSpecific[0].count || 0;
-        }
-
-        setStats(newStats);
-
-        // Process recent activity
-        const activities: RecentActivity[] = (recentRes.data || []).map((session: TherapySession) => ({
-          id: session.id,
-          type: 'session' as const,
-          title: user.role === 'therapist' 
-            ? `Session with ${session.client?.first_name} ${session.client?.last_name}`
-            : `Session with Dr. ${session.therapist?.first_name} ${session.therapist?.last_name}`,
-          subtitle: 'Therapy Session',
-          time: formatTimeAgo(session.scheduled_at),
-          status: 'completed'
-        }));
-
-        setRecentActivity(activities);
-        
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
+        // Handle error appropriately, e.g., show a toast notification
       } finally {
         setLoading(false);
       }
@@ -234,37 +119,8 @@ export const UnifiedDashboard: React.FC = () => {
     fetchDashboardData();
   }, [user, sessionsLoading]);
 
-  // Quick actions based on user role
-  const getQuickActions = () => {
-    const baseActions = [
-      { icon: MessageSquare, label: 'Messages', color: 'bg-blue-500', path: '/messages' },
-      { icon: Bell, label: 'Notifications', color: 'bg-yellow-500', path: '/notifications' },
-      { icon: CreditCard, label: 'Billing', color: 'bg-green-500', path: '/billing' }
-    ];
-
-    if (user?.role === 'therapist') {
-      return [
-        { icon: Calendar, label: 'Availability', color: 'bg-purple-500', path: '/availability' },
-        { icon: Users, label: 'Clients', color: 'bg-indigo-500', path: '/clients' },
-        ...baseActions
-      ];
-    } else {
-      return [
-        { icon: Calendar, label: 'Book Session', color: 'bg-purple-500', path: '/book-session' },
-        { icon: BookOpen, label: 'Workshops', color: 'bg-pink-500', path: '/workshops' },
-        ...baseActions
-      ];
-    }
-  };
-
-  const handleQuickAction = (path: string) => {
-    navigate(path);
-  };
-
-  const quickActions = getQuickActions();
-
-  return (
-    <div className="p-4 md:p-6 space-y-6">
+  const renderSkeleton = () => (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       {/* Welcome Section */}
       <div className="mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900">

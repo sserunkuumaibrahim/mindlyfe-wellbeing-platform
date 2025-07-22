@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
+import { postgresClient } from '@/integrations/postgresql/client';
 
 // Types for analytics events
 export interface AnalyticsEvent {
@@ -124,13 +124,14 @@ class AnalyticsService {
   }
   
   // Core tracking method
-  async track(eventName: string, properties: Record<string, any> = {}): Promise<void> {
+  async track(eventName: string, properties: Record<string, unknown> = {}): Promise<void> {
     try {
-      const user = await supabase.auth.getUser();
+      // Get current user from auth store instead of supabase
+      const userId = this.getCurrentUserId();
       
       const event: AnalyticsEvent = {
         event_name: eventName,
-        user_id: user.data.user?.id,
+        user_id: userId,
         session_id: this.sessionId,
         properties: {
           ...properties,
@@ -149,7 +150,7 @@ class AnalyticsService {
       this.eventQueue.push(event);
       
       // Log in development
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.DEV) {
         console.log('📊 Analytics Event:', eventName, properties);
       }
       
@@ -182,8 +183,8 @@ class AnalyticsService {
     this.eventQueue = [];
     
     try {
-      // Use raw SQL query since analytics_events table may not be in types
-      const { error } = await supabase.rpc('insert_analytics_event', {
+      // Send events to analytics API endpoint
+      const { error } = await postgresClient.trackEvent('batch_events', {
         events: eventsToFlush
       });
       
@@ -208,7 +209,7 @@ class AnalyticsService {
     });
   }
   
-  trackUserAction(action: string, context: Record<string, any> = {}): void {
+  trackUserAction(action: string, context: Record<string, unknown> = {}): void {
     this.track('user_action', { 
       action, 
       ...context,
@@ -216,7 +217,7 @@ class AnalyticsService {
     });
   }
   
-  trackError(error: Error, context: string, additionalData: Record<string, any> = {}): void {
+  trackError(error: Error, context: string, additionalData: Record<string, unknown> = {}): void {
     this.track('error_occurred', {
       error_message: error.message,
       error_stack: error.stack,
@@ -225,7 +226,7 @@ class AnalyticsService {
     });
   }
   
-  trackConversion(conversionType: string, value?: number, metadata: Record<string, any> = {}): void {
+  trackConversion(conversionType: string, value?: number, metadata: Record<string, unknown> = {}): void {
     this.track('conversion', {
       conversion_type: conversionType,
       value,
@@ -233,7 +234,7 @@ class AnalyticsService {
     });
   }
   
-  trackFeatureUsage(feature: string, action: string, metadata: Record<string, any> = {}): void {
+  trackFeatureUsage(feature: string, action: string, metadata: Record<string, unknown> = {}): void {
     this.track('feature_usage', {
       feature,
       action,
@@ -241,7 +242,7 @@ class AnalyticsService {
     });
   }
   
-  trackSearch(query: string, results: number, filters: Record<string, any> = {}): void {
+  trackSearch(query: string, results: number, filters: Record<string, unknown> = {}): void {
     this.track('search', {
       query,
       results_count: results,
@@ -249,7 +250,7 @@ class AnalyticsService {
     });
   }
   
-  trackBooking(therapistId: string, sessionType: string, metadata: Record<string, any> = {}): void {
+  trackBooking(therapistId: string, sessionType: string, metadata: Record<string, unknown> = {}): void {
     this.track('booking_attempt', {
       therapist_id: therapistId,
       session_type: sessionType,
@@ -297,11 +298,10 @@ class AnalyticsService {
   // Business metrics methods
   async getBusinessMetrics(startDate: Date, endDate: Date): Promise<BusinessMetrics> {
     try {
-      // Use raw SQL query for analytics_events
-      const { data: events, error } = await supabase.rpc('get_analytics_events', {
-        start_date: startDate.toISOString(),
-        end_date: endDate.toISOString()
-      });
+      // Get analytics data from API
+      const { data: events, error } = await postgresClient.getAnalytics(
+        Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+      );
       
       if (error) throw error;
       
@@ -313,7 +313,7 @@ class AnalyticsService {
     }
   }
   
-  private calculateBusinessMetrics(events: any[]): BusinessMetrics {
+  private calculateBusinessMetrics(events: AnalyticsEvent[]): BusinessMetrics {
     const registrations = events.filter(e => e.event_name === 'user_registered');
     const bookingAttempts = events.filter(e => e.event_name === 'booking_attempt');
     const bookingCompletions = events.filter(e => e.event_name === 'booking_completed');
@@ -340,7 +340,7 @@ class AnalyticsService {
     };
   }
   
-  private calculateSessionDurations(events: any[]): number[] {
+  private calculateSessionDurations(events: AnalyticsEvent[]): number[] {
     const sessionEvents = events.reduce((acc, event) => {
       const sessionId = event.session_id;
       if (!acc[sessionId]) {
@@ -359,7 +359,7 @@ class AnalyticsService {
       .filter(duration => duration > 0);
   }
   
-  private calculateRegistrationRate(events: any[]): number {
+  private calculateRegistrationRate(events: AnalyticsEvent[]): number {
     const pageViews = events.filter(e => e.event_name === 'page_view');
     const registrations = events.filter(e => e.event_name === 'user_registered');
     const uniqueVisitors = new Set(pageViews.map(e => e.session_id)).size;
@@ -367,14 +367,14 @@ class AnalyticsService {
     return uniqueVisitors > 0 ? (registrations.length / uniqueVisitors) * 100 : 0;
   }
   
-  private calculateRetentionRate(events: any[]): number {
+  private calculateRetentionRate(events: AnalyticsEvent[]): number {
     // Simple retention calculation - users who had activity in multiple days
     const userDays = events.reduce((acc, event) => {
       if (!event.user_id) return acc;
       
       const day = new Date(event.timestamp).toDateString();
       if (!acc[event.user_id]) {
-        acc[event.user_id] = new Set();
+        acc[event.user_id] = new Set<string>();
       }
       acc[event.user_id].add(day);
       return acc;
@@ -386,9 +386,9 @@ class AnalyticsService {
     return totalUsers > 0 ? (retainedUsers / totalUsers) * 100 : 0;
   }
   
-  private calculateFeatureAdoption(featureEvents: any[], totalSessions: number): Record<string, number> {
+  private calculateFeatureAdoption(featureEvents: AnalyticsEvent[], totalSessions: number): Record<string, number> {
     const featureUsage = featureEvents.reduce((acc, event) => {
-      const feature = event.properties?.feature;
+      const feature = event.properties?.feature as string;
       if (feature) {
         acc[feature] = (acc[feature] || 0) + 1;
       }
@@ -401,8 +401,22 @@ class AnalyticsService {
     }, {} as Record<string, number>);
   }
   
+  private getCurrentUserId(): string | undefined {
+    // Get user ID from localStorage or auth store
+    try {
+      const authData = localStorage.getItem('auth-storage');
+      if (authData) {
+        const parsed = JSON.parse(authData);
+        return parsed.state?.user?.id;
+      }
+    } catch (error) {
+      console.warn('Could not get user ID for analytics:', error);
+    }
+    return undefined;
+  }
+  
   // A/B Testing support
-  trackExperiment(experimentName: string, variant: string, metadata: Record<string, any> = {}): void {
+  trackExperiment(experimentName: string, variant: string, metadata: Record<string, unknown> = {}): void {
     this.track('experiment_exposure', {
       experiment_name: experimentName,
       variant,

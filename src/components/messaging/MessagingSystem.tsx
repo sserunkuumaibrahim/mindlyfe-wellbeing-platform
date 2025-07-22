@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Send, Phone, Video, Paperclip, Search } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/lib/toast';
 
 interface Message {
   id: string;
@@ -47,14 +47,14 @@ export const MessagingSystem: React.FC = () => {
     if (user) {
       fetchConversations();
     }
-  }, [user]);
+  }, [user, fetchConversations]);
 
   useEffect(() => {
     if (selectedConversation) {
       fetchMessages(selectedConversation.conversation_id);
       markMessagesAsRead(selectedConversation.other_user_id);
     }
-  }, [selectedConversation]);
+  }, [selectedConversation, markMessagesAsRead]);
 
   useEffect(() => {
     scrollToBottom();
@@ -64,7 +64,7 @@ export const MessagingSystem: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const fetchConversations = async () => {
+  const fetchConversations = useCallback(async () => {
     try {
       const { data, error } = await supabase.functions.invoke('get-conversations', {
         body: { user_id: user?.id }
@@ -82,7 +82,7 @@ export const MessagingSystem: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
 
   const fetchMessages = async (conversationId: string) => {
     try {
@@ -104,7 +104,7 @@ export const MessagingSystem: React.FC = () => {
     }
   };
 
-  const markMessagesAsRead = async (senderId: string) => {
+  const markMessagesAsRead = useCallback(async (senderId: string) => {
     try {
       await supabase
         .from('messages')
@@ -114,7 +114,7 @@ export const MessagingSystem: React.FC = () => {
     } catch (error) {
       console.error('Error marking messages as read:', error);
     }
-  };
+  }, [user?.id]);
 
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation) return;

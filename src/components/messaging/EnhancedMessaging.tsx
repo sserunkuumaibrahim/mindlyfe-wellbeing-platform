@@ -7,8 +7,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Send, MessageSquare } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { apiRequest } from '@/services/apiClient';
+import { toast } from '@/lib/toast';
 
 interface Message {
   id: string;
@@ -60,6 +60,50 @@ export const EnhancedMessaging: React.FC = () => {
     }
   }, [selectedConversation]);
 
+  const fetchConversations = async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const data = await apiRequest<Conversation[]>('/api/messaging/conversations');
+      setConversations(data || []);
+    } catch (error) {
+      toast({ title: 'Error', description: 'Could not fetch conversations.' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchMessages = async (conversationId: string) => {
+    setLoading(true);
+    try {
+      const data = await apiRequest<Message[]>(`/api/messaging/conversations/${conversationId}/messages`);
+      setMessages(data || []);
+    } catch (error) {
+      toast({ title: 'Error', description: 'Could not fetch messages.' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !selectedConversation) return;
+
+    try {
+      const recipientId = conversations.find(c => c.conversation_id === selectedConversation)?.other_user_id;
+      if (!recipientId) return;
+
+      const sentMessage = await apiRequest<Message>('/api/messaging/messages', 'POST', {
+        recipient_id: recipientId,
+        content: newMessage,
+      });
+
+      setMessages(prev => [...prev, sentMessage]);
+      setNewMessage('');
+    } catch (error) {
+      toast({ title: 'Error', description: 'Could not send message.' });
+    }
+  };
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -68,87 +112,10 @@ export const EnhancedMessaging: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const fetchConversations = async () => {
-    if (!user) return;
-
-    try {
-      const { data, error } = await supabase.functions.invoke('get-conversations', {
-        body: { user_id: user.id }
-      });
-
-      if (error) throw error;
-      setConversations(data.conversations || []);
-    } catch (error) {
-      console.error('Error fetching conversations:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load conversations",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchMessages = async (conversationId: string) => {
-    if (!user) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('messages')
-        .select(`
-          *,
-          sender:profiles!messages_sender_id_fkey(first_name, last_name, profile_photo_url),
-          recipient:profiles!messages_recipient_id_fkey(first_name, last_name, profile_photo_url)
-        `)
-        .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-      setMessages(data || []);
-    } catch (error) {
-      console.error('Error fetching messages:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load messages",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const sendMessage = async () => {
-    if (!user || !selectedConversation || !newMessage.trim()) return;
-
-    const recipientId = selectedConversation;
-
-    try {
-      const { error } = await supabase.functions.invoke('send-message', {
-        body: {
-          sender_id: user.id,
-          recipient_id: recipientId,
-          content: newMessage.trim()
-        }
-      });
-
-      if (error) throw error;
-
-      setNewMessage('');
-      fetchMessages(selectedConversation);
-      fetchConversations();
-    } catch (error) {
-      console.error('Error sending message:', error);
-      toast({
-        title: "Error",
-        description: "Failed to send message",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      handleSendMessage();
     }
   };
 
@@ -263,7 +230,7 @@ export const EnhancedMessaging: React.FC = () => {
                   placeholder="Type your message..."
                   className="flex-1"
                 />
-                <Button onClick={sendMessage} disabled={!newMessage.trim()}>
+                <Button onClick={handleSendMessage} disabled={!newMessage.trim()}>
                   <Send className="h-4 w-4" />
                 </Button>
               </div>

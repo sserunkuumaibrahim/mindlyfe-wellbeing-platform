@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -7,55 +7,41 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Users, Calendar, DollarSign, TrendingUp, Search, Filter } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
-
-interface AdminStats {
-  totalUsers: number;
-  totalSessions: number;
-  totalRevenue: number;
-  activeSubscriptions: number;
-  pendingTherapists: number;
-}
-
-interface User {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  role: string;
-  created_at: string;
-  is_active: boolean;
-  therapist_status?: string;
-}
+import { apiRequest } from '@/services/apiClient';
+import { toast } from '@/lib/toast';
+import { AdminDashboardData, AdminUser } from '@/types/dashboard';
 
 export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const [stats, setStats] = useState<AdminStats>({
-    totalUsers: 0,
-    totalSessions: 0,
-    totalRevenue: 0,
-    activeSubscriptions: 0,
-    pendingTherapists: 0
-  });
-  const [recentUsers, setRecentUsers] = useState<User[]>([]);
-  const [allUsers, setAllUsers] = useState<User[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [dashboardData, setDashboardData] = useState<AdminDashboardData | null>(null);
+  const [filteredUsers, setFilteredUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [showAllUsers, setShowAllUsers] = useState(false);
 
   useEffect(() => {
+    const fetchDashboardData = async () => {
+      setLoading(true);
+      try {
+        const data = await apiRequest<AdminDashboardData>('/api/admin/dashboard');
+        setDashboardData(data);
+        setFilteredUsers(data.users);
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        toast({ title: 'Error', description: 'Failed to load dashboard data' });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
     fetchDashboardData();
   }, []);
 
-  useEffect(() => {
-    filterUsers();
-  }, [searchTerm, roleFilter, allUsers]);
-
-  const filterUsers = () => {
-    let filtered = allUsers;
+  const filterUsers = useCallback(() => {
+    if (!dashboardData) return;
+    
+    let filtered = dashboardData.users;
 
     if (searchTerm) {
       filtered = filtered.filter(user => 
@@ -70,136 +56,68 @@ export const AdminDashboard: React.FC = () => {
     }
 
     setFilteredUsers(filtered);
-  };
+  }, [dashboardData, searchTerm, roleFilter]);
 
-  const fetchDashboardData = async () => {
+  useEffect(() => {
+    if (dashboardData) {
+      filterUsers();
+    }
+  }, [filterUsers, dashboardData]);
+
+  const handleApproveTherapist = async (userId: string) => {
     try {
-      // Fetch user count
-      const { count: userCount } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true });
-
-      // Fetch session count
-      const { count: sessionCount } = await supabase
-        .from('therapy_sessions')
-        .select('*', { count: 'exact', head: true });
-
-      // Fetch revenue from paid invoices
-      const { data: invoices } = await supabase
-        .from('invoices')
-        .select('amount')
-        .eq('status', 'paid');
-
-      const totalRevenue = invoices?.reduce((sum, invoice) => sum + Number(invoice.amount), 0) || 0;
-
-      // Fetch active subscriptions
-      const { count: subscriptionCount } = await supabase
-        .from('subscriptions')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'active');
-
-      // Fetch pending therapists
-      const { count: pendingTherapistsCount } = await supabase
-        .from('therapist_profiles')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'pending_review');
-
-      // Fetch recent users (last 10)
-      const { data: users } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name, email, role, created_at, is_active')
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      // Fetch all users for management
-      const { data: allUsersData } = await supabase
-        .from('profiles')
-        .select(`
-          id, 
-          first_name, 
-          last_name, 
-          email, 
-          role, 
-          created_at, 
-          is_active,
-          therapist_profiles(status)
-        `)
-        .order('created_at', { ascending: false });
-
-      const processedUsers = allUsersData?.map(user => ({
-        ...user,
-        therapist_status: user.therapist_profiles?.status || null
-      })) || [];
-
-      setStats({
-        totalUsers: userCount || 0,
-        totalSessions: sessionCount || 0,
-        totalRevenue,
-        activeSubscriptions: subscriptionCount || 0,
-        pendingTherapists: pendingTherapistsCount || 0
-      });
-
-      setRecentUsers(users || []);
-      setAllUsers(processedUsers);
+      await apiRequest(`/api/admin/users/${userId}/approve`, 'POST');
+      toast({ title: 'Success', description: 'Therapist approved' });
+      // Refresh data
+      const data = await apiRequest<AdminDashboardData>('/api/admin/dashboard');
+      setDashboardData(data);
+      setFilteredUsers(data.users);
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load dashboard data",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+      console.error('Error approving therapist:', error);
+      toast({ title: 'Error', description: 'Failed to approve therapist' });
     }
   };
 
-  const toggleUserStatus = async (userId: string, currentStatus: boolean) => {
+  const handleDeactivateUser = async (userId: string) => {
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ is_active: !currentStatus })
-        .eq('id', userId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: `User ${!currentStatus ? 'activated' : 'deactivated'} successfully`,
-      });
-
-      fetchDashboardData();
+      await apiRequest(`/api/admin/users/${userId}/deactivate`, 'POST');
+      toast({ title: 'Success', description: 'User deactivated' });
+      // Refresh data
+      const data = await apiRequest<AdminDashboardData>('/api/admin/dashboard');
+      setDashboardData(data);
+      setFilteredUsers(data.users);
     } catch (error) {
-      console.error('Error updating user status:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update user status",
-        variant: "destructive",
-      });
+      console.error('Error deactivating user:', error);
+      toast({ title: 'Error', description: 'Failed to deactivate user' });
     }
   };
 
   const approveTherapist = async (userId: string) => {
     try {
-      const { error } = await supabase
-        .from('therapist_profiles')
-        .update({ status: 'approved' })
-        .eq('id', userId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Therapist approved successfully",
-      });
-
-      fetchDashboardData();
+      await apiRequest(`/api/admin/therapists/${userId}/approve`, 'POST');
+      toast.success('Therapist approved successfully');
+      // Refresh data
+      const data = await apiRequest<AdminDashboardData>('/api/admin/dashboard');
+      setDashboardData(data);
+      setFilteredUsers(data.users);
     } catch (error) {
       console.error('Error approving therapist:', error);
-      toast({
-        title: "Error",
-        description: "Failed to approve therapist",
-        variant: "destructive",
-      });
+      toast.error('Failed to approve therapist');
+    }
+  };
+
+  const toggleUserStatus = async (userId: string, currentStatus: boolean) => {
+    try {
+      const action = currentStatus ? 'deactivate' : 'activate';
+      await apiRequest(`/api/admin/users/${userId}/${action}`, 'POST');
+      toast.success(`User ${action}d successfully`);
+      // Refresh data
+      const data = await apiRequest<AdminDashboardData>('/api/admin/dashboard');
+      setDashboardData(data);
+      setFilteredUsers(data.users);
+    } catch (error) {
+      console.error(`Error ${currentStatus ? 'deactivating' : 'activating'} user:`, error);
+      toast.error(`Failed to ${currentStatus ? 'deactivate' : 'activate'} user`);
     }
   };
 
@@ -224,7 +142,7 @@ export const AdminDashboard: React.FC = () => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalUsers}</div>
+            <div className="text-2xl font-bold">{dashboardData?.stats.total_users || 0}</div>
             <p className="text-xs text-muted-foreground">
               Registered users
             </p>
@@ -237,7 +155,7 @@ export const AdminDashboard: React.FC = () => {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalSessions}</div>
+            <div className="text-2xl font-bold">{dashboardData?.stats.total_sessions || 0}</div>
             <p className="text-xs text-muted-foreground">
               Therapy sessions
             </p>
@@ -250,7 +168,7 @@ export const AdminDashboard: React.FC = () => {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">UGX {stats.totalRevenue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">UGX {dashboardData?.stats.total_revenue.toLocaleString() || '0'}</div>
             <p className="text-xs text-muted-foreground">
               From payments
             </p>
@@ -263,7 +181,7 @@ export const AdminDashboard: React.FC = () => {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.activeSubscriptions}</div>
+            <div className="text-2xl font-bold">{dashboardData?.stats.active_subscriptions || 0}</div>
             <p className="text-xs text-muted-foreground">
               Active subscriptions
             </p>
@@ -276,7 +194,7 @@ export const AdminDashboard: React.FC = () => {
             <Users className="h-4 w-4 text-orange-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-500">{stats.pendingTherapists}</div>
+            <div className="text-2xl font-bold text-orange-500">{dashboardData?.stats.pending_therapists || 0}</div>
             <p className="text-xs text-muted-foreground">
               Therapist reviews
             </p>
@@ -328,15 +246,15 @@ export const AdminDashboard: React.FC = () => {
           )}
 
           <div className="space-y-4">
-            {(showAllUsers ? filteredUsers : recentUsers).map((user) => (
+            {(showAllUsers ? filteredUsers : (dashboardData?.users.slice(0, 5) || [])).map((user) => (
               <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="flex items-center space-x-3">
                   <div>
                     <p className="font-medium">{user.first_name} {user.last_name}</p>
                     <p className="text-sm text-muted-foreground">{user.email}</p>
-                    {user.role === 'therapist' && user.therapist_status && (
+                    {user.role === 'therapist' && user.therapist_details && (
                       <p className="text-xs text-muted-foreground">
-                        Therapist Status: {user.therapist_status}
+                        Therapist Status: {user.therapist_details.status}
                       </p>
                     )}
                   </div>
@@ -354,7 +272,7 @@ export const AdminDashboard: React.FC = () => {
                     {user.is_active ? 'Active' : 'Inactive'}
                   </Badge>
 
-                  {user.role === 'therapist' && user.therapist_status === 'pending_review' && (
+                  {user.role === 'therapist' && user.therapist_details?.status === 'pending' && (
                     <Button
                       size="sm"
                       onClick={() => approveTherapist(user.id)}
@@ -385,7 +303,7 @@ export const AdminDashboard: React.FC = () => {
             <CardTitle className="text-lg">Pending Therapist Reviews</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-orange-500">{stats.pendingTherapists}</p>
+            <p className="text-2xl font-bold text-orange-500">{dashboardData?.stats.pending_therapists || 0}</p>
             <p className="text-sm text-muted-foreground mt-2">
               Therapists waiting for approval
             </p>
@@ -409,7 +327,11 @@ export const AdminDashboard: React.FC = () => {
             <CardTitle className="text-lg">Recent Activity</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{recentUsers.length}</p>
+            <p className="text-2xl font-bold">{dashboardData?.users.filter(user => {
+              const oneWeekAgo = new Date();
+              oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+              return new Date(user.created_at) >= oneWeekAgo;
+            }).length || 0}</p>
             <p className="text-sm text-muted-foreground mt-2">
               New users this week
             </p>

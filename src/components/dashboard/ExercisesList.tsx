@@ -1,5 +1,17 @@
 
-export default function ExercisesList({ data }: { data: any[] }) {
+interface Exercise {
+  icon: string;
+  label: string;
+  progress: number;
+  duration: string;
+  category: string;
+  actions: {
+    completed: number;
+    comments: number;
+  };
+}
+
+export default function ExercisesList({ data }: { data: Exercise[] }) {
   return (
     <div className="rounded-[2rem] bg-white/60 shadow-card px-8 py-7 flex flex-col border border-[#dae7f5]">
       <div className="font-bold text-lg mb-1 text-[#233a56] font-dmsans">My exercises</div>

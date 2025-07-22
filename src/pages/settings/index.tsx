@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Settings, User, Bell, Shield, Globe } from 'lucide-react';
 import { useProfile } from '@/hooks/useProfile';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/lib/toast';
 import AppPageLayout from '@/components/ui/AppPageLayout';
 
 export default function SettingsPage() {

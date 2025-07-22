@@ -1,5 +1,14 @@
 
-export default function UpcomingSchedule({ data }: { data: any[] }) {
+interface ScheduleItem {
+  avatar: string;
+  therapist: string;
+  role: string;
+  time: string;
+  today?: boolean;
+  date?: string;
+}
+
+export default function UpcomingSchedule({ data }: { data: ScheduleItem[] }) {
   return (
     <div className="rounded-[2rem] bg-white/60 shadow-card px-8 py-8 border border-[#dae7f5] min-h-[375px]">
       <div className="font-bold text-lg mb-1 text-[#182d44] font-dmsans">Upcoming</div>

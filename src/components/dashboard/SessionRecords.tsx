@@ -1,6 +1,13 @@
 
 import { Play } from "lucide-react";
-export default function SessionRecords({ data }: { data: any[] }) {
+
+interface SessionRecord {
+  title: string;
+  therapist: string;
+  duration: string;
+}
+
+export default function SessionRecords({ data }: { data: SessionRecord[] }) {
   return (
     <div className="rounded-[2rem] bg-white/60 shadow-card px-8 py-7 border border-[#dae7f5]">
       <div className="font-bold text-lg mb-1 text-[#233a56] font-dmsans">Records of recent sessions</div>

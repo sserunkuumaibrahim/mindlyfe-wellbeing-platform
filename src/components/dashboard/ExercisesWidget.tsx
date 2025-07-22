@@ -1,5 +1,17 @@
 
-export default function ExercisesWidget({ exercises }: { exercises: any[] }) {
+interface Exercise {
+  icon: string;
+  label: string;
+  progress: number;
+  duration: string;
+  category: string;
+  actions: {
+    completed: number;
+    comments: number;
+  };
+}
+
+export default function ExercisesWidget({ exercises }: { exercises: Exercise[] }) {
   return (
     <div className="rounded-[32px] bg-white/70 backdrop-blur-lg shadow-xl px-8 py-7 flex flex-col border border-[#e5eaf3]">
       <div className="font-bold text-lg mb-2 text-gray-700 font-dashboard">My exercises</div>

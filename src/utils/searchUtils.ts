@@ -1,8 +1,31 @@
-import { Database } from '../integrations/supabase/types'
+import { Database } from '../integrations/postgresql/types'
 
-type Specialization = Database['public']['Tables']['specializations']['Row']
+// Define Specialization interface since there's no specializations table
+interface Specialization {
+  id: string;
+  name: string;
+  description?: string;
+}
+
 type TherapistProfile = Database['public']['Tables']['therapist_profiles']['Row']
 type Profile = Database['public']['Tables']['profiles']['Row']
+
+// Extended TherapistProfile with additional properties for search results
+interface ExtendedTherapistProfile extends Omit<TherapistProfile, 'specializations'> {
+  profile?: Profile & {
+    first_name?: string;
+    last_name?: string;
+  };
+  distance?: number;
+  matchScore?: number;
+  averageRating?: number;
+  approach?: string;
+  specializations: string[];
+  therapistProfile?: {
+    session_rate?: number;
+    years_of_experience?: number;
+  };
+}
 
 // Haversine formula to calculate distance between two points
 export function calculateDistance(
@@ -27,7 +50,7 @@ export function calculateDistance(
 // Calculate relevance score based on search query and therapist data
 export function calculateRelevanceScore(
   query: string,
-  therapist: TherapistProfile & { profile?: Profile },
+  therapist: ExtendedTherapistProfile,
   specializations: Specialization[]
 ): number {
   if (!query) return 0
@@ -72,10 +95,10 @@ export function calculateRelevanceScore(
 
 // Sort results based on different criteria
 export function sortSearchResults(
-  results: (TherapistProfile & { profile?: Profile })[],
+  results: ExtendedTherapistProfile[],
   sortBy: string,
   userLocation?: { latitude: number; longitude: number }
-): (TherapistProfile & { profile?: Profile })[] {
+): ExtendedTherapistProfile[] {
   switch (sortBy) {
     case 'rating':
       return results.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0))
